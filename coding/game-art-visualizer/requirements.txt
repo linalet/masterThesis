@@ -1,9 +1,0 @@
-streamlit
-requests
-python-dotenv
-pillow
-colorthief
-matplotlib
-pandas
-numpy
-scikit-learn
