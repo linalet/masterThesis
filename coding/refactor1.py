@@ -2,8 +2,6 @@ import os
 import requests
 import csv
 from colorthief import ColorThief
-# import io
-# from PIL import Image
 import pandas as pd
 import ast
 import matplotlib.pyplot as plt
