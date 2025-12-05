@@ -17,8 +17,8 @@ OUTPUT_CSV = os.path.join(DATA_DIR, "color_palettes.csv")
 # ==========================
 # Other settings
 # ==========================
-START_YEAR = 1970
-END_YEAR = 1975
+START_YEAR = 1978
+END_YEAR = 2025
 MAX_SCREENSHOTS_PER_GAME = 5    # possibly increase to 10
 COLOR_COUNT = 10                # possibly increase to 20
 BATCH_SIZE = 500             # IGDB max per request is 500
