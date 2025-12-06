@@ -4,7 +4,7 @@ import os
 # IGDB API credentials
 # ==========================
 CLIENT_ID = "6k1gmqbtqyihlzrqijshniy5fs3xis"
-ACCESS_TOKEN = "tf6tmtwd8q8s6vuhrxyjir9wjxmv6k"
+ACCESS_TOKEN = "z6qyehyl2ufrt16gcutyc79fwf5wn8"
 
 # ==========================
 # Project paths
