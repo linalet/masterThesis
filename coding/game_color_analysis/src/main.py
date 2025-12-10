@@ -7,7 +7,7 @@ from color_extraction import extract_palette, cluster_palette
 
 def main():
     # -----------------------------
-    # 1️⃣ Prepare CSV
+    # Prepare CSV
     # -----------------------------
     if os.path.exists(OUTPUT_CSV):
         # Load existing rows to skip duplicates
@@ -21,14 +21,11 @@ def main():
         seen = set()
 
     # -----------------------------
-    # 2️⃣ Open CSV in append mode
+    # Open CSV in append mode
     # -----------------------------
     with open(OUTPUT_CSV, mode="a", newline="", encoding="utf-8") as file:
         writer = csv.writer(file)
 
-        # -----------------------------
-        # 3️⃣ Loop over years
-        # -----------------------------
         for year in range(START_YEAR, END_YEAR + 1):
             print(f"[INFO] Fetching all games from {year}...")
             offset = 0
@@ -63,6 +60,7 @@ def main():
             print(f"[INFO] Finished fetching all games for {year}")
 
     print("[INFO] Data collection complete!")
+
 
 if __name__ == "__main__":
     main()
