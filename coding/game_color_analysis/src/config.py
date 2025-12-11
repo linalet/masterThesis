@@ -17,7 +17,7 @@ OUTPUT_CSV = os.path.join(DATA_DIR, "color_palettes.csv")
 # ==========================
 # Analysis settings
 # ==========================
-START_YEAR = 2012
+START_YEAR = 2013
 END_YEAR = 2025
 MAX_SCREENSHOTS_PER_GAME = 5    # possibly increase to 10
 COLOR_COUNT = 10                # possibly increase to 20
