@@ -1,12 +1,12 @@
-import os
-import requests
-from urllib.parse import urlparse
-from config import CLIENT_ID, ACCESS_TOKEN, SCREENSHOT_DIR, BATCH_SIZE
+"""IGDB API interaction and image downloading."""
 
-HEADERS = {
-    "Client-ID": CLIENT_ID,
-    "Authorization": f"Bearer {ACCESS_TOKEN}"
-}
+import os
+
+import requests
+from config import ACCESS_TOKEN, BATCH_SIZE, CLIENT_ID, SCREENSHOT_DIR
+
+HEADERS = {"Client-ID": CLIENT_ID, "Authorization": f"Bearer {ACCESS_TOKEN}"}
+
 
 def query_igdb(year, limit=BATCH_SIZE, offset=0):
     """
@@ -30,8 +30,9 @@ def query_igdb(year, limit=BATCH_SIZE, offset=0):
     except requests.RequestException as e:
         print(f"[ERROR] Request exception for {year} (offset {offset}): {e}")
         return []
-    
-def normalize_igdb_url(url: str) -> str:
+
+
+def normalize_igdb_url(url):
     """Normalize IGDB image URLs to ensure they are valid."""
 
     url = url.strip()
@@ -40,7 +41,7 @@ def normalize_igdb_url(url: str) -> str:
     while url.startswith("https://https://"):
         url = url.replace("https://https://", "https://")
 
-    
+    # is this redundant?
     if url.startswith("//"):
         url = "https:" + url
 
@@ -50,21 +51,19 @@ def normalize_igdb_url(url: str) -> str:
 
     return url
 
+
 def download_image(url, folder=SCREENSHOT_DIR):
     """Download a screenshot from IGDB URL if it doesn’t already exist."""
     os.makedirs(folder, exist_ok=True)
     try:
-        # Normalize the URL (IGDB changed URL format :/ )
+        # Normalize the URL (IGDB changed URL format :( )
         url = normalize_igdb_url(url)
 
         img_url = url.replace("t_thumb", "t_screenshot_big")
-        
         filename = os.path.join(folder, img_url.split("/")[-1])
-        
         # Skip download if already exists
         if os.path.exists(filename):
             return filename
-        
         img_data = requests.get(img_url, timeout=15)
         img_data.raise_for_status()
 
@@ -72,8 +71,6 @@ def download_image(url, folder=SCREENSHOT_DIR):
             f.write(img_data.content)
 
         return filename
-    
     except Exception as e:
         print(f"[ERROR] Failed to download image {url}: {e}")
         return None
-

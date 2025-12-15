@@ -1,14 +1,17 @@
+"""Main script to fetch game data and analyze color palettes from screenshots."""
 import csv
 import os
+
+import numpy as np
 import pandas as pd
-from config import START_YEAR, END_YEAR, MAX_SCREENSHOTS_PER_GAME, COLOR_COUNT, OUTPUT_CSV
-from igdb_api import query_igdb, download_image
-from color_extraction import extract_palette, cluster_palette
+from colorthief import ColorThief
+from config import END_YEAR, MAX_SCREENSHOTS_PER_GAME, OUTPUT_CSV, START_YEAR
+from igdb_api import download_image, query_igdb
+from sklearn.cluster import KMeans
+
 
 def main():
-    # -----------------------------
     # Prepare CSV
-    # -----------------------------
     if os.path.exists(OUTPUT_CSV):
         # Load existing rows to skip duplicates
         existing = pd.read_csv(OUTPUT_CSV)
@@ -20,9 +23,7 @@ def main():
             writer.writerow(["Year", "Game", "Screenshot", "Palette"])
         seen = set()
 
-    # -----------------------------
     # Open CSV in append mode
-    # -----------------------------
     with open(OUTPUT_CSV, mode="a", newline="", encoding="utf-8") as file:
         writer = csv.writer(file)
 
@@ -39,22 +40,31 @@ def main():
                     screenshots = game.get("screenshots", [])
 
                     for sc in screenshots[:MAX_SCREENSHOTS_PER_GAME]:
-                        img_path = download_image(sc["url"])
-                        if not img_path:
+                        image_path = download_image(sc["url"])
+                        if not image_path:
                             continue
 
                         # Skip if already recorded
-                        if (year, name, img_path) in seen:
+                        if (year, name, image_path) in seen:
                             continue
 
-                        # Extract palette & cluster
-                        palette = extract_palette(img_path, COLOR_COUNT)
-                        clustered_palette = cluster_palette(palette, n_clusters=5)
+                        # Get palette
+                        palette = []
+                        thief = ColorThief(image_path)
+                        palette = thief.get_palette(10)
 
+                        # Cluster palette using k-means
+                        if palette:
+                            colors = np.array(palette)
+                            kmeans = KMeans(min(5, len(colors)), random_state=42)
+                            kmeans.fit(colors)
+                            palette = [
+                                tuple(map(int, c)) for c in kmeans.cluster_centers_
+                            ]
                         # Write row
-                        writer.writerow([year, name, img_path, clustered_palette])
-                        seen.add((year, name, img_path))
-                        print(f"[INFO] Saved {name} ({year}) with palette {clustered_palette}")
+                        writer.writerow([year, name, image_path, palette])
+                        seen.add((year, name, image_path))
+                        print(f"[INFO] Saved {name} ({year}) with palette {palette}")
 
                 offset += len(games)
             print(f"[INFO] Finished fetching all games for {year}")
