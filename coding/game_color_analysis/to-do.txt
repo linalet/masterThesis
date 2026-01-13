@@ -1,0 +1,4 @@
+switch color thief to colorgram (https://github.com/obskyr/colorgram.py)
+
+
+figure out updating (once a month?)

@@ -11,7 +11,7 @@ from igdb_api import download_image, query_igdb
 from sklearn.cluster import KMeans
 
 # Analysis settings
-START_YEAR = 2013
+START_YEAR = 2013  # Tennis for two 1958
 END_YEAR = 2025
 MAX_SCREENSHOTS_PER_GAME = 5  # possibly increase to 10
 

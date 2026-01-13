@@ -60,8 +60,8 @@ def normalize_igdb_url(url):
 
 
 def download_image(url, folder=SCREENSHOT_DIR):
-    """Download a screenshot from IGDB URL if it doesn’t already exist.
-    Returns the local file path or None on failure."""
+    """Download a screenshot from IGDB URL, only if it doesn’t already exist.
+    Returns the local file path or None."""
 
     os.makedirs(folder, exist_ok=True)
 
