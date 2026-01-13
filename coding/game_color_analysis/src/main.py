@@ -1,13 +1,23 @@
 """Main script to fetch game data and analyze color palettes from screenshots."""
+
 import csv
 import os
 
 import numpy as np
 import pandas as pd
 from colorthief import ColorThief
-from config import END_YEAR, MAX_SCREENSHOTS_PER_GAME, OUTPUT_CSV, START_YEAR
+
 from igdb_api import download_image, query_igdb
 from sklearn.cluster import KMeans
+
+# Analysis settings
+START_YEAR = 2013
+END_YEAR = 2025
+MAX_SCREENSHOTS_PER_GAME = 5  # possibly increase to 10
+
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_DIR = os.path.join(ROOT_DIR, "data")
+OUTPUT_CSV = os.path.join(DATA_DIR, "color_palettes.csv")
 
 
 def main():
@@ -58,9 +68,7 @@ def main():
                             colors = np.array(palette)
                             kmeans = KMeans(min(5, len(colors)), random_state=42)
                             kmeans.fit(colors)
-                            palette = [
-                                tuple(map(int, c)) for c in kmeans.cluster_centers_
-                            ]
+                            palette = [tuple(map(int, c)) for c in kmeans.cluster_centers_]
                         # Write row
                         writer.writerow([year, name, image_path, palette])
                         seen.add((year, name, image_path))

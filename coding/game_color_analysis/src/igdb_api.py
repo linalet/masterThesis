@@ -3,16 +3,28 @@
 import os
 
 import requests
-from config import URL, ACCESS_TOKEN, BATCH_SIZE, CLIENT_ID, SCREENSHOT_DIR
+
+# IGDB API credentials
+CLIENT_ID = "6k1gmqbtqyihlzrqijshniy5fs3xis"
+ACCESS_TOKEN = "z6qyehyl2ufrt16gcutyc79fwf5wn8"
+URL = "https://api.igdb.com/v4/games"
+
+# delete?
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_DIR = os.path.join(ROOT_DIR, "data")
+SCREENSHOT_DIR = os.path.join(DATA_DIR, "screenshots")
 
 HEADERS = {"Client-ID": CLIENT_ID, "Authorization": f"Bearer {ACCESS_TOKEN}"}
 
 
-def query_igdb(year, limit=BATCH_SIZE, offset=0):
+def query_igdb(year, limit=500, offset=0):
     """
     Query games released in a given year. Download screenshots.
     Using pagination to fetch all available games.
     Returns an empty list on failure, list of game dicts on success.
+    year: int - release year to query
+    limit: int - batchsize from IGDB (default 500)
+    offset: int - pagination offset
     """
     query = f"""
     fields name, release_dates.y, screenshots.url;
