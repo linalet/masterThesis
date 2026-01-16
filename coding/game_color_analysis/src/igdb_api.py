@@ -21,7 +21,7 @@ def query_igdb(year, limit=500, offset=0):
     """
     Query games released in a given year. Download screenshots.
     Using pagination to fetch all available games.
-    Returns an empty list on failure, list of game dicts on success.
+    Returns a dictionary of games, empty list on failure.
     year: int - release year to query
     limit: int - batchsize from IGDB (default 500)
     offset: int - pagination offset
