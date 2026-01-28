@@ -14,7 +14,7 @@ from sklearn.cluster import KMeans
 # -----------------------------
 # Config
 # -----------------------------
-DATA_CSV = r"C:\Users\nina\Documents\UNI\SEM\thesis\coding\game_color_analysis\src\processed_color_data.csv"
+DATA_CSV = r"C:\Users\nina\Documents\UNI\SEM\thesis\coding\game_color_analysis\data\processed_color_data.csv"
 PAGE_SIZE = 12
 TOP_COLORS = 10
 CLUSTER_COLORS = 8

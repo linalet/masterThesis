@@ -6,20 +6,19 @@ import os
 import numpy as np
 import pandas as pd
 
-# from colorthief import ColorThief
 import colorgram
 
 from igdb_api import download_image, query_igdb
 from sklearn.cluster import KMeans
 
 # Analysis settings
-START_YEAR = 2013  # Tennis for two 1958
+START_YEAR = 1950  # Tennis for two 1958 OXO? 1952?
 END_YEAR = 2025
-MAX_SCREENSHOTS_PER_GAME = 5  # possibly increase to 10
+MAX_SCREENSHOTS_PER_GAME = 3  # possibly increase to 10
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(ROOT_DIR, "data")
-OUTPUT_CSV = os.path.join(DATA_DIR, "color_palettes.csv")
+OUTPUT_CSV = os.path.join(DATA_DIR, "game_info.csv")
 
 
 def main():
@@ -32,7 +31,7 @@ def main():
         # Create new CSV with header
         with open(OUTPUT_CSV, mode="w", newline="", encoding="utf-8") as file:
             writer = csv.writer(file)
-            writer.writerow(["Year", "Game", "Screenshot", "Palette"])
+            writer.writerow(["Year", "Decade", "Game", "Screenshot", "Genres", "Themes", "Palette"])
         processed = set()
 
     # Open CSV in append mode
@@ -73,9 +72,21 @@ def main():
                             palette = [tuple(map(int, c)) for c in kmeans.cluster_centers_]
 
                         # Write row
-                        writer.writerow([year, name, image_path, palette])
+                        writer.writerow(
+                            [
+                                year,
+                                year // 10 * 10,
+                                name,
+                                image_path,
+                                game.get("genres", "Unknown"),
+                                game.get("themes", "Unknown"),
+                                palette,
+                            ]
+                        )
                         processed.add((year, name, image_path))
-                        print(f"[INFO] Saved {name} ({year}) with palette {palette}")
+                        print(
+                            f"[INFO] Saved {name} ({year})"  # , genres: {game.get('genres', 'Unknown')}, themes: {game.get('themes', 'Unknown')}"
+                        )
 
                 offset += len(games)
             print(f"[INFO] Finished fetching all games for {year}")

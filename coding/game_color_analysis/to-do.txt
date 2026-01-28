@@ -1,4 +1,14 @@
-switch color thief to colorgram (https://github.com/obskyr/colorgram.py)
+image downloaded wrong -> palette extraction fails
 
+analyze data
 
+design and plan app
+
+build Streamlit app
+-   checkmarks, expander: ukaz/schovaj data
+-   selectbox: vyber moznost
+-   sidebar: organizacia
+-   st.progress() for loading/progress bar
 figure out updating (once a month?)
+
+themeing, fonts, colors
