@@ -6,7 +6,8 @@ import os
 import numpy as np
 import pandas as pd
 
-import colorgram
+# import colorgram
+import fast_colorthief
 
 from igdb_api import download_image, query_igdb
 from sklearn.cluster import KMeans
@@ -62,11 +63,11 @@ def main():
 
                         # Get palette
                         palette = []
-                        colors = colorgram.extract(image_path, 10)
+                        palette = fast_colorthief.get_palette(image_path, color_count=10, quality=5)
 
                         # Cluster palette using k-means
-                        if colors:
-                            colors = np.array([[c.rgb.r, c.rgb.g, c.rgb.b] for c in colors])
+                        if palette:
+                            colors = np.array(palette)
                             kmeans = KMeans(min(5, len(colors)), random_state=42)
                             kmeans.fit(colors)
                             palette = [tuple(map(int, c)) for c in kmeans.cluster_centers_]
