@@ -13,7 +13,7 @@ from igdb_api import download_image, query_igdb
 from sklearn.cluster import KMeans
 
 # Analysis settings
-START_YEAR = 1950  # Tennis for two 1958 OXO? 1952?
+START_YEAR = 2009  # 1950  # Tennis for two 1958 OXO? 1952?
 END_YEAR = 2025
 MAX_SCREENSHOTS_PER_GAME = 3  # possibly increase to 10
 
@@ -63,13 +63,20 @@ def main():
 
                         # Get palette
                         palette = []
-                        palette = fast_colorthief.get_palette(image_path, color_count=10, quality=5)
+                        try:
+                            palette = fast_colorthief.get_palette(
+                                image_path, color_count=10, quality=5
+                            )
+                        # colorgram throws error on completely white images
+                        except RuntimeError as e:
+                            print(f"[ERROR] Failed to extract palette from {image_path}: {e}")
 
                         # Cluster palette using k-means
                         if palette:
                             colors = np.array(palette)
-                            kmeans = KMeans(min(5, len(colors)), random_state=42)
-                            kmeans.fit(colors)
+                            kmeans = KMeans(n_clusters=min(5, len(colors)), random_state=42).fit(
+                                colors
+                            )
                             palette = [tuple(map(int, c)) for c in kmeans.cluster_centers_]
 
                         # Write row

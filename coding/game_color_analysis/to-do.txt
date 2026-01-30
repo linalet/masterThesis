@@ -1,4 +1,5 @@
 image downloaded wrong -> palette extraction fails
+all white image -> runtime error
 
 analyze data
 
