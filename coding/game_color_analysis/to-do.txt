@@ -1,6 +1,7 @@
 image downloaded wrong -> palette extraction fails
 all white image -> runtime error
 
+make palettes a set? save by games not screenshot - merge 
 analyze data
 
 design and plan app
