@@ -5,15 +5,17 @@ import os
 
 import numpy as np
 import pandas as pd
-
-# import colorgram
-import fast_colorthief
-
-from igdb_api import download_image, query_igdb
 from sklearn.cluster import KMeans
 
+# import colorgram
+import fast_colorthief  # doesnt work wit 3.14
+# from colorthief import ColorThief
+
+from igdb_api import download_image, query_igdb
+
+
 # Analysis settings
-START_YEAR = 2015  # 1950  # Tennis for two 1958 OXO? 1952?
+START_YEAR = 2023  # 1950  # Tennis for two 1958 OXO? 1952?
 END_YEAR = 2025
 MAX_SCREENSHOTS_PER_GAME = 3  # possibly increase to 10
 
@@ -63,10 +65,13 @@ def main():
 
                         # Get palette
                         palette = []
+                        # color_thief = ColorThief(image_path)
                         try:
                             palette = fast_colorthief.get_palette(
                                 image_path, color_count=10, quality=5
                             )
+                            # palette = color_thief.get_palette(color_count=10, quality=5)
+
                         # colorgram throws error on completely white images
                         except RuntimeError as e:
                             print(f"[ERROR] Failed to extract palette from {image_path}: {e}")
