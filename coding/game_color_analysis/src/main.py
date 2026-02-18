@@ -8,7 +8,7 @@ import pandas as pd
 from sklearn.cluster import KMeans
 
 # import colorgram
-import fast_colorthief  # doesnt work wit 3.14
+# import fast_colorthief  # doesnt work wit 3.14
 # from colorthief import ColorThief
 
 from igdb_api import download_image, query_igdb
