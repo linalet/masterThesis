@@ -15,7 +15,7 @@ from igdb_api import download_image, query_igdb
 
 
 # Analysis settings
-START_YEAR = 1950  # 1950  # Tennis for two 1958? OXO 1952?
+START_YEAR = 2023  # 1950  # Tennis for two 1958? OXO 1952?
 END_YEAR = 2025
 MAX_SCREENSHOTS_PER_GAME = 3  # possibly increase to 10
 
@@ -89,7 +89,6 @@ def main():
                         genres = [] if genres == "Unknown" else [g["name"] for g in genres]
                         themes = game.get("themes", [])
                         themes = [] if themes == "Unknown" else [t["name"] for t in themes]
-                        print(type(themes[0]), type(palette[0]))
                         # Write row
                         writer.writerow(
                             [
