@@ -22,7 +22,8 @@ MAX_SCREENSHOTS_PER_GAME = 3  # possibly increase to 10
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(ROOT_DIR, "data")
 # OUTPUT_CSV = os.path.join(DATA_DIR, "game_info.csv")
-OUTPUT_CSV = os.path.join(DATA_DIR, "new_game_info.csv")
+# OUTPUT_CSV = os.path.join(DATA_DIR, "new_game_info.csv")
+OUTPUT_CSV = os.path.join(DATA_DIR, "game_data.csv")
 
 
 def main():
