@@ -2,21 +2,17 @@
 
 import csv
 import os
-
 import numpy as np
 import pandas as pd
+from PIL import Image
 from sklearn.cluster import KMeans
-
-# import colorgram
-# import fast_colorthief  # doesnt work wit 3.14
-# from colorthief import ColorThief
 
 from igdb_api import download_image, query_igdb
 
 
 # Analysis settings
-START_YEAR = 1950  # 1950  # Tennis for two 1958? OXO 1952?
-END_YEAR = 2025
+START_YEAR = 2005  # 1950  # Tennis for two 1958? OXO 1952?
+END_YEAR = 2005
 MAX_SCREENSHOTS_PER_GAME = 3  # possibly increase to 10
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -26,17 +22,62 @@ DATA_DIR = os.path.join(ROOT_DIR, "data")
 OUTPUT_CSV = os.path.join(DATA_DIR, "game_data.csv")
 
 
+# TODO try to rewrite
+def get_palette(image_path, n_clusters=5):
+    try:
+        with Image.open(image_path) as img:
+            img = img.convert("RGB")
+            # Make img smaller for fast processing -> colors not details
+            img = img.resize((50, 50))
+            # matrix to array for KMeans
+            pixels = np.array(img).reshape(-1, 3)
+
+        kmeans = KMeans(n_clusters=n_clusters, n_init=1, max_iter=10, random_state=42).fit(pixels)
+        raw_colors = kmeans.cluster_centers_
+
+        processed_palette = []
+        for color in raw_colors:
+            r, g, b = map(int, color)
+
+            # Grey correction for B&W images
+            if abs(r - g) < 10 and abs(g - b) < 10 and abs(r - b) < 10:
+                avg = (r + g + b) // 3
+                r, g, b = avg, avg, avg
+
+            # Merge blacks and whites
+            if r < 35 and g < 35 and b < 35:
+                r, g, b = 0, 0, 0
+            if r > 220 and g > 220 and b > 220:
+                r, g, b = 255, 255, 255
+
+            # Merge similar colors (quantization)
+            r, g, b = (round(x / 10) * 10 for x in (r, g, b))
+            processed_palette.append((r, g, b))
+
+        return list(set(processed_palette))
+
+    except Exception as e:
+        print(f"[ERROR] Failed to extract palette from {image_path}: {e}")
+        return []
+
+
 def main():
     # Prepare CSV
+    color_headers = []
+    for i in range(1, 6):
+        color_headers.extend([f"C{i}_R", f"C{i}_G", f"C{i}_B"])
+    header = ["Year", "Decade", "Game", "Screenshot", "Genres", "Themes"] + color_headers
+
     if os.path.exists(OUTPUT_CSV):
         # Load existing rows to skip duplicates
         current_csv = pd.read_csv(OUTPUT_CSV)
-        processed = set(zip(current_csv["Year"], current_csv["Game"], current_csv["Screenshot"]))
+        processed = set(current_csv["Screenshot"].astype(str).tolist())
     else:
         # Create new CSV with header
+        # os.makedirs(DATA_DIR, exist_ok=True)
         with open(OUTPUT_CSV, mode="w", newline="", encoding="utf-8") as file:
             writer = csv.writer(file)
-            writer.writerow(["Year", "Decade", "Game", "Screenshot", "Genres", "Themes", "Palette"])
+            writer.writerow(header)
         processed = set()
 
     # Open CSV in append mode
@@ -44,7 +85,7 @@ def main():
         writer = csv.writer(file)
 
         for year in range(START_YEAR, END_YEAR + 1):
-            print(f"[INFO] Fetching all games from {year}...")
+            print(f"[INFO] Getting games from {year}...")
             offset = 0
             while True:
                 games = query_igdb(year, offset=offset)
@@ -57,40 +98,32 @@ def main():
 
                     for screen in screenshots[:MAX_SCREENSHOTS_PER_GAME]:
                         image_path = download_image(screen["url"])
-                        # Skip if download failed
-                        if not image_path:
-                            continue
-
-                        # Skip if already recorded
-                        if (year, name, image_path) in processed:
+                        # Skip if download failed or already recorded
+                        if not image_path or image_path in processed:
                             continue
 
                         # Get palette
-                        palette = []
-                        # color_thief = ColorThief(image_path)
-                        try:
-                            palette = fast_colorthief.get_palette(
-                                image_path, color_count=10, quality=5
-                            )
-                            # palette = color_thief.get_palette(color_count=10, quality=5)
-
-                        # colorgram throws error on completely white images
-                        except RuntimeError as e:
-                            print(f"[ERROR] Failed to extract palette from {image_path}: {e}")
-
-                        # Cluster palette using k-means
-                        if palette:
-                            colors = np.array(palette)
-                            kmeans = KMeans(n_clusters=min(5, len(colors)), random_state=42).fit(
-                                colors
-                            )
-                            palette = [tuple(map(int, c)) for c in kmeans.cluster_centers_]
-
+                        # palette = []
+                        palette = get_palette(image_path, n_clusters=5)
+                        color_data = []
+                        for i in range(5):
+                            if i < len(palette):
+                                r, g, b = palette[i]
+                                color_data.extend([r, g, b])
+                            else:
+                                color_data.extend([None, None, None])
                         genres = game.get("genres", [])
-                        genres = [] if genres == "Unknown" else [g["name"] for g in genres]
+                        genres_str = (
+                            "|".join([g["name"] for g in genres])
+                            if isinstance(genres, list)
+                            else ""
+                        )
                         themes = game.get("themes", [])
-                        themes = [] if themes == "Unknown" else [t["name"] for t in themes]
-                        print(type(themes[0]), type(palette[0]))
+                        themes_str = (
+                            "|".join([t["name"] for t in themes])
+                            if isinstance(themes, list)
+                            else ""
+                        )
                         # Write row
                         writer.writerow(
                             [
@@ -98,18 +131,18 @@ def main():
                                 year // 10 * 10,
                                 name,
                                 image_path,
-                                genres,
-                                themes,
+                                genres_str,
+                                themes_str,
                                 palette,
                             ]
                         )
-                        processed.add((year, name, image_path))
+                        processed.add(image_path)
                         print(
                             f"[INFO] Saved {name} ({year})"  # , genres: {game.get('genres', 'Unknown')}, themes: {game.get('themes', 'Unknown')}"
                         )
 
                 offset += len(games)
-            print(f"[INFO] Finished fetching all games for {year}")
+            print(f"[INFO] Finished all games for {year}")
 
     print("[INFO] Data collection complete!")
 

@@ -66,7 +66,7 @@ def download_image(url, folder=SCREENSHOT_DIR):
     os.makedirs(folder, exist_ok=True)
 
     url = normalize_igdb_url(url)
-    img_url = url.replace("t_thumb", "t_screenshot_big")
+    img_url = url.replace("t_thumb", "t_screenshot_big")  # t_720p instead?
     filename = os.path.join(folder, img_url.split("/")[-1])
 
     # Skip download if already exists
