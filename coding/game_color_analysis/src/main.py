@@ -11,54 +11,47 @@ from igdb_api import download_image, query_igdb
 
 
 # Analysis settings
-START_YEAR = 2005  # 1950  # Tennis for two 1958? OXO 1952?
-END_YEAR = 2005
+START_YEAR = 1995  # 1950  # Tennis for two 1958? OXO 1952?
+END_YEAR = 1995
 MAX_SCREENSHOTS_PER_GAME = 3  # possibly increase to 10
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(ROOT_DIR, "data")
-# OUTPUT_CSV = os.path.join(DATA_DIR, "game_info.csv")
 # OUTPUT_CSV = os.path.join(DATA_DIR, "new_game_info.csv")
 OUTPUT_CSV = os.path.join(DATA_DIR, "game_data.csv")
 
 
-# TODO try to rewrite
 def get_palette(image_path, n_clusters=5):
-    try:
-        with Image.open(image_path) as img:
-            img = img.convert("RGB")
-            # Make img smaller for fast processing -> colors not details
-            img = img.resize((50, 50))
-            # matrix to array for KMeans
-            pixels = np.array(img).reshape(-1, 3)
+    with Image.open(image_path) as img:
+        img = img.convert("RGB")
+        # Make img smaller for fast processing -> colors not details
+        img = img.resize((50, 50))
+        # matrix to array for KMeans
+        pixels = np.array(img).reshape(-1, 3)
 
-        kmeans = KMeans(n_clusters=n_clusters, n_init=1, max_iter=10, random_state=42).fit(pixels)
-        raw_colors = kmeans.cluster_centers_
+    kmeans = KMeans(n_clusters=n_clusters, n_init=1, max_iter=10, random_state=42).fit(pixels)
+    raw_colors = kmeans.cluster_centers_
 
-        processed_palette = []
-        for color in raw_colors:
-            r, g, b = map(int, color)
+    palette = []
+    for color in raw_colors:
+        r, g, b = map(int, color)
 
-            # Grey correction for B&W images
-            if abs(r - g) < 10 and abs(g - b) < 10 and abs(r - b) < 10:
-                avg = (r + g + b) // 3
-                r, g, b = avg, avg, avg
+        # Grey correction for B&W images
+        if abs(r - g) < 10 and abs(r - b) < 10 and abs(g - b) < 10:
+            avg = (r + g + b) // 3
+            r, g, b = avg, avg, avg
 
-            # Merge blacks and whites
-            if r < 35 and g < 35 and b < 35:
-                r, g, b = 0, 0, 0
-            if r > 220 and g > 220 and b > 220:
-                r, g, b = 255, 255, 255
+        # Merge blacks and whites
+        if r < 35 and g < 35 and b < 35:
+            r, g, b = 0, 0, 0
+        if r > 220 and g > 220 and b > 220:
+            r, g, b = 255, 255, 255
 
-            # Merge similar colors (quantization)
-            r, g, b = (round(x / 10) * 10 for x in (r, g, b))
-            processed_palette.append((r, g, b))
+        # Merge similar colors (quantization)
+        r, g, b = (round(x / 10) * 10 for x in (r, g, b))
+        palette.append((r, g, b))
 
-        return list(set(processed_palette))
-
-    except Exception as e:
-        print(f"[ERROR] Failed to extract palette from {image_path}: {e}")
-        return []
+    return list(set(palette))
 
 
 def main():
@@ -74,7 +67,7 @@ def main():
         processed = set(current_csv["Screenshot"].astype(str).tolist())
     else:
         # Create new CSV with header
-        # os.makedirs(DATA_DIR, exist_ok=True)
+        os.makedirs(DATA_DIR, exist_ok=True)
         with open(OUTPUT_CSV, mode="w", newline="", encoding="utf-8") as file:
             writer = csv.writer(file)
             writer.writerow(header)
@@ -103,7 +96,6 @@ def main():
                             continue
 
                         # Get palette
-                        # palette = []
                         palette = get_palette(image_path, n_clusters=5)
                         color_data = []
                         for i in range(5):
@@ -112,34 +104,17 @@ def main():
                                 color_data.extend([r, g, b])
                             else:
                                 color_data.extend([None, None, None])
-                        genres = game.get("genres", [])
-                        genres_str = (
-                            "|".join([g["name"] for g in genres])
-                            if isinstance(genres, list)
-                            else ""
-                        )
+                        genres = game.get("genres") or []
+                        genres_str = "|".join(g["name"] for g in genres if "name" in g)
                         themes = game.get("themes", [])
-                        themes_str = (
-                            "|".join([t["name"] for t in themes])
-                            if isinstance(themes, list)
-                            else ""
-                        )
+                        themes_str = "|".join(t["name"] for t in themes if "name" in t)
                         # Write row
                         writer.writerow(
-                            [
-                                year,
-                                year // 10 * 10,
-                                name,
-                                image_path,
-                                genres_str,
-                                themes_str,
-                                palette,
-                            ]
+                            [year, year // 10 * 10, name, image_path, genres_str, themes_str]
+                            + color_data
                         )
                         processed.add(image_path)
-                        print(
-                            f"[INFO] Saved {name} ({year})"  # , genres: {game.get('genres', 'Unknown')}, themes: {game.get('themes', 'Unknown')}"
-                        )
+                        print(f"[INFO] Saved {name} ({year})")
 
                 offset += len(games)
             print(f"[INFO] Finished all games for {year}")
