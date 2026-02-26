@@ -11,9 +11,9 @@ from igdb_api import download_image, query_igdb
 
 
 # Analysis settings
-START_YEAR = 1995  # 1950  # Tennis for two 1958? OXO 1952?
-END_YEAR = 1995
-MAX_SCREENSHOTS_PER_GAME = 3  # possibly increase to 10
+START_YEAR = 2025  # 1950  # Tennis for two 1958? OXO 1952?
+END_YEAR = 2025
+MAX_SCREENSHOTS_PER_GAME = 5  # possibly increase to 10
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(ROOT_DIR, "data")
@@ -59,7 +59,16 @@ def main():
     color_headers = []
     for i in range(1, 6):
         color_headers.extend([f"C{i}_R", f"C{i}_G", f"C{i}_B"])
-    header = ["Year", "Decade", "Game", "Screenshot", "Genres", "Themes"] + color_headers
+    header = [
+        "Year",
+        "Decade",
+        "Game",
+        "Screenshot",
+        "Genres",
+        "Themes",
+        "Keywords",
+        "Player Perspectives",
+    ] + color_headers
 
     if os.path.exists(OUTPUT_CSV):
         # Load existing rows to skip duplicates
@@ -108,9 +117,24 @@ def main():
                         genres_str = "|".join(g["name"] for g in genres if "name" in g)
                         themes = game.get("themes", [])
                         themes_str = "|".join(t["name"] for t in themes if "name" in t)
+                        keywords = game.get("keywords", [])
+                        keywords_str = "|".join(k["name"] for k in keywords if "name" in k)
+                        player_perspectives = game.get("player_perspectives", [])
+                        player_perspectives_str = "|".join(
+                            p["name"] for p in player_perspectives if "name" in p
+                        )
                         # Write row
                         writer.writerow(
-                            [year, year // 10 * 10, name, image_path, genres_str, themes_str]
+                            [
+                                year,
+                                year // 10 * 10,
+                                name,
+                                image_path,
+                                genres_str,
+                                themes_str,
+                                keywords_str,
+                                player_perspectives_str,
+                            ]
                             + color_data
                         )
                         processed.add(image_path)
