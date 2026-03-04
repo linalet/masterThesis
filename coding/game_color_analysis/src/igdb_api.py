@@ -27,7 +27,9 @@ def query_igdb(year, limit=500, offset=0):
     offset: int - pagination offset
     """
     query = f"""
-    fields release_dates.y, name, screenshots.url, genres.name, themes.name, keywords.name, player_perspectives.name;
+    fields release_dates.y, name, screenshots.url, genres.name,
+    themes.name, keywords.name, player_perspectives.name, 
+    involved_companies.developer, involved_companies.company.name;
     where release_dates.y = {year} & screenshots != null;
     limit {limit};
     offset {offset};

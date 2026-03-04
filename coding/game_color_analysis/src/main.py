@@ -11,7 +11,8 @@ from igdb_api import download_image, query_igdb
 
 
 # Analysis settings
-START_YEAR = 2025  # 1950  # Tennis for two 1958? OXO 1952?
+START_YEAR = 2004
+# 1950  # Tennis for two 1958? OXO 1952?
 END_YEAR = 2025
 MAX_SCREENSHOTS_PER_GAME = 5  # possibly increase to 10
 
@@ -68,6 +69,7 @@ def main():
         "Themes",
         "Keywords",
         "Player Perspectives",
+        "Developers",
     ] + color_headers
 
     if os.path.exists(OUTPUT_CSV):
@@ -96,6 +98,15 @@ def main():
 
                 for game in games:
                     name = game.get("name", "Unknown")
+
+                    companies = game.get("involved_companies", [])
+                    devs = "|".join([c["company"]["name"] for c in companies if c.get("developer")])
+                    genres = "|".join(g["name"] for g in game.get("genres", []) if "name" in g)
+                    themes = "|".join(t["name"] for t in game.get("themes", []) if "name" in t)
+                    keywords = "|".join(k["name"] for k in game.get("keywords", []) if "name" in k)
+                    perspectives = "|".join(
+                        p["name"] for p in game.get("player_perspectives", []) if "name" in p
+                    )
                     screenshots = game.get("screenshots", [])
 
                     for screen in screenshots[:MAX_SCREENSHOTS_PER_GAME]:
@@ -113,16 +124,6 @@ def main():
                                 color_data.extend([r, g, b])
                             else:
                                 color_data.extend([None, None, None])
-                        genres = game.get("genres") or []
-                        genres_str = "|".join(g["name"] for g in genres if "name" in g)
-                        themes = game.get("themes", [])
-                        themes_str = "|".join(t["name"] for t in themes if "name" in t)
-                        keywords = game.get("keywords", [])
-                        keywords_str = "|".join(k["name"] for k in keywords if "name" in k)
-                        player_perspectives = game.get("player_perspectives", [])
-                        player_perspectives_str = "|".join(
-                            p["name"] for p in player_perspectives if "name" in p
-                        )
                         # Write row
                         writer.writerow(
                             [
@@ -130,10 +131,11 @@ def main():
                                 year // 10 * 10,
                                 name,
                                 image_path,
-                                genres_str,
-                                themes_str,
-                                keywords_str,
-                                player_perspectives_str,
+                                genres,
+                                themes,
+                                keywords,
+                                perspectives,
+                                devs,
                             ]
                             + color_data
                         )
