@@ -1,5 +1,5 @@
 .env
-data/
+coding/game_color_analysis/data/screenshots/
 __pycache__/
 *.pyc
 

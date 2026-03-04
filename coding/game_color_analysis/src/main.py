@@ -11,14 +11,13 @@ from igdb_api import download_image, query_igdb
 
 
 # Analysis settings
-START_YEAR = 2004
+START_YEAR = 1980
 # 1950  # Tennis for two 1958? OXO 1952?
 END_YEAR = 2025
 MAX_SCREENSHOTS_PER_GAME = 5  # possibly increase to 10
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(ROOT_DIR, "data")
-# OUTPUT_CSV = os.path.join(DATA_DIR, "new_game_info.csv")
 OUTPUT_CSV = os.path.join(DATA_DIR, "game_data.csv")
 
 
