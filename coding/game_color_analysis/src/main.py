@@ -11,7 +11,7 @@ from igdb_api import download_image, query_igdb
 
 
 # Analysis settings
-START_YEAR = 2013
+START_YEAR = 2016
 # 1950  # Tennis for two 1958? OXO 1952?
 END_YEAR = 2025
 MAX_SCREENSHOTS_PER_GAME = 5  # possibly increase to 10
@@ -19,6 +19,9 @@ MAX_SCREENSHOTS_PER_GAME = 5  # possibly increase to 10
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(ROOT_DIR, "data")
 OUTPUT_CSV = os.path.join(DATA_DIR, "game_data.csv")
+
+# List of keywords that trigger the NSFW/Censored flag for the UI
+NSFW_WORDS = ["erotica", "hentai", "nsfw", "nudity", "sexual content", "adult", "pornographic"]
 
 
 def get_palette(image_path, n_clusters=5):
@@ -32,9 +35,15 @@ def get_palette(image_path, n_clusters=5):
     kmeans = KMeans(n_clusters=n_clusters, n_init=1, max_iter=10, random_state=42).fit(pixels)
     raw_colors = kmeans.cluster_centers_
 
+    # Calculate weights (percentage of image for each color)
+    labels = kmeans.labels_
+    counts = np.bincount(labels)
+    weights = counts / len(labels)
+
     palette = []
-    for color in raw_colors:
+    for i, color in enumerate(raw_colors):
         r, g, b = map(int, color)
+        weight = float(weights[i])
 
         # Grey correction for B&W images
         if abs(r - g) < 10 and abs(r - b) < 10 and abs(g - b) < 10:
@@ -49,7 +58,7 @@ def get_palette(image_path, n_clusters=5):
 
         # Merge similar colors (quantization)
         r, g, b = (round(x / 10) * 10 for x in (r, g, b))
-        palette.append((r, g, b))
+        palette.append((r, g, b, weight))
 
     return list(set(palette))
 
@@ -69,6 +78,7 @@ def main():
         "Keywords",
         "Player Perspectives",
         "Developers",
+        "Is_NSFW",
     ] + color_headers
 
     if os.path.exists(OUTPUT_CSV):
@@ -97,15 +107,21 @@ def main():
 
                 for game in games:
                     name = game.get("name", "Unknown")
-
-                    companies = game.get("involved_companies", [])
-                    devs = "|".join([c["company"]["name"] for c in companies if c.get("developer")])
+                    devs = "|".join(
+                        [
+                            c["company"]["name"]
+                            for c in game.get("involved_companies", [])
+                            if c.get("developer")
+                        ]
+                    )
                     genres = "|".join(g["name"] for g in game.get("genres", []) if "name" in g)
                     themes = "|".join(t["name"] for t in game.get("themes", []) if "name" in t)
                     keywords = "|".join(k["name"] for k in game.get("keywords", []) if "name" in k)
                     perspectives = "|".join(
                         p["name"] for p in game.get("player_perspectives", []) if "name" in p
                     )
+                    combined_text = f"{genres} {themes} {keywords}".lower()
+                    is_nsfw = 1 if any(word in combined_text for word in NSFW_WORDS) else 0
                     screenshots = game.get("screenshots", [])
 
                     for screen in screenshots[:MAX_SCREENSHOTS_PER_GAME]:
