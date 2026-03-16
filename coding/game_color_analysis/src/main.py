@@ -11,14 +11,14 @@ from igdb_api import download_image, query_igdb
 
 
 # Analysis settings
-START_YEAR = 2016
+START_YEAR = 2025
 # 1950  # Tennis for two 1958? OXO 1952?
 END_YEAR = 2025
 MAX_SCREENSHOTS_PER_GAME = 5  # possibly increase to 10
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(ROOT_DIR, "data")
-OUTPUT_CSV = os.path.join(DATA_DIR, "game_data.csv")
+OUTPUT_CSV = os.path.join(DATA_DIR, "new_game_data.csv")
 
 # List of keywords that trigger the NSFW/Censored flag for the UI
 NSFW_WORDS = ["erotica", "hentai", "nsfw", "nudity", "sexual content", "adult", "pornographic"]
@@ -32,7 +32,11 @@ def get_palette(image_path, n_clusters=5):
         # matrix to array for KMeans
         pixels = np.array(img).reshape(-1, 3)
 
-    kmeans = KMeans(n_clusters=n_clusters, n_init=1, max_iter=10, random_state=42).fit(pixels)
+        # Handle images that are entirely one color (avoid K-Means overhead/error)
+    unique_pixels = np.unique(pixels, axis=0)
+    clusters = min(n_clusters, len(unique_pixels))
+
+    kmeans = KMeans(n_clusters=clusters, n_init=1, max_iter=10, random_state=42).fit(pixels)
     raw_colors = kmeans.cluster_centers_
 
     # Calculate weights (percentage of image for each color)
@@ -60,6 +64,8 @@ def get_palette(image_path, n_clusters=5):
         r, g, b = (round(x / 10) * 10 for x in (r, g, b))
         palette.append((r, g, b, weight))
 
+    # Sort by weight (most dominant color first)
+    palette.sort(key=lambda x: x[3], reverse=True)
     return list(set(palette))
 
 
@@ -67,7 +73,7 @@ def main():
     # Prepare CSV
     color_headers = []
     for i in range(1, 6):
-        color_headers.extend([f"C{i}_R", f"C{i}_G", f"C{i}_B"])
+        color_headers.extend([f"C{i}_R", f"C{i}_G", f"C{i}_B", f"C{i}_W"])
     header = [
         "Year",
         "Decade",
@@ -120,7 +126,7 @@ def main():
                     perspectives = "|".join(
                         p["name"] for p in game.get("player_perspectives", []) if "name" in p
                     )
-                    combined_text = f"{genres} {themes} {keywords}".lower()
+                    combined_text = f"{genres} {themes} {keywords} {name}".lower()
                     is_nsfw = 1 if any(word in combined_text for word in NSFW_WORDS) else 0
                     screenshots = game.get("screenshots", [])
 
@@ -135,10 +141,9 @@ def main():
                         color_data = []
                         for i in range(5):
                             if i < len(palette):
-                                r, g, b = palette[i]
-                                color_data.extend([r, g, b])
+                                color_data.extend(list(palette[i]))
                             else:
-                                color_data.extend([None, None, None])
+                                color_data.extend([None, None, None, 0.0])
                         # Write row
                         writer.writerow(
                             [
@@ -151,6 +156,7 @@ def main():
                                 keywords,
                                 perspectives,
                                 devs,
+                                is_nsfw,
                             ]
                             + color_data
                         )
