@@ -11,62 +11,94 @@ from igdb_api import download_image, query_igdb
 
 
 # Analysis settings
-START_YEAR = 2025
+START_YEAR = 1950
 # 1950  # Tennis for two 1958? OXO 1952?
-END_YEAR = 2025
+END_YEAR = 2026
 MAX_SCREENSHOTS_PER_GAME = 5  # possibly increase to 10
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(ROOT_DIR, "data")
-OUTPUT_CSV = os.path.join(DATA_DIR, "new_game_data.csv")
+OUTPUT_CSV = os.path.join(DATA_DIR, "test_game_data.csv")
 
 # List of keywords that trigger the NSFW/Censored flag for the UI
 NSFW_WORDS = ["erotica", "hentai", "nsfw", "nudity", "sexual content", "adult", "pornographic"]
 
 
+# def get_palette(image_path, n_clusters=5):
+#     with Image.open(image_path) as img:
+#         img = img.convert("RGB")
+#         # Make img smaller for fast processing -> colors not details
+#         img = img.resize((50, 50))
+#         # matrix to array for KMeans
+#         pixels = np.array(img).reshape(-1, 3)
+
+#         # Handle images that are entirely one color (avoid K-Means overhead/error)
+#     unique_pixels = np.unique(pixels, axis=0)
+#     clusters = min(n_clusters, len(unique_pixels))
+
+#     kmeans = KMeans(n_clusters=clusters, n_init=1, max_iter=10, random_state=42).fit(pixels)
+#     raw_colors = kmeans.cluster_centers_
+
+#     # Calculate weights (percentage of image for each color)
+#     labels = kmeans.labels_
+#     counts = np.bincount(labels)
+#     weights = counts / len(labels)
+
+#     palette = []
+#     for i, color in enumerate(raw_colors):
+#         r, g, b = map(int, color)
+#         weight = float(weights[i])
+
+#         # Grey correction for B&W images
+#         if abs(r - g) < 10 and abs(r - b) < 10 and abs(g - b) < 10:
+#             avg = (r + g + b) // 3
+#             r, g, b = avg, avg, avg
+
+#         # Merge blacks and whites
+#         if r < 35 and g < 35 and b < 35:
+#             r, g, b = 0, 0, 0
+#         if r > 220 and g > 220 and b > 220:
+#             r, g, b = 255, 255, 255
+
+#         # Merge similar colors (quantization)
+#         r, g, b = (round(x / 10) * 10 for x in (r, g, b))
+#         palette.append((r, g, b, weight))
+
+#     # Sort by weight (most dominant color first)
+#     palette.sort(key=lambda x: x[3], reverse=True)
+#     return list(set(palette))
+
+
 def get_palette(image_path, n_clusters=5):
+    """
+    Extracts a representative palette using Median Cut quantization.
+    This prevents small vibrant colors from being 'averaged' into grey mud.
+    """
     with Image.open(image_path) as img:
         img = img.convert("RGB")
-        # Make img smaller for fast processing -> colors not details
-        img = img.resize((50, 50))
-        # matrix to array for KMeans
-        pixels = np.array(img).reshape(-1, 3)
+        # Median Cut finds the most distinct color boxes in the image
+        paletted_img = img.quantize(colors=n_clusters, method=Image.Quantize.MEDIANCUT)
 
-        # Handle images that are entirely one color (avoid K-Means overhead/error)
-    unique_pixels = np.unique(pixels, axis=0)
-    clusters = min(n_clusters, len(unique_pixels))
+        # Extract the RGB values from the paletted image
+        # Pillow stores these in a flat list: [R1, G1, B1, R2, G2, B2...]
+        palette_raw = paletted_img.getpalette()[: n_clusters * 3]
+        colors = [tuple(palette_raw[i : i + 3]) for i in range(0, len(palette_raw), 3)]
 
-    kmeans = KMeans(n_clusters=clusters, n_init=1, max_iter=10, random_state=42).fit(pixels)
-    raw_colors = kmeans.cluster_centers_
+        # Calculate weights based on actual pixel counts per color index
+        color_counts = paletted_img.getcolors()
+        total_pixels = sum(count for count, index in color_counts)
 
-    # Calculate weights (percentage of image for each color)
-    labels = kmeans.labels_
-    counts = np.bincount(labels)
-    weights = counts / len(labels)
+        palette = []
+        # getcolors() returns (count, index)
+        for count, index in color_counts:
+            if index < len(colors):
+                r, g, b = colors[index]
+                weight = count / total_pixels
+                palette.append((r, g, b, weight))
 
-    palette = []
-    for i, color in enumerate(raw_colors):
-        r, g, b = map(int, color)
-        weight = float(weights[i])
-
-        # Grey correction for B&W images
-        if abs(r - g) < 10 and abs(r - b) < 10 and abs(g - b) < 10:
-            avg = (r + g + b) // 3
-            r, g, b = avg, avg, avg
-
-        # Merge blacks and whites
-        if r < 35 and g < 35 and b < 35:
-            r, g, b = 0, 0, 0
-        if r > 220 and g > 220 and b > 220:
-            r, g, b = 255, 255, 255
-
-        # Merge similar colors (quantization)
-        r, g, b = (round(x / 10) * 10 for x in (r, g, b))
-        palette.append((r, g, b, weight))
-
-    # Sort by weight (most dominant color first)
+    # Sort by weight so the most dominant color remains C1 for your graphs
     palette.sort(key=lambda x: x[3], reverse=True)
-    return list(set(palette))
+    return palette
 
 
 def main():
