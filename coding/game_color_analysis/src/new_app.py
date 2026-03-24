@@ -29,7 +29,6 @@ studio_map = {
 }
 
 
-# --- 1. DATA LOADING & TAXONOMY ---
 @st.cache_data
 def load_data():
     csv_path = os.path.join(

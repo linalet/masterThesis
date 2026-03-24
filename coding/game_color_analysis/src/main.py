@@ -2,7 +2,8 @@
 
 import csv
 import os
-import numpy as np
+
+# import numpy as np
 import pandas as pd
 from PIL import Image
 from sklearn.cluster import KMeans
@@ -11,100 +12,56 @@ from igdb_api import download_image, query_igdb
 
 
 # Analysis settings
-START_YEAR = 1950
+START_YEAR = 2015
 # 1950  # Tennis for two 1958? OXO 1952?
 END_YEAR = 2026
-MAX_SCREENSHOTS_PER_GAME = 5  # possibly increase to 10
+SCREENSHOT_COUNT = 5  # possibly increase to 10
+COLOR_COUNT = 10
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(ROOT_DIR, "data")
 OUTPUT_CSV = os.path.join(DATA_DIR, "test_game_data.csv")
 
-# List of keywords that trigger the NSFW/Censored flag for the UI
+# List of keywords to filter nsfw images
 NSFW_WORDS = ["erotica", "hentai", "nsfw", "nudity", "sexual content", "adult", "pornographic"]
-
-
-# def get_palette(image_path, n_clusters=5):
-#     with Image.open(image_path) as img:
-#         img = img.convert("RGB")
-#         # Make img smaller for fast processing -> colors not details
-#         img = img.resize((50, 50))
-#         # matrix to array for KMeans
-#         pixels = np.array(img).reshape(-1, 3)
-
-#         # Handle images that are entirely one color (avoid K-Means overhead/error)
-#     unique_pixels = np.unique(pixels, axis=0)
-#     clusters = min(n_clusters, len(unique_pixels))
-
-#     kmeans = KMeans(n_clusters=clusters, n_init=1, max_iter=10, random_state=42).fit(pixels)
-#     raw_colors = kmeans.cluster_centers_
-
-#     # Calculate weights (percentage of image for each color)
-#     labels = kmeans.labels_
-#     counts = np.bincount(labels)
-#     weights = counts / len(labels)
-
-#     palette = []
-#     for i, color in enumerate(raw_colors):
-#         r, g, b = map(int, color)
-#         weight = float(weights[i])
-
-#         # Grey correction for B&W images
-#         if abs(r - g) < 10 and abs(r - b) < 10 and abs(g - b) < 10:
-#             avg = (r + g + b) // 3
-#             r, g, b = avg, avg, avg
-
-#         # Merge blacks and whites
-#         if r < 35 and g < 35 and b < 35:
-#             r, g, b = 0, 0, 0
-#         if r > 220 and g > 220 and b > 220:
-#             r, g, b = 255, 255, 255
-
-#         # Merge similar colors (quantization)
-#         r, g, b = (round(x / 10) * 10 for x in (r, g, b))
-#         palette.append((r, g, b, weight))
-
-#     # Sort by weight (most dominant color first)
-#     palette.sort(key=lambda x: x[3], reverse=True)
-#     return list(set(palette))
 
 
 def get_palette(image_path, n_clusters=5):
     """
-    Extracts a representative palette using Median Cut quantization.
-    This prevents small vibrant colors from being 'averaged' into grey mud.
+    Gets the color palette using Median Cut.
+    Returns a list of tuples sorted by weight.
     """
-    with Image.open(image_path) as img:
-        img = img.convert("RGB")
-        # Median Cut finds the most distinct color boxes in the image
-        paletted_img = img.quantize(colors=n_clusters, method=Image.Quantize.MEDIANCUT)
+    try:
+        with Image.open(image_path) as image:
+            image = image.convert("RGB")
+            quantized_image = image.quantize(colors=n_clusters, method=Image.Quantize.MEDIANCUT)
 
-        # Extract the RGB values from the paletted image
-        # Pillow stores these in a flat list: [R1, G1, B1, R2, G2, B2...]
-        palette_raw = paletted_img.getpalette()[: n_clusters * 3]
-        colors = [tuple(palette_raw[i : i + 3]) for i in range(0, len(palette_raw), 3)]
+            # get palettes
+            raw_palette = quantized_image.getpalette()[: n_clusters * 3]
+            colors = [tuple(raw_palette[i : i + 3]) for i in range(0, len(raw_palette), 3)]
 
-        # Calculate weights based on actual pixel counts per color index
-        color_counts = paletted_img.getcolors()
-        total_pixels = sum(count for count, index in color_counts)
+            color_counts = quantized_image.getcolors()
+            pixel_count = sum(count for count, index in color_counts)
 
-        palette = []
-        # getcolors() returns (count, index)
-        for count, index in color_counts:
-            if index < len(colors):
-                r, g, b = colors[index]
-                weight = count / total_pixels
-                palette.append((r, g, b, weight))
+            # calculate weights
+            palette = []
+            for count, index in color_counts:
+                if index < len(colors):
+                    r, g, b = colors[index]
+                    weight = count / pixel_count
+                    palette.append((r, g, b, weight))
 
-    # Sort by weight so the most dominant color remains C1 for your graphs
-    palette.sort(key=lambda x: x[3], reverse=True)
-    return palette
+        palette.sort(key=lambda x: x[3], reverse=True)
+        return palette
+    except Exception as e:
+        print(f"[ERROR] Could not process {image_path}: {e}")
+        return []
 
 
 def main():
     # Prepare CSV
     color_headers = []
-    for i in range(1, 6):
+    for i in range(1, COLOR_COUNT + 1):
         color_headers.extend([f"C{i}_R", f"C{i}_G", f"C{i}_B", f"C{i}_W"])
     header = [
         "Year",
@@ -114,24 +71,22 @@ def main():
         "Genres",
         "Themes",
         "Keywords",
-        "Player Perspectives",
+        # "Player Perspectives",
         "Developers",
         "Is_NSFW",
     ] + color_headers
 
     if os.path.exists(OUTPUT_CSV):
-        # Load existing rows to skip duplicates
-        current_csv = pd.read_csv(OUTPUT_CSV)
+        # Skip processed screenshots
+        current_csv = pd.read_csv(OUTPUT_CSV, low_memory=False)
         processed = set(current_csv["Screenshot"].astype(str).tolist())
     else:
-        # Create new CSV with header
         os.makedirs(DATA_DIR, exist_ok=True)
         with open(OUTPUT_CSV, mode="w", newline="", encoding="utf-8") as file:
             writer = csv.writer(file)
             writer.writerow(header)
         processed = set()
 
-    # Open CSV in append mode
     with open(OUTPUT_CSV, mode="a", newline="", encoding="utf-8") as file:
         writer = csv.writer(file)
 
@@ -142,7 +97,7 @@ def main():
                 games = query_igdb(year, offset=offset)
                 if not games:
                     break  # no more games
-
+                # get data
                 for game in games:
                     name = game.get("name", "Unknown")
                     devs = "|".join(
@@ -162,21 +117,19 @@ def main():
                     is_nsfw = 1 if any(word in combined_text for word in NSFW_WORDS) else 0
                     screenshots = game.get("screenshots", [])
 
-                    for screen in screenshots[:MAX_SCREENSHOTS_PER_GAME]:
+                    for screen in screenshots[:SCREENSHOT_COUNT]:
                         image_path = download_image(screen["url"])
                         # Skip if download failed or already recorded
                         if not image_path or image_path in processed:
                             continue
 
-                        # Get palette
-                        palette = get_palette(image_path, n_clusters=5)
+                        palette = get_palette(image_path, n_clusters=COLOR_COUNT)
                         color_data = []
-                        for i in range(5):
+                        for i in range(COLOR_COUNT):
                             if i < len(palette):
                                 color_data.extend(list(palette[i]))
                             else:
                                 color_data.extend([None, None, None, 0.0])
-                        # Write row
                         writer.writerow(
                             [
                                 year,
@@ -186,7 +139,7 @@ def main():
                                 genres,
                                 themes,
                                 keywords,
-                                perspectives,
+                                # perspectives,
                                 devs,
                                 is_nsfw,
                             ]
