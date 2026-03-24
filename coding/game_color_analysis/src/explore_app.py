@@ -29,7 +29,6 @@ studio_map = {
 }
 
 
-# --- 1. DATA LOADING & TAXONOMY ---
 @st.cache_data
 def load_data():
     csv_path = os.path.join(
@@ -186,6 +185,8 @@ page = st.sidebar.radio(
         "Genre Timelines",
         "Aesthetic Mapping",
         "Game Search",
+        "Game Search MIX",
+        "game search 3.0",
         "Innovation & Impact",
     ],
 )
@@ -657,41 +658,228 @@ elif page == "Aesthetic Mapping":
 
 elif page == "Game Search":
     st.header("🔍 Individual Game Analysis")
+    st.write("Search for a game to see its aggregated visual identity across all screenshots.")
 
-    # FIX 1: Use unique names to avoid the "multiple Orions" problem
+    # 1. Use .unique() to fix the duplicate game name issue
     unique_games = sorted(df["Game"].unique())
-    selected_game = st.selectbox("Search for a game:", unique_games)
+    selected_game = st.selectbox("Select a game from your dataset:", unique_games)
 
     if selected_game:
-        # Filter rows for the selected game
+        # 2. Filter data for THIS specific game
         game_rows = df[df["Game"] == selected_game]
 
-        st.subheader(f"Results for {selected_game}")
+        col1, col2 = st.columns([1, 2])
 
-        # FIX 2: Aggregate across all screenshots for a "Game Palette"
-        game_palette = []
-        for i in range(1, 11):  # Loop through all 10 color slots
-            # Average the colors across all 5 screenshots
-            r = game_rows[f"C{i}_R"].mean()
-            g = game_rows[f"C{i}_G"].mean()
-            b = game_rows[f"C{i}_B"].mean()
-            w = game_rows[f"C{i}_W"].mean()
-            if not pd.isna(r):
-                game_palette.append((r, g, b, w))
+        with col1:
+            st.write(f"### Metadata")
+            st.write(f"**Year:** {game_rows.iloc[0]['Year']}")
+            st.write(f"**Studio:** {game_rows.iloc[0]['Developers'].title()}")
+            st.write(f"**Style:** {game_rows.iloc[0]['Art_Style']}")
+            st.write(f"**Screenshots Analyzed:** {len(game_rows)}")
 
-        # Sort by most dominant
-        game_palette.sort(key=lambda x: x[3], reverse=True)
+        with col2:
+            st.write("### Aggregated Game Palette")
+            st.caption("Averaged colors across all game screenshots (Weighted by dominance)")
 
-        # Draw the aggregated palette bar
-        html_bar = '<div style="display: flex; height: 100px; border-radius: 10px; overflow: hidden; border: 1px solid #444;">'
-        for r, g, b, w in game_palette:
-            if w > 0:
-                html_bar += f'<div style="background-color:rgb({int(r)},{int(g)},{int(b)}); flex:{w};" title="Weight: {w:.1%}"></div>'
-        html_bar += "</div>"
-        st.markdown(html_bar, unsafe_allow_html=True)
+            # 3. Aggregate colors. We iterate 1-10 because main.py now has 10 colors.
+            game_pal_list = []
+            for i in range(1, 11):
+                # We calculate the average R, G, B, and Weight for each cluster slot across all rows
+                r = game_rows[f"C{i}_R"].mean()
+                g = game_rows[f"C{i}_G"].mean()
+                b = game_rows[f"C{i}_B"].mean()
+                w = game_rows[f"C{i}_W"].mean()
+                if not pd.isna(r):
+                    game_pal_list.append((r, g, b, w))
 
-        # Show screenshots below
-        st.write("### Screenshots analyzed:")
-        cols = st.columns(len(game_rows))
-        for idx, row in enumerate(game_rows.itertuples()):
-            cols[idx].image(row.Screenshot, use_container_width=True)
+            # Sort by weight so most important colors are first
+            game_pal_list.sort(key=lambda x: x[3], reverse=True)
+
+            # 4. Draw the Palette Bar
+            html_bar = '<div style="display: flex; height: 80px; border-radius: 10px; overflow: hidden; border: 2px solid #555;">'
+            for r, g, b, w in game_pal_list:
+                if w > 0:
+                    html_bar += f'<div style="background-color:rgb({int(r)},{int(g)},{int(b)}); flex:{w};" title="Weight: {w:.1%}"></div>'
+            html_bar += "</div>"
+            st.markdown(html_bar, unsafe_allow_html=True)
+
+        st.divider()
+
+        # 5. Show the individual screenshots analyzed
+        st.write("### Source Screenshots")
+        img_cols = st.columns(len(game_rows))
+        for i, row in enumerate(game_rows.itertuples()):
+            img_cols[i].image(row.Screenshot, use_container_width=True)
+            # Mini palette for each individual screen
+            mini_pal = ""
+            for j in range(1, 6):  # Just show first 5 for the small preview
+                r, g, b = getattr(row, f"C{j}_R"), getattr(row, f"C{j}_G"), getattr(row, f"C{j}_B")
+                if not pd.isna(r):
+                    mini_pal += f'<div style="background-color:rgb({int(r)},{int(g)},{int(b)}); height:10px; flex:1;"></div>'
+            img_cols[i].markdown(
+                f'<div style="display:flex;">{mini_pal}</div>', unsafe_allow_html=True
+            )
+elif page == "game search 3.0":
+    st.header("🔍 Individual Game Analysis")
+    st.write("Search for a specific title to extract its unique visual DNA and metadata.")
+
+    # Search Bar with Autocomplete-like behavior
+    search_query = st.text_input("Type game name:", placeholder="e.g. Super Mario World").lower()
+
+    if search_query:
+        # Filter for the specific game
+        game_data = df[df["Game"].str.contains(search_query, case=False, na=False)]
+
+        if not game_data.empty:
+            # Handle multiple results by letting the user select the exact one
+            if len(game_data) > 1:
+                st.warning(f"Found {len(game_data)} matches. Please refine your selection:")
+                selected_game_name = st.selectbox(
+                    "Select the exact game:", game_data["Game"].tolist()
+                )
+                selected_game = game_data[game_data["Game"] == selected_game_name].iloc[0]
+            else:
+                selected_game = game_data.iloc[0]
+
+            st.divider()
+
+            # --- DISPLAY SECTION ---
+            col1, col2 = st.columns([1, 2])
+
+            with col1:
+                if "Screenshot" in selected_game and pd.notna(selected_game["Screenshot"]):
+                    st.image(selected_game["Screenshot"], use_container_width=True)
+                else:
+                    st.info("No image available for this title.")
+
+                # Technical Visual Specs
+                st.subheader("📊 Visual Specs")
+                st.metric("Luminance (Brightness)", f"{selected_game['luminance'] * 100:.1f}%")
+                st.metric("Saturation (Vibrancy)", f"{selected_game['saturation']:.1f}")
+
+            with col2:
+                st.title(selected_game["Game"].title())
+
+                # Metadata Grid
+                m_col1, m_col2 = st.columns(2)
+                with m_col1:
+                    st.markdown(f"**📅 Year:** {selected_game['Year']}")
+                    st.markdown(
+                        f"**🏢 Developer:** {selected_game['Developers'].replace('|', ', ').title()}"
+                    )
+                    st.markdown(f"**🎨 Art Style:** {selected_game['Art_Style']}")
+
+                with m_col2:
+                    st.markdown(
+                        f"**🕹️ Genres:** {selected_game['Genres'].replace('|', ', ').title()}"
+                    )
+                    st.markdown(
+                        f"**🎭 Themes:** {selected_game['Themes'].replace('|', ', ').title()}"
+                    )
+
+                # Game-Specific Palette Generation
+                st.subheader("🎨 Representative Palette")
+                # We use the existing engine but pass only this single game's data
+                game_subset = df[df["Game"] == selected_game["Game"]]
+                game_pal = get_representative_palette(game_subset, count=5)
+
+                html_pal = '<div style="display: flex; height: 80px; border-radius: 10px; overflow: hidden; border: 2px solid #444; margin-top: 10px;">'
+                for color in game_pal:
+                    html_pal += (
+                        f'<div style="background-color:{color}; flex:1;" title="{color}"></div>'
+                    )
+                html_pal += "</div>"
+                st.markdown(html_pal, unsafe_allow_html=True)
+
+                # Hex Code List for copy-pasting
+                st.caption("Hex codes: " + ", ".join(game_pal))
+
+            st.divider()
+
+            # Contextual Comparison
+            st.subheader(
+                f"How {selected_game['Game'].title()} compares to the {selected_game['Decade']}"
+            )
+            dec_avg_sat = df[df["Decade"] == selected_game["Decade"]]["saturation"].mean()
+            diff = selected_game["saturation"] - dec_avg_sat
+
+            status = "more colorful" if diff > 0 else "more muted"
+            st.write(
+                f"This game is **{abs(diff):.1f} units {status}** than the average game from the {selected_game['Decade']}."
+            )
+
+        else:
+            st.error("No game found with that name. Try a different keyword.")
+elif page == "Game Search MIX":
+    st.header("🔍 Individual Game Analysis")
+    st.write("Extracting the visual DNA and metadata for specific titles.")
+
+    # Combined Search: Selectbox with unique names for accuracy
+    unique_games = sorted(df["Game"].unique())
+    selected_game_name = st.selectbox("Select or search a game:", unique_games)
+
+    if selected_game_name:
+        # Filter for all rows belonging to this game
+        game_rows = df[df["Game"] == selected_game_name]
+        # Use the first row for general metadata
+        main_info = game_rows.iloc[0]
+
+        st.divider()
+
+        # --- TOP SECTION: Metadata & Technical Stats ---
+        col1, col2, col3 = st.columns([1.5, 1, 2])
+
+        with col1:
+            st.title(main_info["Game"].title())
+            st.markdown(f"**📅 Year:** {main_info['Year']}")
+            st.markdown(f"**🏢 Studio:** {main_info['Developers'].replace('|', ', ').title()}")
+            st.markdown(f"**🎨 Art Style:** {main_info['Art_Style']}")
+            st.markdown(f"**🕹️ Genres:** {main_info['Genres'].replace('|', ', ').title()}")
+
+        with col2:
+            st.subheader("📊 Visual Specs")
+            st.metric("Brightness", f"{main_info['luminance'] * 100:.1f}%")
+            st.metric("Vibrancy", f"{main_info['saturation']:.1f}")
+            st.caption(f"Based on {len(game_rows)} screens")
+
+        with col3:
+            st.subheader("🎨 Representative Palette")
+            # Use the 'bucket' logic for a cleaner, more vibrant look
+            game_pal = get_representative_palette(game_rows, count=8)
+
+            html_pal = '<div style="display: flex; height: 80px; border-radius: 10px; overflow: hidden; border: 2px solid #555;">'
+            for color in game_pal:
+                html_pal += f'<div style="background-color:{color}; flex:1;" title="{color}"></div>'
+            html_pal += "</div>"
+            st.markdown(html_pal, unsafe_allow_html=True)
+            st.caption(f"Hex: {', '.join(game_pal)}")
+
+        # --- MIDDLE SECTION: Historical Context ---
+        st.info(
+            f"**Thesis Context:** This game is {abs(main_info['saturation'] - df[df['Decade'] == main_info['Decade']]['saturation'].mean()):.1f} units "
+            f"{'more colorful' if main_info['saturation'] > df[df['Decade'] == main_info['Decade']]['saturation'].mean() else 'more muted'} "
+            f"than the {main_info['Decade']} average."
+        )
+
+        st.divider()
+
+        # --- BOTTOM SECTION: Source Screenshots Grid ---
+        st.subheader("🖼️ Source Screenshots")
+        # Dynamic columns based on number of screenshots (max 5 per row)
+        n_screens = len(game_rows)
+        cols = st.columns(min(n_screens, 5))
+
+        for i, row in enumerate(game_rows.itertuples()):
+            with cols[i % 5]:
+                st.image(row.Screenshot, use_container_width=True)
+                # Mini individual palette for each screen
+                mini_html = '<div style="display: flex; height: 12px; margin-top: -10px; border-radius: 0 0 5px 5px; overflow: hidden;">'
+                for j in range(1, 6):
+                    r, g, b = (
+                        getattr(row, f"C{j}_R"),
+                        getattr(row, f"C{j}_G"),
+                        getattr(row, f"C{j}_B"),
+                    )
+                    mini_html += f'<div style="background-color:rgb({int(r)},{int(g)},{int(b)}); flex:1;"></div>'
+                mini_html += "</div>"
+                st.markdown(mini_html, unsafe_allow_html=True)
