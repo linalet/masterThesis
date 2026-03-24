@@ -2,8 +2,12 @@ import pandas as pd
 import os
 
 # Paths
-RAW_CSV = "data/test_game_data.csv"
-OUT_PARQUET = "data/game_summary.parquet"
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_DIR = os.path.join(ROOT_DIR, "data")
+OUTPUT_CSV = os.path.join(DATA_DIR, "test_game_data.csv")
+
+RAW_CSV = os.path.join(DATA_DIR, "test_game_data.csv")
+OUT_PARQUET = os.path.join(DATA_DIR, "game_summary.parquet")
 
 
 def optimize_data():
@@ -22,7 +26,7 @@ def optimize_data():
     color_cols = [col for col in df.columns if col.startswith("C")]
 
     # We want to keep these identifying columns
-    info_cols = ["Year", "Decade", "Genres", "Developers"]
+    info_cols = ["Year", "Decade", "Genres", "Themes", "Developers"]
 
     # Create the summary:
     # - Take the first occurrence of info (Year, Genres, etc.)
