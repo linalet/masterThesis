@@ -46,35 +46,42 @@ def normalize_studio_name(dev_string):
 
 def classify_taxonomy(row):
     text = f"{row['Keywords']} {row['Themes']} {row['Genres']}".lower()
+    perspective = str(row.get("Player_Perspective", "")).lower().strip()
+
+    # III. ABSTRACTION
+    if any(w in text for w in ["text-based", "experimental", "psychedelic", "ascii"]):
+        return "Abstraction: Symbolic"
+    if any(w in text for w in ["flat art", "silhouette", "geometric", "minimalist"]):
+        return "Abstraction: Minimalist"
 
     # I. REALISM
-    if any(w in text for w in ["photoreal", "ray-tracing", "pbr", "realistic"]):
-        return "Realism: High-Fidelity"  # like 0 games at all...
-    if any(w in text for w in ["illusionism", "fantasy realism", "televisual"]):
-        return "Realism: Stylized Realism"
+    if any(w in text for w in ["photoreal", "ray-tracing", "pbr", "realistic", "4k"]):
+        return "Realism: Photoreal"
+    if any(w in text for w in ["cinematic", "fantasy realism", "atmospheric"]):
+        return "Realism: Stylized"  # literally 0 games
 
     # II. STYLIZATION
-    if any(w in text for w in ["watercolor", "hand-painted", "comic", "cel-shade"]):
+    if any(
+        w in text
+        for w in ["watercolor", "hand-painted", "comic", "cel-shade", "hand-drawn", "sketch"]
+    ):
         return "Stylization: Illustrative"
     if any(w in text for w in ["anime", "manga", "chibi", "cartoon"]):
         return "Stylization: Caricature"
-    if any(w in text for w in ["pixel", "8-bit", "16-bit", "low-poly", "voxel"]):
-        return "Stylization: Retro-Tech"
-    if any(w in text for w in ["claymation", "papercraft", "puppet"]):
+    if any(w in text for w in ["pixel", "8-bit", "16-bit", "low-poly", "voxel", "retro"]):
+        return "Stylization: Pixel Art"
+    if any(w in text for w in ["claymation", "papercraft", "puppet", "stop-motion", "felt"]):
         return "Stylization: Material-Based"
 
-    # III. ABSTRACTION
-    if any(w in text for w in ["flat art", "vector", "silhouette", "geometric"]):
+    # fallback
+    if row["Year"] < 1980:
+        if "text" in perspective:
+            return "Abstraction: Symbolic"
         return "Abstraction: Minimalist"
-    if any(w in text for w in ["text-based", "experimental", "psychedelic"]):
-        return "Abstraction: Symbolic"
-
     if any(w in text for w in ["3d", "3-D"]):
         return "Unclassified 3D"
     if any(w in text for w in ["2d", "2-D"]):
         return "Unclassified 2D"
-    # if row["Year"] < 2000:
-    #     return "Unknown - pixel art?"
     return "Unclassified"
 
 
@@ -108,13 +115,11 @@ def get_representative_palette(yr_data, count=10):
     return [f"#{int(r):02x}{int(g):02x}{int(b):02x}" for r, g, b in zip(top.R_B, top.G_B, top.B_B)]
 
 
-def load_data():
-    csv_path = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/game_data.csv"
-    )
+def load_data(path):
+    csv_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), path)
     df = pd.read_csv(csv_path, low_memory=False)
 
-    for col in ["Genres", "Themes", "Keywords", "Developers", "Game"]:
+    for col in ["Genres", "Themes", "Keywords", "Developers", "Game", "Player_Perspective"]:
         df[col] = df[col].fillna("").astype(str).str.lower()
 
     df["Year"] = pd.to_numeric(df["Year"], errors="coerce").fillna(0).astype(int)

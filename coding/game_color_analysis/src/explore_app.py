@@ -7,6 +7,31 @@ import helper_functions as helper
 st.set_page_config(
     layout="wide", page_title="Evolution of Color and Art Styles in Video Game Design"
 )
+# [theme]
+baseFontSize = "23px"
+st.markdown(
+    """
+    <style>
+    /* 1. Make the Label (the title above the slider/selectbox) bigger */
+    [data-testid="stWidgetLabel"] p {
+        font-size: 22px !important;
+        font-weight: 600 !important;
+        color: ##bec4eb;
+    }
+
+    /* 2. Make the text INSIDE the Selectbox bigger */
+    [data-testid="stSelectbox"] div[data-baseweb="select"] > div {
+        font-size: 18px !important;
+    }
+
+    /* 3. Make the slider values/steps bigger */
+    [data-testid="stTickBarMinMax"], [data-testid="stTickBar"] {
+        font-size: 16px !important;
+    }
+    </style>
+""",
+    unsafe_allow_html=True,
+)
 
 # @st.cache_data
 # def load_summary():
@@ -17,7 +42,7 @@ st.set_page_config(
 #     )
 
 
-df, unique_devs_list, top_50_global = helper.load_data()
+df, unique_devs_list, top_50_global = helper.load_data("data/current_game_data.csv")
 # df_summary = load_summary()
 
 if "page_selection" not in st.session_state:
@@ -52,32 +77,81 @@ if st.sidebar.button("🎲 Random Game"):
 
 if page == "Art Style Popularity":
     st.header("📈 Art Style Popularity through Time")
-    style_counts = df.groupby(["Year", "Art_Style"]).size().reset_index(name="Count")
-    year_totals = df.groupby("Year").size().reset_index(name="Total")
+    classified_df = df[~df["Art_Style"].str.contains("Unclassified", case=False, na=False)]
+    style_counts = classified_df.groupby(["Year", "Art_Style"]).size().reset_index(name="Count")
+    year_totals = classified_df.groupby("Year").size().reset_index(name="Total")
     perc_df = style_counts.merge(year_totals, on="Year")
     perc_df["Percentage"] = (perc_df["Count"] / perc_df["Total"]) * 100
 
-    fig = px.area(perc_df, x="Year", y="Percentage", color="Art_Style", height=600)
+    fig = px.area(
+        perc_df,
+        x="Year",
+        y="Percentage",
+        color="Art_Style",
+        height=600,
+        # category_orders={"Art_Style": sorted(classified_df["Art_Style"].unique())},
+    )
     fig.update_yaxes(range=[0, 100])
     fig.update_xaxes(type="linear", range=[1950, 2026])
+    fig.update_layout(
+        yaxis=dict(
+            title_font=dict(size=22),  # Y-axis title
+            tickfont=dict(size=20),  # Y-axis numbers (0, 20, 40...)
+        ),
+        xaxis=dict(
+            title_font=dict(size=22),
+            tickfont=dict(size=20),
+        ),
+        legend=dict(
+            title="Art Styles",
+            font=dict(size=20),
+            title_font=dict(size=24),
+            itemsizing="constant",  # Keeps the color icons consistent
+        ),
+        legend_title_side="top center",
+        font=dict(size=20),
+    )
     st.plotly_chart(fig, width="stretch")
 
     st.divider()
-    st.subheader("📈 Dataset Classification Progress")
-    known_games_df = df[
-        (df["Art_Style"] != "Unclassified")
-        & (df["Art_Style"] != "Unclassified 2D")
-        & (df["Art_Style"] != "Unclassified 3D")
-    ]
-    classification_stats = known_games_df.groupby("Decade")["Game"].nunique().reset_index()
-    classification_stats.columns = ["Decade", "Classified Games"]
-    st.bar_chart(data=classification_stats, x="Decade", y="Classified Games", color="#00ff00")
+    st.subheader("📈 Dataset Classification Success")
+    all_games_decade = df.groupby("Decade")["Game"].nunique().reset_index(name="Total_Games")
+    classified_decade = (
+        classified_df.groupby("Decade")["Game"].nunique().reset_index(name="Classified_Games")
+    )
+    progress_df = pd.merge(all_games_decade, classified_decade, on="Decade", how="left").fillna(0)
+    progress_df["Successful"] = (progress_df["Classified_Games"] / progress_df["Total_Games"]) * 100
+
+    fig = px.bar(
+        progress_df,
+        x="Decade",
+        y="Successful",
+        color_discrete_sequence=["#006eff"],
+        labels={"Successful": "Success Rate (%)", "Decade": "Decade"},
+        text_auto=".1f",
+    )
+    fig.update_layout(
+        yaxis=dict(
+            range=[0, 100],
+            title_font=dict(size=26),  # Y-axis title
+            tickfont=dict(size=22),  # Y-axis numbers (0, 20, 40...)
+        ),
+        xaxis=dict(
+            title_font=dict(size=26),
+            tickfont=dict(size=22),
+        ),
+        font=dict(size=20),
+    )
+    fig.update_traces(textfont_size=20, textposition="outside", cliponaxis=False)
+
+    st.plotly_chart(fig, width="stretch")
+
     total_games = df["Game"].nunique()
-    classified_total = known_games_df["Game"].nunique()
+    classified_total = classified_df["Game"].nunique()
     percent_complete = (classified_total / total_games) * 100
 
-    st.write(
-        f"**Current Progress:** You have successfully classified **{classified_total} out of {total_games}** games (**{percent_complete:.1f}%**) using image-based DNA."
+    st.info(
+        f"We have successfully classified **{classified_total} out of {total_games}** games (**{percent_complete:.1f}%**) using image-based DNA."
     )
 
 
@@ -113,7 +187,7 @@ elif page == "Color through Decades":
 
     st.markdown("---")
 
-    helper.render_saturation_heatmap(df)
+    # helper.render_saturation_heatmap(df)
 
     st.subheader("Deep Dive: Style x Decade")
     col_decade, col_style = st.columns(2)
@@ -145,11 +219,13 @@ elif page == "Color through Decades":
         scols = st.columns(4)
         for i, row in enumerate(samples.itertuples()):
             with scols[i % 4]:
-                st.image(row.Screenshot, use_container_width=True)
-        if st.button(f"🔍 View {row.Game}", key=f"nav_{row.Index}"):
-            st.session_state["search_query"] = row.Game
-            st.session_state["trigger_nav"] = True  # Set the trigger
-            st.rerun()
+                st.image(row.Screenshot, width="stretch")
+                st.markdown(
+                    f"<div style='font-size:18px; text-align:center; color:gray;'>"
+                    f"<b>{row.Game}</b> ({row.Year})"
+                    f"</div>",
+                    unsafe_allow_html=True,
+                )
 
 
 elif page == "Genre Timelines":
@@ -301,63 +377,11 @@ elif page == "Aesthetic Mapping":
                     )
 
             fig.update_layout(height=450 * ((len(decade_list) + 2) // 3), margin=dict(t=50, b=50))
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
             st.info(
                 "💡 **How to read this:** The **Star** shows the typical 'look' of the decade. Notice how the star moves toward the bottom-left during the 2000s—this represents the industry-wide shift toward grittier, browner palettes."
             )
 
-    # --- SECTION 2: THE MARIO EFFECT ---
-    st.subheader("🍄 The 'Mario' Effect")
-    st.write("Compare a specific influential Franchise/Studio against the rest of the industry.")
-
-    comp_decade = st.selectbox("Select Era", [1970, 1980, 1990, 2000, 2010, 2020], index=1)
-    era_df = df[(df["Year"] >= comp_decade) & (df["Year"] < comp_decade + 10)]
-
-    # Setup for comparison
-    target_search = st.text_input("Target Studio/Game (e.g., 'Nintendo' or 'Mario')", "nintendo")
-
-    # Split the data into 'Target' and 'Others'
-    target_mask = era_df["Developers"].str.contains(
-        rf"\b{target_search}\b", case=False, na=False, regex=True
-    ) | era_df["Game"].str.contains(target_search, case=False, na=False)
-
-    target_group = era_df[target_mask]
-    others_group = era_df[~target_mask]
-
-    if not target_group.empty:
-        col_m1, col_m2 = st.columns(2)
-
-        with col_m1:
-            st.write(f"#### {target_search.title()} Palette")
-            t_pal = helper.get_representative_palette(target_group, count=10)
-            html_t = '<div style="display: flex; height: 50px; border-radius: 8px; overflow: hidden; border: 2px solid white;">'
-            for c in t_pal:
-                html_t += f'<div style="background-color:{c}; flex:1;"></div>'
-            html_t += "</div>"
-            st.markdown(html_t, unsafe_allow_html=True)
-            st.caption(f"Average Saturation: {target_group['saturation'].mean():.2f}")
-
-        with col_m2:
-            st.write("#### Industry Average (Others)")
-            o_pal = helper.get_representative_palette(others_group, count=10)
-            html_o = '<div style="display: flex; height: 50px; border-radius: 8px; overflow: hidden; border: 1px solid #444;">'
-            for c in o_pal:
-                html_o += f'<div style="background-color:{c}; flex:1;"></div>'
-            html_o += "</div>"
-            st.markdown(html_o, unsafe_allow_html=True)
-            st.caption(f"Average Saturation: {others_group['saturation'].mean():.2f}")
-
-        # Distribution comparison
-        # fig_dist = px.histogram(
-        #     era_df,
-        #     x="saturation",
-        #     color=target_mask,
-        #     barmode="overlay",
-        #     nbins=50,
-        #     labels={"color": f"Is {target_search.title()}?"},
-        #     title=f"Saturation Spread: {target_search.title()} vs. The Industry",
-        # )
-        # st.plotly_chart(fig_dist, use_container_width=True)
 # --- TAB: STUDIO DNA ---
 elif page == "Studio DNA":
     st.header("🏢 Studio Visual Fingerprints")
@@ -405,7 +429,7 @@ elif page == "Studio DNA":
                     px.pie(
                         all_df, names="Art_Style", hole=0.4, height=350, title="Style Distribution"
                     ),
-                    use_container_width=True,
+                    width="stretch",
                 )
             with detail_col2:
                 st.write("#### Core Palette Details")
@@ -464,7 +488,7 @@ elif page == "Studio DNA":
                     title="Technique Volume",
                 )
                 fig_bar.update_layout(showlegend=False)
-                st.plotly_chart(fig_bar, use_container_width=True)
+                st.plotly_chart(fig_bar, width="stretch")
             with detail_col4:
                 st.write("#### Hex Detail")
                 for c in p_dec[:8]:
@@ -521,7 +545,7 @@ elif page == "Studio DNA":
                 style_data.columns = ["Style", "Count"]
                 fig_comp = px.pie(style_data, names="Style", values="Count", hole=0.5, height=280)
                 fig_comp.update_layout(showlegend=False)
-                st.plotly_chart(fig_comp, use_container_width=True)
+                st.plotly_chart(fig_comp, width="stretch")
 
 elif page == "Game Search":
     st.header("🔍 Individual Game Analysis")
@@ -576,7 +600,7 @@ elif page == "Game Search":
         st.write("### Source Screenshots")
         img_cols = st.columns(len(game_rows))
         for i, row in enumerate(game_rows.itertuples()):
-            img_cols[i].image(row.Screenshot, use_container_width=True)
+            img_cols[i].image(row.Screenshot, width="stretch")
             # Mini palette for each individual screen
             mini_pal = ""
             for j in range(1, 6):  # Just show first 5 for the small preview
@@ -615,7 +639,7 @@ elif page == "game search 3.0":
 
             with col1:
                 if "Screenshot" in selected_game and pd.notna(selected_game["Screenshot"]):
-                    st.image(selected_game["Screenshot"], use_container_width=True)
+                    st.image(selected_game["Screenshot"], width="stretch")
                 else:
                     st.info("No image available for this title.")
 
@@ -756,7 +780,7 @@ elif page == "Game Search MIX":
 
         for i, row in enumerate(game_rows.itertuples()):
             with cols[i % 5]:
-                st.image(row.Screenshot, use_container_width=True)
+                st.image(row.Screenshot, width="stretch")
                 single_img_data = game_rows[game_rows["Screenshot"] == row.Screenshot]
                 screen_pal = helper.get_representative_palette(single_img_data, count=5)
 

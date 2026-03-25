@@ -2,90 +2,65 @@
 
 import csv
 import os
-
-# import numpy as np
 import pandas as pd
 from PIL import Image
-from sklearn.cluster import KMeans
 
 from igdb_api import download_image, query_igdb
 
 
-# Analysis settings
 START_YEAR = 1952
-# 1950  # Tennis for two 1958? OXO 1952?
 END_YEAR = 2026
 SCREENSHOT_COUNT = 5  # possibly increase to 10
 COLOR_COUNT = 10
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(ROOT_DIR, "data")
-OUTPUT_CSV = os.path.join(DATA_DIR, "game_data.csv")
+OUTPUT_CSV = os.path.join(DATA_DIR, "current_game_data.csv")
 
 # List of keywords to filter nsfw images
-NSFW_WORDS = ["erotica", "hentai", "nsfw", "nudity", "sexual content", "adult", "pornographic"]
+NSFW_WORDS = [
+    "erotica",
+    "hentai",
+    "nsfw",
+    "nudity",
+    "sexual content",
+    "adult",
+    "pornographic",
+    "porn",
+    "sex",
+]
 
 
-def get_vibrant_palette(image_path, n_clusters=10):
+def get_palette(image_path, n_clusters=10):
     """
-    Extracts the most used distinct colors using Octree Quantization.
-    This prevents small, vibrant clusters from being 'averaged' away.
+    Gets the color palette using Median Cut.
+    Returns a list of tuples sorted by weight.
     """
-    with Image.open(image_path) as img:
-        img = img.convert("RGB")
+    try:
+        with Image.open(image_path) as image:
+            image = image.convert("RGB")
+            quantized_image = image.quantize(colors=n_clusters, method=Image.Quantize.MEDIANCUT)
 
-        # Use method=2 for Octree Quantization
-        # This is specifically designed to keep distinct color clusters separate
-        quantized = img.quantize(colors=n_clusters, method=2)
+            # get palettes
+            raw_palette = quantized_image.getpalette()[: n_clusters * 3]
+            colors = [tuple(raw_palette[i : i + 3]) for i in range(0, len(raw_palette), 3)]
 
-        # Extract palette and weights
-        raw_pal = quantized.getpalette()[: n_clusters * 3]
-        colors = [tuple(raw_pal[i : i + 3]) for i in range(0, len(raw_pal), 3)]
-        counts = quantized.getcolors()
+            color_counts = quantized_image.getcolors()
+            pixel_count = sum(count for count, index in color_counts)
 
-        # Calculate pixel weights
-        total_pixels = sum(count for count, _ in counts)
-        palette = []
-        for count, idx in counts:
-            if idx < len(colors):
-                r, g, b = colors[idx]
-                palette.append((r, g, b, count / total_pixels))
+            # calculate weights
+            palette = []
+            for count, index in color_counts:
+                if index < len(colors):
+                    r, g, b = colors[index]
+                    weight = count / pixel_count
+                    palette.append((r, g, b, weight))
 
-        # Sort by dominance to see the 'most used' colors first
         palette.sort(key=lambda x: x[3], reverse=True)
         return palette
-
-
-# def get_palette(image_path, n_clusters=10):
-#     """
-#     Gets the color palette using Median Cut.
-#     Returns a list of tuples sorted by weight.
-#     """
-#     try:
-#         with Image.open(image_path) as image:
-#             image = image.convert("RGB")
-#             quantized_image = image.quantize(colors=n_clusters, method=Image.Quantize.MEDIANCUT)
-
-#             # get palettes
-#             raw_palette = quantized_image.getpalette()[: n_clusters * 3]
-#             colors = [tuple(raw_palette[i : i + 3]) for i in range(0, len(raw_palette), 3)]
-
-#             color_counts = quantized_image.getcolors()
-#             pixel_count = sum(count for count, index in color_counts)
-
-#             # calculate weights
-#             palette = []
-#             for count, index in color_counts:
-#                 if index < len(colors):
-#                     r, g, b = colors[index]
-#                     weight = count / pixel_count
-#                     palette.append((r, g, b, weight))
-
-#         palette.sort(key=lambda x: x[3], reverse=True)
-#         return palette
-#     except Exception as e:
-#         print(f"[ERROR] Could not process {image_path}: {e}")
-#         return []
+    except Exception as e:
+        print(f"[ERROR] Could not process {image_path}: {e}")
+        return []
 
 
 def main():
@@ -101,7 +76,7 @@ def main():
         "Genres",
         "Themes",
         "Keywords",
-        # "Player Perspectives",
+        "Player_Perspective",
         "Developers",
         "Is_NSFW",
     ] + color_headers
@@ -140,20 +115,20 @@ def main():
                     genres = "|".join(g["name"] for g in game.get("genres", []) if "name" in g)
                     themes = "|".join(t["name"] for t in game.get("themes", []) if "name" in t)
                     keywords = "|".join(k["name"] for k in game.get("keywords", []) if "name" in k)
-                    perspectives = "|".join(
+                    perspective = "|".join(
                         p["name"] for p in game.get("player_perspectives", []) if "name" in p
                     )
                     combined_text = f"{genres} {themes} {keywords} {name}".lower()
                     is_nsfw = 1 if any(word in combined_text for word in NSFW_WORDS) else 0
-                    screenshots = game.get("screenshots", [])
+                    # screenshots = game.get("screenshots", [])
 
-                    for screen in screenshots[:SCREENSHOT_COUNT]:
+                    for screen in game.get("screenshots", [])[:SCREENSHOT_COUNT]:
                         image_path = download_image(screen["url"])
                         # Skip if download failed or already recorded
                         if not image_path or image_path in processed:
                             continue
 
-                        palette = get_vibrant_palette(image_path, n_clusters=COLOR_COUNT)
+                        palette = get_palette(image_path, n_clusters=COLOR_COUNT)
                         color_data = []
                         for i in range(COLOR_COUNT):
                             if i < len(palette):
@@ -169,7 +144,7 @@ def main():
                                 genres,
                                 themes,
                                 keywords,
-                                # perspectives,
+                                perspective,
                                 devs,
                                 is_nsfw,
                             ]
