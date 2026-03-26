@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import os
 import plotly.express as px
 
 
@@ -68,7 +67,7 @@ def classify_taxonomy(row):
         return "Stylization: Illustrative"
     if any(w in text for w in ["anime", "manga", "chibi", "cartoon"]):
         return "Stylization: Caricature"
-    if any(w in text for w in ["pixel", "8-bit", "16-bit", "low-poly", "voxel", "retro"]):
+    if any(w in text for w in ["pixel", "8-bit", "16-bit", "voxel"]):
         return "Stylization: Pixel Art"
     if any(
         w in text
@@ -126,33 +125,25 @@ def get_representative_palette(yr_data, count=10):
 
 @st.cache_data
 def load_data(path):
-    csv_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), path)
-    df = pd.read_csv(csv_path, low_memory=False)
+    # Load the pre-processed file
+    df = pd.read_parquet(path)
 
-    for col in ["Genres", "Themes", "Keywords", "Developers", "Game", "Player_Perspective"]:
-        df[col] = df[col].fillna("").astype(str).str.lower()
-
-    df["Year"] = pd.to_numeric(df["Year"], errors="coerce").fillna(0).astype(int)
-    # df["Developers"] = df["Developers"].fillna("").astype(str).str.lower()
-
-    df["Developers"] = df["Developers"].apply(normalize_studio_name)
+    # 1. Quick Re-calc of runtime-only objects (Sets aren't saved in Parquet)
     df["Dev_Set"] = df["Developers"].apply(lambda x: set(x.split("|")))
-    all_devs_series = df["Developers"].str.split("|").explode().str.strip()
+    df["Theme_Set"] = df["Themes"].apply(lambda x: set(x.split("|")))
+    df["Genre_Set"] = df["Genres"].apply(lambda x: set(x.split("|")))
 
+    # 2. Get Global Lists for UI Selectboxes
+    all_devs_series = df["Developers"].str.split("|").explode().str.strip()
     top_studios_global = (
         all_devs_series[all_devs_series != ""].value_counts().nlargest(50).index.tolist()
     )
     unique_devs = sorted(all_devs_series[all_devs_series != ""].unique().tolist())
 
-    df["Art_Style"] = df.apply(classify_taxonomy, axis=1)
-    df["saturation"] = df[["C1_R", "C1_G", "C1_B"]].max(axis=1) - df[["C1_R", "C1_G", "C1_B"]].min(
-        axis=1
-    )
-    df["luminance"] = (0.2126 * df["C1_R"] + 0.7152 * df["C1_G"] + 0.0722 * df["C1_B"]) / 255.0
+    # 3. Filter for Thesis Scope
+    df_filtered = df[df["Year"] > 1950].copy()
 
-    df["Decade"] = (df["Year"] // 10 * 10).astype(int).astype(str) + "s"
-
-    return df[df["Year"] > 1950].copy(), unique_devs, top_studios_global
+    return df_filtered, unique_devs, top_studios_global
 
 
 def render_color_strip(data_subset, label, sub_label=""):
@@ -247,3 +238,57 @@ def get_weighted_representative_palette(yr_data, count=8):
         )
 
     return palette_data
+
+
+import numpy as np
+
+
+def fast_game_dna(group):
+    """
+    Highly optimized version of get_weighted_representative_palette
+    Processes a whole game group at once using vectorized operations.
+    """
+    # 1. Gather all C1-C8 colors into one pool instantly
+    # We reshape the dataframe to have R, G, B, W columns
+    r_cols = [f"C{i}_R" for i in range(1, 9)]
+    g_cols = [f"C{i}_G" for i in range(1, 9)]
+    b_cols = [f"C{i}_B" for i in range(1, 9)]
+    w_cols = [f"C{i}_W" for i in range(1, 9)]
+
+    # Flatten the colors: This is 100x faster than a manual loop
+    r = group[r_cols].values.flatten()
+    g = group[g_cols].values.flatten()
+    b = group[b_cols].values.flatten()
+    w = group[w_cols].values.flatten()
+
+    # Remove NaNs
+    mask = ~np.isnan(r)
+    r, g, b, w = r[mask], g[mask], b[mask], w[mask]
+
+    if len(r) == 0:
+        return ""
+
+    # 2. Vectorized Bucketing
+    r_b = (r // 20 * 20).clip(0, 255)
+    g_b = (g // 20 * 20).clip(0, 255)
+    b_b = (b // 20 * 20).clip(0, 255)
+    sat = np.max([r, g, b], axis=0) - np.min([r, g, b], axis=0)
+
+    # 3. Use a temp dataframe for the final aggregation (the only way to group colors)
+    temp = pd.DataFrame({"R": r_b, "G": g_b, "B": b_b, "W": w, "sat": sat})
+    grouped = (
+        temp.groupby(["R", "G", "B"]).agg(total_w=("W", "sum"), max_s=("sat", "max")).reset_index()
+    )
+
+    # Ranking
+    grouped["score"] = (grouped["total_w"] * 10) * (grouped["max_s"] + 5)
+    top = grouped.nlargest(8, "score")
+
+    # Normalize weights
+    total_w = top["total_w"].sum()
+    return "|".join(
+        [
+            f"#{int(row.R):02x}{int(row.G):02x}{int(row.B):02x},{row.total_w / total_w:.3f}"
+            for row in top.itertuples()
+        ]
+    )

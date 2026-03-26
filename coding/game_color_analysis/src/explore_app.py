@@ -34,8 +34,10 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-
-df, unique_devs_list, top_50_global = helper.load_data("data/current_game_data.csv")
+path = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/processed_game_data.parquet"
+)
+df, unique_devs_list, top_50_global = helper.load_data(path)
 
 if st.session_state.get("trigger_nav"):
     st.session_state["page_selection"] = "Individual Game Palette"
@@ -64,9 +66,7 @@ if st.sidebar.button("🎲 Random Game"):
 
 if page == "Art Style Popularity":
     st.header("📈 Art Style Popularity through Time")
-    classified_df = df[
-        ~df["Art_Style"].str.contains("Unclassified", case=False, regex=True, na=False)
-    ]
+    classified_df = df[~df["Art_Style"].str.startswith("Unclassified")]
     style_counts = classified_df.groupby(["Year", "Art_Style"]).size().reset_index(name="Count")
     year_totals = classified_df.groupby("Year").size().reset_index(name="Total")
     perc_df = style_counts.merge(year_totals, on="Year")
@@ -157,7 +157,10 @@ elif page == "Color through Decades":
         2010: "💡 Modern Lighting (DirectX 11)",
         2020: "✨ Ray Tracing & HDR Era",
     }
-    with open("data/summary_stats.json", "r") as f:
+    path = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/summary_stats.json"
+    )
+    with open(path, "r") as f:
         summaries = json.load(f)
 
     for dec in [1950, 1960, 1970, 1980, 1990, 2000, 2010, 2020]:
@@ -233,7 +236,7 @@ elif page == "Genre Timelines":
 
     if sel_genre:
         # Pooled filtering logic
-        g_df = df[df["Genres"].str.contains(rf"\b{sel_genre}\b", case=False, na=False, regex=True)]
+        g_df = df[df["Genre_Set"].apply(lambda x: sel_genre.lower() in x)]
 
         # Iterate through Decades
         decades = sorted([d for d in g_df["Year"].unique() if d >= 1970], reverse=True)
@@ -269,7 +272,7 @@ elif page == "Theme Timelines":
     )
 
     if sel_theme:
-        t_df = df[df["Themes"].str.contains(rf"\b{sel_theme}\b", case=False, na=False, regex=True)]
+        t_df = df[df["Theme_Set"].apply(lambda x: sel_theme.lower() in x)]
 
         t_decades = sorted(
             list(set([(d // 10) * 10 for d in t_df["Year"].unique() if d >= 1970])), reverse=True
@@ -454,11 +457,7 @@ elif page == "Game Developer Profile":
         final_dec = search_dec if search_dec else (sel_dec if sel_dec != "Select..." else None)
 
     if final_dec:
-        dec_dev_df = dec_df_full[
-            dec_df_full["Developers"].str.contains(
-                rf"\b{final_dec}\b", case=False, na=False, regex=True
-            )
-        ]
+        dec_dev_df = dec_df_full[dec_df_full["Dev_Set"].apply(lambda x: final_dec.lower() in x)]
         with col4:
             st.write(f"### {final_dec.title()}'s Style in the {dec_sel_s}s")
             p_dec = helper.get_representative_palette(dec_dev_df, count=10)
@@ -517,11 +516,7 @@ elif page == "Game Developer Profile":
         res_a, res_b = st.columns(2)
         for studio_name, col in [(studio_a, res_a), (studio_b, res_b)]:
             # Filter using the pooled regex logic
-            s_df = comp_df[
-                comp_df["Developers"].str.contains(
-                    rf"\b{studio_name}\b", case=False, na=False, regex=True
-                )
-            ]
+            s_df = comp_df[comp_df["Dev_Set"].apply(lambda x: studio_name.lower() in x)]
 
             with col:
                 st.write(f"#### {studio_name.title()}")
@@ -611,16 +606,14 @@ elif page == "Individual Game Palette":
             # html_dna += "</div>"
 
             # st.markdown(html_dna, unsafe_allow_html=True)
-            # st.markdown("Proportionally weighted palette for this game")
             dna_string = main_info["Precalc_DNA"]  # e.g., "#332211,0.4|#ff9900,0.3"
-            html_dna = (
-                '<div style="display: flex; height: 100px; border-radius: 12px; overflow: hidden;">'
-            )
+            html_dna = '<div style="display: flex; height: 100px; border-radius: 12px; overflow: hidden;border: 2px solid #555; box-shadow: 0px 4px 10px rgba(0,0,0,0.3);">'
             for entry in dna_string.split("|"):
                 color, weight = entry.split(",")
                 html_dna += f'<div style="background-color:{color}; flex:{weight};"></div>'
             html_dna += "</div>"
             st.markdown(html_dna, unsafe_allow_html=True)
+            st.markdown("Proportionally weighted palette for this game")
             # st.caption(f"Colors: {', '.join([c['hex'] for c in master_pal])}")
 
         # --- MIDDLE SECTION: Historical Context ---
