@@ -38,6 +38,7 @@ path = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/processed_game_data.parquet"
 )
 df, unique_devs_list, top_50_global = helper.load_data(path)
+df_safe = df[df["is_nsfw"] == False].copy()
 
 if st.session_state.get("trigger_nav"):
     st.session_state["page_selection"] = "Individual Game Palette"
@@ -51,14 +52,14 @@ page = st.sidebar.radio(
         "Color through Decades",
         "Genre Timelines",
         "Theme Timelines",
-        "Colorfulness",
+        # "Colorfulness",
         "Game Developer Profile",
         "Individual Game Palette",
     ],
     key="page_selection",
 )
 if st.sidebar.button("🎲 Random Game"):
-    random_game = df["Game"].sample(1).iloc[0]
+    random_game = df["Unique_ID"].sample(1).iloc[0]
     st.session_state["search_query"] = random_game
     st.session_state["trigger_nav"] = True
     st.rerun()
@@ -66,7 +67,7 @@ if st.sidebar.button("🎲 Random Game"):
 
 if page == "Art Style Popularity":
     st.header("📈 Art Style Popularity through Time")
-    classified_df = df[~df["Art_Style"].str.startswith("Unclassified")]
+    classified_df = df[df["is_classified"]]
     style_counts = classified_df.groupby(["Year", "Art_Style"]).size().reset_index(name="Count")
     year_totals = classified_df.groupby("Year").size().reset_index(name="Total")
     perc_df = style_counts.merge(year_totals, on="Year")
@@ -104,9 +105,9 @@ if page == "Art Style Popularity":
 
     st.divider()
     st.subheader("📈 Dataset Classification Success")
-    all_games_decade = df.groupby("Decade")["Game"].nunique().reset_index(name="Total_Games")
+    all_games_decade = df.groupby("Decade")["Unique_ID"].nunique().reset_index(name="Total_Games")
     classified_decade = (
-        classified_df.groupby("Decade")["Game"].nunique().reset_index(name="Classified_Games")
+        classified_df.groupby("Decade")["Unique_ID"].nunique().reset_index(name="Classified_Games")
     )
     progress_df = pd.merge(all_games_decade, classified_decade, on="Decade", how="left").fillna(0)
     progress_df["Successful"] = (progress_df["Classified_Games"] / progress_df["Total_Games"]) * 100
@@ -135,8 +136,8 @@ if page == "Art Style Popularity":
 
     st.plotly_chart(fig, width="stretch")
 
-    total_games = df["Game"].nunique()
-    classified_total = classified_df["Game"].nunique()
+    total_games = df["Unique_ID"].nunique()
+    classified_total = classified_df["Unique_ID"].nunique()
     percent_complete = (classified_total / total_games) * 100
 
     st.info(
@@ -211,17 +212,23 @@ elif page == "Color through Decades":
             p_cols[i].caption(color)
 
         st.subheader("Visual Sample")
-        samples = style_df.sample(min(4, len(style_df)))
-        scols = st.columns(4)
-        for i, row in enumerate(samples.itertuples()):
-            with scols[i % 4]:
-                st.image(row.Screenshot, width="stretch")
-                st.markdown(
-                    f"<div style='font-size:18px; text-align:center; color:gray;'>"
-                    f"<b>{row.Game}</b> ({row.Year})"
-                    f"</div>",
-                    unsafe_allow_html=True,
-                )
+        style_df_safe = style_df[style_df["is_nsfw"] == False]
+        if not style_df_safe.empty:
+            samples = style_df_safe.sample(min(4, len(style_df_safe)))
+            scols = st.columns(4)
+            for i, row in enumerate(samples.itertuples()):
+                with scols[i % 4]:
+                    st.image(row.Screenshot, width="stretch")
+                    st.markdown(
+                        f"<div style='font-size:14px; text-align:center; color:gray; line-height:1.2; margin-top:5px;'>"
+                        f"<b>{row.Game.title()}</b><br>({row.Year})"
+                        f"</div>",
+                        unsafe_allow_html=True,
+                    )
+        else:
+            st.info(
+                "🎨 Data is being used for palette calculation, but no 'Safe for Work' screenshots are available to display for this selection."
+            )
 
 
 elif page == "Genre Timelines":
@@ -296,89 +303,89 @@ elif page == "Theme Timelines":
                         )
 
 
-elif page == "Colorfulness":
-    st.header("📍 The Visual Landscape")
+# elif page == "Colorfulness":
+#     st.header("📍 The Visual Landscape")
 
-    with st.sidebar:
-        st.subheader("🎨 Research Filters")
-        all_genres_list = sorted(set(df["Genres"].str.split("|").explode().dropna().unique()))
-        genre_toggle = st.toggle("Select All Genres", value=True)
-        selected_genres = (
-            all_genres_list if genre_toggle else st.multiselect("Pick Genres", all_genres_list)
-        )
+#     with st.sidebar:
+#         st.subheader("🎨 Research Filters")
+#         all_genres_list = sorted(set(df["Genres"].str.split("|").explode().dropna().unique()))
+#         genre_toggle = st.toggle("Select All Genres", value=True)
+#         selected_genres = (
+#             all_genres_list if genre_toggle else st.multiselect("Pick Genres", all_genres_list)
+#         )
 
-        all_styles = sorted(df["Art_Style"].dropna().unique().tolist())
-        style_toggle = st.toggle("Select All Art Styles", value=True)
-        selected_styles = (
-            all_styles if style_toggle else st.multiselect("Pick Specific Styles", all_styles)
-        )
+#         all_styles = sorted(df["Art_Style"].dropna().unique().tolist())
+#         style_toggle = st.toggle("Select All Art Styles", value=True)
+#         selected_styles = (
+#             all_styles if style_toggle else st.multiselect("Pick Specific Styles", all_styles)
+#         )
 
-    if selected_genres:
-        # Non-Regex Piped Genre Filter
-        def genre_filter(genre_string):
-            if pd.isna(genre_string):
-                return False
-            game_genres = genre_string.split("|")
-            return any(g in selected_genres for g in game_genres)
+#     if selected_genres:
+#         # Non-Regex Piped Genre Filter
+#         def genre_filter(genre_string):
+#             if pd.isna(genre_string):
+#                 return False
+#             game_genres = genre_string.split("|")
+#             return any(g in selected_genres for g in game_genres)
 
-        mask = (df["Genres"].apply(genre_filter)) & (df["Art_Style"].isin(selected_styles))
-        plot_df = df[mask & (df["Year"] >= 1970)].copy()
+#         mask = (df["Genres"].apply(genre_filter)) & (df["Art_Style"].isin(selected_styles))
+#         plot_df = df[mask & (df["Year"] >= 1970)].copy()
 
-        plot_df["Decade"] = (plot_df["Year"] // 10 * 10).astype(int).astype(str) + "s"
-        decade_list = sorted(plot_df["Decade"].unique())
+#         plot_df["Decade"] = (plot_df["Year"] // 10 * 10).astype(int).astype(str) + "s"
+#         decade_list = sorted(plot_df["Decade"].unique())
 
-        # 0-100 Normalization
-        plot_df["lum_pct"] = plot_df["luminance"] * 100
-        plot_df["sat_pct"] = (plot_df["saturation"] / plot_df["saturation"].max()) * 100
-        plot_df["hex_color"] = plot_df.apply(
-            lambda r: f"#%02x%02x%02x" % (int(r["C1_R"]), int(r["C1_G"]), int(r["C1_B"])), axis=1
-        )
+#         # 0-100 Normalization
+#         plot_df["lum_pct"] = plot_df["luminance"] * 100
+#         plot_df["sat_pct"] = (plot_df["saturation"] / plot_df["saturation"].max()) * 100
+#         plot_df["hex_color"] = plot_df.apply(
+#             lambda r: f"#%02x%02x%02x" % (int(r["C1_R"]), int(r["C1_G"]), int(r["C1_B"])), axis=1
+#         )
 
-        if not plot_df.empty:
-            fig = px.scatter(
-                plot_df,
-                x="lum_pct",
-                y="sat_pct",
-                hover_name="Game",
-                facet_col="Decade",
-                facet_col_wrap=3,
-                category_orders={"Decade": decade_list},
-                labels={"lum_pct": "Brightness", "sat_pct": "Colorfulness"},
-                range_x=[-5, 105],
-                range_y=[-5, 105],
-                template="plotly_dark",
-            )
+#         if not plot_df.empty:
+#             fig = px.scatter(
+#                 plot_df,
+#                 x="lum_pct",
+#                 y="sat_pct",
+#                 hover_name="Game",
+#                 facet_col="Decade",
+#                 facet_col_wrap=3,
+#                 category_orders={"Decade": decade_list},
+#                 labels={"lum_pct": "Brightness", "sat_pct": "Colorfulness"},
+#                 range_x=[-5, 105],
+#                 range_y=[-5, 105],
+#                 template="plotly_dark",
+#             )
 
-            # Drop opacity further to make background "recede"
-            fig.update_traces(marker=dict(color=plot_df["hex_color"], size=4, opacity=0.25))
+#             # Drop opacity further to make background "recede"
+#             fig.update_traces(marker=dict(color=plot_df["hex_color"], size=4, opacity=0.25))
 
-            # --- ANNOTATION-BASED STARS (Guaranteed Visibility) ---
-            centroids = plot_df.groupby("Decade")[["lum_pct", "sat_pct"]].mean().reset_index()
+#             # --- ANNOTATION-BASED STARS (Guaranteed Visibility) ---
+#             centroids = plot_df.groupby("Decade")[["lum_pct", "sat_pct"]].mean().reset_index()
 
-            for i, decade in enumerate(decade_list):
-                dec_avg = centroids[centroids["Decade"] == decade]
-                if not dec_avg.empty:
-                    # Annotations use 'xref' and 'yref' to target specific facets
-                    # 'x1', 'y1' for first facet, 'x2', 'y2' for second, etc.
-                    ref_idx = i + 1
+#             for i, decade in enumerate(decade_list):
+#                 dec_avg = centroids[centroids["Decade"] == decade]
+#                 if not dec_avg.empty:
+#                     # Annotations use 'xref' and 'yref' to target specific facets
+#                     # 'x1', 'y1' for first facet, 'x2', 'y2' for second, etc.
+#                     ref_idx = i + 1
 
-                    fig.add_annotation(
-                        x=dec_avg["lum_pct"].iloc[0],
-                        y=dec_avg["sat_pct"].iloc[0],
-                        xref=f"x{ref_idx}",
-                        yref=f"y{ref_idx}",
-                        text="⭐",  # Using an emoji for absolute layering priority
-                        showarrow=False,
-                        font=dict(size=24),  # Large and bright
-                        bgcolor="rgba(0,0,0,0.5)",  # Dark halo to pop against dots
-                        borderpad=2,
-                    )
+#                     fig.add_annotation(
+#                         x=dec_avg["lum_pct"].iloc[0],
+#                         y=dec_avg["sat_pct"].iloc[0],
+#                         xref=f"x{ref_idx}",
+#                         yref=f"y{ref_idx}",
+#                         text="⭐",  # Using an emoji for absolute layering priority
+#                         showarrow=False,
+#                         font=dict(size=24),  # Large and bright
+#                         bgcolor="rgba(0,0,0,0.5)",  # Dark halo to pop against dots
+#                         borderpad=2,
+#                     )
 
-            fig.update_layout(height=450 * ((len(decade_list) + 2) // 3), margin=dict(t=50, b=50))
-            st.plotly_chart(fig, width="stretch")
-            st.info(
-                "💡 **How to read this:** The **Star** shows the typical 'look' of the decade. Notice how the star moves toward the bottom-left during the 2000s—this represents the industry-wide shift toward grittier, browner palettes."
-            )
+#             fig.update_layout(height=450 * ((len(decade_list) + 2) // 3), margin=dict(t=50, b=50))
+#             st.plotly_chart(fig, width="stretch")
+#             st.info(
+#                 "💡 **How to read this:** The **Star** shows the typical 'look' of the decade. Notice how the star moves toward the bottom-left during the 2000s—this represents the industry-wide shift toward grittier, browner palettes."
+#             )
 
 
 elif page == "Game Developer Profile":
@@ -421,12 +428,25 @@ elif page == "Game Developer Profile":
 
             detail_col1, detail_col2 = st.columns(2)
             with detail_col1:
-                st.plotly_chart(
-                    px.pie(
-                        all_df, names="Art_Style", hole=0.4, height=350, title="Style Distribution"
-                    ),
-                    width="stretch",
-                )
+                # Filter for Pie Chart (excluding Unclassified)
+                classified_all = all_df[all_df["is_classified"]]
+                if not classified_all.empty:
+                    fig_all = px.pie(
+                        classified_all,
+                        names="Art_Style",
+                        hole=0.4,
+                        height=350,
+                        title="Style Distribution",
+                        color_discrete_sequence=px.colors.qualitative.Pastel,
+                    )
+                    fig_all.update_layout(showlegend=False)
+                    st.plotly_chart(fig_all, width="stretch")
+
+                    # Report Unclassified %
+                    uncl_all_pct = ((len(all_df) - len(classified_all)) / len(all_df)) * 100
+                    st.caption(f"**{uncl_all_pct:.1f}%** of portfolio is unclassified.")
+                else:
+                    st.warning("No classified styles for this studio.")
             with detail_col2:
                 st.write("#### Core Palette Details")
                 for c in p_all[:8]:
@@ -472,15 +492,29 @@ elif page == "Game Developer Profile":
 
             detail_col3, detail_col4 = st.columns(2)
             with detail_col3:
-                fig_bar = px.bar(
-                    dec_dev_df.groupby("Art_Style").size().reset_index(name="Count"),
-                    x="Art_Style",
-                    y="Count",
-                    color="Art_Style",
-                    title="Technique Volume",
-                )
-                fig_bar.update_layout(showlegend=False)
-                st.plotly_chart(fig_bar, width="stretch")
+                # Bar chart for style volume (Classified only)
+                classified_dec = dec_dev_df[dec_dev_df["is_classified"]]
+                if not classified_dec.empty:
+                    style_counts = (
+                        classified_dec.groupby("Art_Style").size().reset_index(name="Count")
+                    )
+                    fig_pie = px.pie(
+                        style_counts,
+                        values="Count",
+                        names="Art_Style",
+                        hole=0.4,
+                        height=350,
+                        title="Technique Distribution",
+                        color_discrete_sequence=px.colors.qualitative.Pastel,
+                    )
+                    fig_pie.update_layout(showlegend=True)
+                    st.plotly_chart(fig_pie, width="stretch")
+                    uncl_pct = ((len(dec_dev_df) - len(classified_dec)) / len(dec_dev_df)) * 100
+                    st.info(
+                        f"**Note:** {uncl_pct:.1f}% of {final_dec.title()}'s {dec_sel_s}s portfolio is unclassified."
+                    )
+                else:
+                    st.info("No games were classified for this period.")
             with detail_col4:
                 st.write("#### Hex Detail")
                 for c in p_dec[:8]:
@@ -529,17 +563,31 @@ elif page == "Game Developer Profile":
                 html_comp += "</div>"
                 st.markdown(html_comp, unsafe_allow_html=True)
 
-                style_data = s_df["Art_Style"].value_counts().reset_index()
-                style_data.columns = ["Style", "Count"]
-                fig_comp = px.pie(style_data, names="Style", values="Count", hole=0.5, height=280)
-                fig_comp.update_layout(showlegend=False)
-                st.plotly_chart(fig_comp, width="stretch")
+                s_df_classified = s_df[s_df["is_classified"]]
+                if not s_df_classified.empty:
+                    style_data = s_df_classified["Art_Style"].value_counts().reset_index()
+                    style_data.columns = ["Style", "Count"]
+                    fig_comp = px.pie(
+                        style_data,
+                        names="Style",
+                        values="Count",
+                        hole=0.5,
+                        height=300,
+                        color_discrete_sequence=px.colors.qualitative.Pastel,
+                    )
+                    fig_comp.update_layout(showlegend=True)
+                    st.plotly_chart(fig_comp, width="stretch")
+
+                    uncl_comp_pct = ((len(s_df) - len(s_df_classified)) / len(s_df)) * 100
+                    st.caption(f"Unclassified: **{uncl_comp_pct:.1f}%**")
+                else:
+                    st.info("No games were classified")
 
 elif page == "Individual Game Palette":
     st.header("🔍 Individual Game Analysis")
     st.write("Extracting the visual DNA and metadata for specific titles.")
 
-    unique_games = sorted(df["Game"].unique())
+    unique_games = sorted(df_safe["Unique_ID"].unique())
 
     if "search_query" in st.session_state:
         st.session_state["game_selector"] = st.session_state["search_query"]
@@ -550,16 +598,29 @@ elif page == "Individual Game Palette":
         filtered_list = [g for g in unique_games if search_query.lower() in g.lower()]
     else:
         filtered_list = unique_games
-    selected_game_name = st.selectbox("Select a game:", filtered_list, key="game_selector")
 
-    if selected_game_name:
-        # Filter for all rows belonging to this game
-        game_rows = df[df["Game"] == selected_game_name]
+    selected_game_id = st.selectbox("Select a game:", filtered_list, key="game_selector")
+
+    # target_game = st.selectbox("Select Game", df_safe["Game"].unique())
+
+    if selected_game_id:
+        is_nsfw_check = df[df["Unique_ID"] == selected_game_id]["is_nsfw"].any()
+
+        if is_nsfw_check:
+            st.warning(
+                "⚠️ This title has been filtered from visual display due to content maturity settings."
+            )
+            st.stop()
+
+        selected_meta = df_safe[df_safe["Unique_ID"] == selected_game_id].iloc[0]
+        target_year = selected_meta["Year"]
+        game_rows = df[(df["Unique_ID"] == selected_game_id) & (df["Year"] == target_year)]
+
+        # game_rows = df.loc[[selected_game_id]]
         main_info = game_rows.iloc[0]
 
         st.divider()
 
-        # --- TOP SECTION: Metadata & Technical Stats ---
         col1, col2 = st.columns([1.5, 2])
 
         with col1:
@@ -571,39 +632,26 @@ elif page == "Individual Game Palette":
             st.markdown(f"**🎭 Themes:** {main_info['Themes'].replace('|', ', ').title()}")
             st.markdown(f"**🖼️ Screenshots:** {len(game_rows)} images")
 
-        # with col3:
-        #     st.subheader("📊 Visual Specs")
-        #     st.metric("Brightness", f"{game_meta['luminance'] * 100:.1f}%")
-        #     st.metric("Vibrancy", f"{game_meta['saturation']:.1f}")
-
         with col2:
             st.subheader("🎨 Representative Palette")
 
-            game_pal_list = []
-            for i in range(1, 9):
-                # We calculate the average R, G, B, and Weight for each cluster slot across all rows
-                r = game_rows[f"C{i}_R"].mean()
-                g = game_rows[f"C{i}_G"].mean()
-                b = game_rows[f"C{i}_B"].mean()
-                w = game_rows[f"C{i}_W"].mean()
-                if not pd.isna(r):
-                    game_pal_list.append((r, g, b, w))
-            game_pal_list.sort(key=lambda x: x[3], reverse=True)
-            html_bar = '<div style="display: flex; height: 80px; border-radius: 10px; overflow: hidden; border: 2px solid #555;">'
-            for r, g, b, w in game_pal_list:
-                if w > 0:
-                    html_bar += f'<div style="background-color:rgb({int(r)},{int(g)},{int(b)}); flex:{w};" title="Weight: {w:.1%}"></div>'
-            html_bar += "</div>"
-            st.markdown(html_bar, unsafe_allow_html=True)
-            st.markdown("Weighted average of the top 8 colors for this game")
-
-            # master_pal = helper.get_weighted_representative_palette(game_rows, count=8)
-            # html_dna = '<div style="display: flex; height: 100px; border-radius: 12px; overflow: hidden; border: 2px solid #555; box-shadow: 0px 4px 10px rgba(0,0,0,0.3);">'
-            # for item in master_pal:
-            #     color = item["hex"]
-            #     weight = item["weight"]
-            #     html_dna += f'<div style="background-color:{color}; flex:{weight};" title="{color} (Weight: {weight:.1%})"></div>'
-            # html_dna += "</div>"
+            # game_pal_list = []
+            # for i in range(1, 9):
+            #     # We calculate the average R, G, B, and Weight for each cluster slot across all rows
+            #     r = game_rows[f"C{i}_R"].mean()
+            #     g = game_rows[f"C{i}_G"].mean()
+            #     b = game_rows[f"C{i}_B"].mean()
+            #     w = game_rows[f"C{i}_W"].mean()
+            #     if not pd.isna(r):
+            #         game_pal_list.append((r, g, b, w))
+            # game_pal_list.sort(key=lambda x: x[3], reverse=True)
+            # html_bar = '<div style="display: flex; height: 100px; border-radius: 10px; overflow: hidden; border: 2px solid #555;">'
+            # for r, g, b, w in game_pal_list:
+            #     if w > 0:
+            #         html_bar += f'<div style="background-color:rgb({int(r)},{int(g)},{int(b)}); flex:{w};" title="Weight: {w:.1%}"></div>'
+            # html_bar += "</div>"
+            # st.markdown(html_bar, unsafe_allow_html=True)
+            # st.markdown("Weighted average of the top 8 colors for this game")
 
             # st.markdown(html_dna, unsafe_allow_html=True)
             dna_string = main_info["Precalc_DNA"]  # e.g., "#332211,0.4|#ff9900,0.3"
@@ -616,51 +664,87 @@ elif page == "Individual Game Palette":
             st.markdown("Proportionally weighted palette for this game")
             # st.caption(f"Colors: {', '.join([c['hex'] for c in master_pal])}")
 
-        # --- MIDDLE SECTION: Historical Context ---
-        decade_avg_sat = df[df["Decade"] == main_info["Decade"]]["saturation"].mean()
-        denom = decade_avg_sat if decade_avg_sat > 0 else 1.0
-        factor = main_info["saturation"] / denom
+            decade_avg_sat = df[df["Decade"] == main_info["Decade"]]["saturation"].mean()
+            denom = decade_avg_sat if decade_avg_sat > 0 else 1.0
+            factor = main_info["saturation"] / denom
 
-        if factor > 1.5:
-            comparison_text = "is **exceptionally more vibrant**"
-        elif factor > 1.1:
-            comparison_text = f"**{factor:.1f}x more colorful**"
-        elif factor < 0.5:
-            comparison_text = "is **highly desaturated or monochromatic**"
-        elif factor < 0.9:
-            comparison_text = f"**{1 / factor:.1f}x more muted**"
-        else:
-            comparison_text = "visually consistent with"
+            if factor > 1.5:
+                comparison_text = "**exceptionally more vibrant compared to**"
+            elif factor > 1.1:
+                comparison_text = f"**{factor:.1f}x more colorful compared to**"
+            elif factor < 0.5:
+                comparison_text = "**highly desaturated compared to**"
+            elif factor < 0.9:
+                comparison_text = f"**{1 / factor:.1f}x more muted compared to**"
+            else:
+                comparison_text = "visually consistent with"
 
-        st.info(
-            f"**Thesis Context:** {main_info['Game'].title()} is {comparison_text} "
-            f"compared to the average game from the {main_info['Decade']}."
-        )
+            st.info(
+                f"{main_info['Game'].title()} is {comparison_text} "
+                f" the average game from the {main_info['Decade']}."
+            )
 
         st.divider()
 
         # --- BOTTOM SECTION: Source Screenshots Grid ---
-        st.subheader("🖼️ Source Screenshots")
-        # Dynamic columns based on number of screenshots (max 5 per row)
-        n_screens = len(game_rows)
-        cols = st.columns(min(n_screens, 5))
+        # st.subheader("🖼️ Source Screenshots")
+        # # Dynamic columns based on number of screenshots (max 5 per row)
+        # n_screens = len(game_rows)
+        # cols = st.columns(min(n_screens, 5))
 
-        for i, row in enumerate(game_rows.itertuples()):
-            with cols[i % 5]:
-                st.image(row.Screenshot, width="stretch")
+        # for i, row in enumerate(game_rows.itertuples()):
+        #     with cols[i % 5]:
+        #         st.image(row.Screenshot, width="stretch")
 
-                # Pull the 5 colors directly from the current row
-                mini_html = '<div style="display: flex; height: 12px; margin-top: -5px; border-radius: 0 0 5px 5px; overflow: hidden; border: 1px solid #333;">'
+        #         # Pull the 5 colors directly from the current row
+        #         mini_html = '<div style="display: flex; height: 12px; margin-top: -5px; border-radius: 0 0 5px 5px; overflow: hidden; border: 1px solid #333;">'
 
-                for j in range(1, 6):  # C1 to C5
-                    # Get the R, G, B values from the row attributes
-                    r = getattr(row, f"C{j}_R")
-                    g = getattr(row, f"C{j}_G")
-                    b = getattr(row, f"C{j}_B")
+        #         for j in range(1, 6):  # C1 to C5
+        #             # Get the R, G, B values from the row attributes
+        #             r = getattr(row, f"C{j}_R")
+        #             g = getattr(row, f"C{j}_G")
+        #             b = getattr(row, f"C{j}_B")
 
-                    if not pd.isna(r):
-                        color_hex = f"rgb({int(r)},{int(g)},{int(b)})"
-                        mini_html += f'<div style="background-color:{color_hex}; flex:1;" title="{color_hex}"></div>'
+        #             if not pd.isna(r):
+        #                 color_hex = f"rgb({int(r)},{int(g)},{int(b)})"
+        #                 mini_html += f'<div style="background-color:{color_hex}; flex:1;" title="{color_hex}"></div>'
 
-                mini_html += "</div>"
-                st.markdown(mini_html, unsafe_allow_html=True)
+        #         mini_html += "</div>"
+        #         st.markdown(mini_html, unsafe_allow_html=True)
+        # --- BOTTOM SECTION: Source Screenshots Grid ---
+        # --- BOTTOM SECTION: Source Screenshots Grid ---
+    st.subheader("🖼️ Source Screenshots")
+
+    n_screens = len(game_rows)
+    cols = st.columns(min(n_screens, 5))
+
+    for i, row in enumerate(game_rows.itertuples()):
+        with cols[i % 5]:
+            st.image(row.Screenshot, width="stretch")
+
+            # 1. Container for the uniform mini-bar
+            mini_html = (
+                '<div style="display: flex; height: 14px; margin-top: -6px; '
+                'border-radius: 0 0 6px 6px; overflow: hidden; border: 1px solid #333;">'
+            )
+
+            # 2. Loop through only the top 5 colors (as you requested)
+            for j in range(1, 6):
+                r = getattr(row, f"C{j}_R")
+                g = getattr(row, f"C{j}_G")
+                b = getattr(row, f"C{j}_B")
+
+                # Using weight (w) only to check if the cluster exists
+                w = getattr(row, f"C{j}_W")
+
+                if not pd.isna(r) and w > 0:
+                    color_hex = f"rgb({int(r)},{int(g)},{int(b)})"
+
+                    # 3. SET FLEX TO 1: This makes every color block exactly the same width
+                    mini_html += (
+                        f'<div style="background-color:{color_hex}; flex:1; border-right: 0.1px solid rgba(255,255,255,0.1);" '
+                        f'title="R:{int(r)} G:{int(g)} B:{int(b)}"></div>'
+                    )
+
+            mini_html += "</div>"
+            st.markdown(mini_html, unsafe_allow_html=True)

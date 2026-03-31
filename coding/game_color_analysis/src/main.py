@@ -8,7 +8,7 @@ from PIL import Image
 from igdb_api import download_image, query_igdb
 
 
-START_YEAR = 1952
+START_YEAR = 1970
 END_YEAR = 2026
 SCREENSHOT_COUNT = 5  # possibly increase to 10
 COLOR_COUNT = 10
@@ -27,7 +27,10 @@ NSFW_WORDS = [
     "adult",
     "pornographic",
     "porn",
+    "porno",
     "sex",
+    "sexy",
+    "eroge",
 ]
 
 
@@ -83,8 +86,11 @@ def main():
 
     if os.path.exists(OUTPUT_CSV):
         # Skip processed screenshots
-        current_csv = pd.read_csv(OUTPUT_CSV, low_memory=False)
-        processed = set(current_csv["Screenshot"].astype(str).tolist())
+        processed = set(
+            pd.read_csv(OUTPUT_CSV, usecols=["Screenshot"])["Screenshot"].astype(str).tolist()
+        )
+        # current_csv = pd.read_csv(OUTPUT_CSV, low_memory=False)
+        # processed = set(current_csv["Screenshot"].astype(str).tolist())
     else:
         os.makedirs(DATA_DIR, exist_ok=True)
         with open(OUTPUT_CSV, mode="w", newline="", encoding="utf-8") as file:
