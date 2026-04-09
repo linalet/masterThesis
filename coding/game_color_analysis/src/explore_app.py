@@ -157,15 +157,17 @@ elif page == "Color through Decades":
         decade_data = df[df["Decade"] == dec_label]
 
         if not decade_data.empty:
-            # Use our UNIFIED math to get the top 10 representative colors for the era
             palette = helper.get_ranked_colors(decade_data, count=10)
+            game_count = len(decade_data)
 
             c1, c2 = st.columns([1, 7])
-            c1.write(f"### {dec_label}")
+            formatted_count = f"{game_count:,}".replace(",", " ")
+
+            c1.write(f"### {dec_label}\n({formatted_count} games)")
 
             with c2:
-                html = '<div style="display: flex; height: 50px; border-radius: 8px; overflow: hidden; border: 3px solid #999; margin-bottom: 2px;">'
-                hex_labels = '<div style="display: flex; margin-bottom: 25px;">'
+                html = '<div style="display: flex; height: 40px; border-radius: 8px; overflow: hidden; border: 3px solid #999; margin-bottom: 2px;">'
+                hex_labels = '<div style="display: flex; margin-bottom: 2px;">'
 
                 for c in palette:
                     hex_code = "#%02x%02x%02x" % (int(c.R), int(c.G), int(c.B))
@@ -278,7 +280,9 @@ elif page == "Genre Timelines":
                         yr_palette = helper.get_ranked_colors(yr_subset, count=10)
 
                         col_label, col_strip = st.columns([1, 7])
-                        col_label.write(f"**{yr}** (Games: {len(yr_subset)})")
+                        yr_count = len(yr_subset)
+                        formatted_yr_count = f"{yr_count:,}".replace(",", " ")
+                        col_label.write(f"**{yr}** (Games: {formatted_yr_count})")
                         with col_strip:
                             y_html = '<div style="display: flex; height: 30px; border-radius: 4px; overflow: hidden; border: 3px solid #666; margin-bottom: 5px;">'
                             for ycolor in yr_palette:
@@ -329,92 +333,6 @@ elif page == "Theme Timelines":
                         helper.render_color_strip(
                             t_yr_subset, f"  ↳ {yr}", f"{len(t_yr_subset)} titles"
                         )
-
-
-# elif page == "Colorfulness":
-#     st.header("📍 The Visual Landscape")
-
-#     with st.sidebar:
-#         st.subheader("🎨 Research Filters")
-#         all_genres_list = sorted(set(df["Genres"].str.split("|").explode().dropna().unique()))
-#         genre_toggle = st.toggle("Select All Genres", value=True)
-#         selected_genres = (
-#             all_genres_list if genre_toggle else st.multiselect("Pick Genres", all_genres_list)
-#         )
-
-#         all_styles = sorted(df["Art_Style"].dropna().unique().tolist())
-#         style_toggle = st.toggle("Select All Art Styles", value=True)
-#         selected_styles = (
-#             all_styles if style_toggle else st.multiselect("Pick Specific Styles", all_styles)
-#         )
-
-#     if selected_genres:
-#         # Non-Regex Piped Genre Filter
-#         def genre_filter(genre_string):
-#             if pd.isna(genre_string):
-#                 return False
-#             game_genres = genre_string.split("|")
-#             return any(g in selected_genres for g in game_genres)
-
-#         mask = (df["Genres"].apply(genre_filter)) & (df["Art_Style"].isin(selected_styles))
-#         plot_df = df[mask & (df["Year"] >= 1970)].copy()
-
-#         plot_df["Decade"] = (plot_df["Year"] // 10 * 10).astype(int).astype(str) + "s"
-#         decade_list = sorted(plot_df["Decade"].unique())
-
-#         # 0-100 Normalization
-#         plot_df["lum_pct"] = plot_df["luminance"] * 100
-#         plot_df["sat_pct"] = (plot_df["saturation"] / plot_df["saturation"].max()) * 100
-#         plot_df["hex_color"] = plot_df.apply(
-#             lambda r: f"#%02x%02x%02x" % (int(r["C1_R"]), int(r["C1_G"]), int(r["C1_B"])), axis=1
-#         )
-
-#         if not plot_df.empty:
-#             fig = px.scatter(
-#                 plot_df,
-#                 x="lum_pct",
-#                 y="sat_pct",
-#                 hover_name="Game",
-#                 facet_col="Decade",
-#                 facet_col_wrap=3,
-#                 category_orders={"Decade": decade_list},
-#                 labels={"lum_pct": "Brightness", "sat_pct": "Colorfulness"},
-#                 range_x=[-5, 105],
-#                 range_y=[-5, 105],
-#                 template="plotly_dark",
-#             )
-
-#             # Drop opacity further to make background "recede"
-#             fig.update_traces(marker=dict(color=plot_df["hex_color"], size=4, opacity=0.25))
-
-#             # --- ANNOTATION-BASED STARS (Guaranteed Visibility) ---
-#             centroids = plot_df.groupby("Decade")[["lum_pct", "sat_pct"]].mean().reset_index()
-
-#             for i, decade in enumerate(decade_list):
-#                 dec_avg = centroids[centroids["Decade"] == decade]
-#                 if not dec_avg.empty:
-#                     # Annotations use 'xref' and 'yref' to target specific facets
-#                     # 'x1', 'y1' for first facet, 'x2', 'y2' for second, etc.
-#                     ref_idx = i + 1
-
-#                     fig.add_annotation(
-#                         x=dec_avg["lum_pct"].iloc[0],
-#                         y=dec_avg["sat_pct"].iloc[0],
-#                         xref=f"x{ref_idx}",
-#                         yref=f"y{ref_idx}",
-#                         text="⭐",  # Using an emoji for absolute layering priority
-#                         showarrow=False,
-#                         font=dict(size=24),  # Large and bright
-#                         bgcolor="rgba(0,0,0,0.5)",  # Dark halo to pop against dots
-#                         borderpad=2,
-#                     )
-
-#             fig.update_layout(height=450 * ((len(decade_list) + 2) // 3), margin=dict(t=50, b=50))
-#             st.plotly_chart(fig, width="stretch")
-#             st.info(
-#                 "💡 **How to read this:** The **Star** shows the typical 'look' of the decade. Notice how the star moves toward the bottom-left during the 2000s—this represents the industry-wide shift toward grittier, browner palettes."
-#             )
-
 
 elif page == "Game Developer Profile":
     st.header("🏢 Studio Visual Fingerprints")
@@ -730,7 +648,7 @@ elif page == "Individual Game Palette":
 
     for i, row in enumerate(game_rows.itertuples()):
         with cols[i % 5]:
-            st.image(row.Screenshot, use_container_width=True)
+            st.image(row.Screenshot, width="stretch")
 
             # Use the UNIFIED math for 5 colors
             top_5 = helper.get_ranked_colors(row, count=5)

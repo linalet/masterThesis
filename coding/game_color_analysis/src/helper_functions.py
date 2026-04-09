@@ -61,9 +61,9 @@ def load_data(path):
 #     pool["sat"] = pool[["R", "G", "B"]].max(axis=1) - pool[["R", "G", "B"]].min(axis=1)
 
 #     # Bucket colors (Grouping similar shades)
-#     pool["R_B"] = (pool["R"] // 20 * 20).clip(0, 255)
-#     pool["G_B"] = (pool["G"] // 20 * 20).clip(0, 255)
-#     pool["B_B"] = (pool["B"] // 20 * 20).clip(0, 255)
+#     pool["R_B"] = (pool["R"] // 10 * 10).clip(0, 255)
+#     pool["G_B"] = (pool["G"] // 10 * 10).clip(0, 255)
+#     pool["B_B"] = (pool["B"] // 10 * 10).clip(0, 255)
 
 #     grouped = (
 #         pool.groupby(["R_B", "G_B", "B_B"])
@@ -125,7 +125,7 @@ def get_ranked_colors(df_row_or_group, count=5, filter_similarity=True):
         return []
 
     # 1. Bucket and Group
-    r_b, g_b, b_b = (r // 20 * 20), (g // 20 * 20), (b // 20 * 20)
+    r_b, g_b, b_b = (r // 10 * 10), (g // 10 * 10), (b // 10 * 10)
     sat = np.max([r, g, b], axis=0) - np.min([r, g, b], axis=0)
 
     temp = pd.DataFrame({"R": r_b, "G": g_b, "B": b_b, "W": w, "S": sat})
@@ -151,7 +151,7 @@ def get_ranked_colors(df_row_or_group, count=5, filter_similarity=True):
             dist = (
                 (row.R - chosen.R) ** 2 + (row.G - chosen.G) ** 2 + (row.B - chosen.B) ** 2
             ) ** 0.5
-            if dist < 50:  # Standard human eye threshold
+            if dist < 35:  # Standard human eye threshold
                 is_similar = True
                 break
         if not is_similar:
