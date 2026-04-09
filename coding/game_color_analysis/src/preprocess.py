@@ -38,10 +38,11 @@ def run_preprocessing(input_path="data/current_game_data.csv"):
 
     df["Developers"] = df["Developers"].apply(ph.normalize_studio_name)
 
-    # 4. Vectorized DNA Calculation (The logic we discussed for 360k games)
+    # # 4. Vectorized DNA Calculation (The logic we discussed for 360k games)
     print("🧬 Generating Game DNA...")
-    dna_results = df.groupby("Game").apply(ph.get_weighted_representative_palette)
-    df["Precalc_DNA"] = df["Game"].map(dna_results)
+    dna_results = df.groupby("Unique_ID").apply(ph.get_weighted_representative_palette)
+    # Group by Unique_ID so every version gets its own unique palette DNA
+    df["Precalc_DNA"] = df["Unique_ID"].map(dna_results)
 
     df["is_classified"] = ~df["Art_Style"].str.startswith("Unclassified")
     # 5. Save as Parquet

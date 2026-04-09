@@ -146,47 +146,40 @@ if page == "Art Style Popularity":
 
 
 elif page == "Color through Decades":
-    st.header("🎨 Palette Archetypes & Technological Milestones")
-    st.subheader("The Decade Color Pillar")
-    st.write("Evolution of the dominant industry palette alongside tech milestones.")
+    st.header("🎨 Color through Decades")
+    st.subheader("Dominant colors of each decade")
+    # st.write("Evolution of the dominant industry palette alongside tech milestones.")
 
-    milestones = {
-        1970: "🕹️ First Arcades (PONG)",
-        1980: "🎮 8-Bit Era (NES/Master System)",
-        1990: "📐 The 3D Shift (PS1/N64)",
-        2000: "🎞️ Cinematic Realism (PS2/Xbox)",
-        2010: "💡 Modern Lighting (DirectX 11)",
-        2020: "✨ Ray Tracing & HDR Era",
-    }
-    path = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/summary_stats.json"
-    )
-    with open(path, "r") as f:
-        summaries = json.load(f)
+    decade_list = sorted(df["Decade"].unique())
 
-    for dec in [1950, 1960, 1970, 1980, 1990, 2000, 2010, 2020]:
-        dec_label = f"{dec}s"
-        pal = summaries["decades"].get(dec_label, [])
-        # dec_df = df[(df["Year"] >= dec) & (df["Year"] < dec + 10)]
-        # if not dec_df.empty:
-        #   pal = helper.get_representative_palette(dec_df, count=10)
-        if pal:
-            c1, c2, c3 = st.columns([1, 2, 6])
-            c1.write(f"### {dec}s")
-            c2.info(milestones.get(dec, ""))
+    for dec_label in decade_list:
+        dec_int = int(dec_label.replace("s", ""))
+        decade_data = df[df["Decade"] == dec_label]
 
-            with c3:
-                html = '<div style="display: flex; height: 50px; border-radius: 8px; overflow: hidden; border: 1px solid #333; margin-bottom: 25px;">'
-                for color in pal:
-                    html += f'<div style="background-color:{color}; flex:1;" title="{color}"></div>'
+        if not decade_data.empty:
+            # Use our UNIFIED math to get the top 10 representative colors for the era
+            palette = helper.get_ranked_colors(decade_data, count=10)
+
+            c1, c2 = st.columns([1, 7])
+            c1.write(f"### {dec_label}")
+
+            with c2:
+                html = '<div style="display: flex; height: 50px; border-radius: 8px; overflow: hidden; border: 3px solid #999; margin-bottom: 2px;">'
+                hex_labels = '<div style="display: flex; margin-bottom: 25px;">'
+
+                for c in palette:
+                    hex_code = "#%02x%02x%02x" % (int(c.R), int(c.G), int(c.B))
+                    rgb_val = f"rgb({int(c.R)},{int(c.G)},{int(c.B)})"
+                    html += f'<div style="background-color:{rgb_val}; flex:1;" title="{hex_code.upper()}"></div>'
+                    hex_labels += f'<div style="flex:1; text-align:center; font-size:14px; color:gray; font-family:monospace;">{hex_code.upper()}</div>'
                 html += "</div>"
-                st.markdown(html, unsafe_allow_html=True)
+                st.markdown(html + hex_labels, unsafe_allow_html=True)
 
     st.markdown("---")
 
     # helper.render_saturation_heatmap(df)
 
-    st.subheader("Deep Dive: Style x Decade")
+    st.subheader("Dominant colors in a decade by art style")
     col_decade, col_style = st.columns(2)
     with col_decade:
         decade_sel = st.select_slider(
@@ -195,10 +188,10 @@ elif page == "Color through Decades":
     with col_style:
         df_decade = df[(df["Year"] >= decade_sel) & (df["Year"] < decade_sel + 10)]
         available_styles = sorted(df_decade["Art_Style"].unique().tolist())
-        style_choice = st.selectbox("Art Styles", ["Overall Industry"] + available_styles)
+        style_choice = st.selectbox("Art Styles", ["All Styles"] + available_styles)
 
     style_df = df_decade.copy()
-    if style_choice != "Overall Industry":
+    if style_choice != "All Styles":
         style_df = df_decade[df_decade["Art_Style"] == style_choice]
 
     if not style_df.empty:
@@ -206,12 +199,13 @@ elif page == "Color through Decades":
         p_cols = st.columns(10)
         for i, color in enumerate(palette):
             p_cols[i].markdown(
-                f"<div style='background-color:{color}; height:60px; border-radius:5px;'></div>",
+                f"<div style='background-color:{color}; height:60px; border-radius:5px; border: 3px solid #999;'></div>",
                 unsafe_allow_html=True,
             )
             p_cols[i].caption(color)
 
-        st.subheader("Visual Sample")
+        st.subheader(f"Randomized examples from {style_choice} in the {decade_sel}s")
+        st.write("Games may be categorized incorrectly, due to the use of user generated keywords")
         style_df_safe = style_df[style_df["is_nsfw"] == False]
         if not style_df_safe.empty:
             samples = style_df_safe.sample(min(4, len(style_df_safe)))
@@ -232,37 +226,71 @@ elif page == "Color through Decades":
 
 
 elif page == "Genre Timelines":
-    st.header("📅 Historical Color Strip")
-    st.write("Analyze visual identities across decades with a detailed year-by-year drill-down.")
-
-    st.subheader("🕹️ Genre-Specific Evolution")
+    st.header("🎨 Genre-Specific Color Evolution")
+    # st.subheader("🕹️ Genre-Specific Evolution")
     all_genres = sorted(list(set(df["Genres"].str.split("|").explode().str.strip().unique())))
-    sel_genre = st.selectbox(
-        "Select Genre to Trace", [g for g in all_genres if g], key="genre_trace_box"
-    )
+    sel_genre = st.selectbox("Select Genre", [g for g in all_genres if g], key="genre_trace_box")
+    st.write("Click the 🔍 tab to expand and see year-by-year breakdowns")
+    st.write("**☝TOOL TIP**: Hover mouse over the colors in the breakdown to see their hex codes")
 
     if sel_genre:
-        # Pooled filtering logic
         g_df = df[df["Genre_Set"].apply(lambda x: sel_genre.lower() in x)]
 
-        # Iterate through Decades
-        decades = sorted([d for d in g_df["Year"].unique() if d >= 1970], reverse=True)
-        unique_decades = sorted(list(set([(d // 10) * 10 for d in decades])), reverse=True)
+        decades = sorted([d for d in g_df["Year"].unique() if d >= 1950])  # , reverse=True)
+        unique_decades = sorted(list(set([(d // 10) * 10 for d in decades])))  # , reverse=True)
 
         for dec in unique_decades:
             dec_subset = g_df[(g_df["Year"] >= dec) & (g_df["Year"] < dec + 10)]
             if not dec_subset.empty:
-                # Main Decade Header
-                helper.render_color_strip(
-                    dec_subset, f"{dec}s Era", f"Market Share: {dec_subset['Art_Style'].mode()[0]}"
+                valid_styles = dec_subset[dec_subset["Art_Style"] != "Unclassified"]["Art_Style"]
+                top_style = valid_styles.mode()[0] if not valid_styles.empty else "General Industry"
+
+                palette = helper.get_ranked_colors(dec_subset, count=10)
+                # st.write(f"#### {dec}s Era")
+                # st.write(f"Most Common Art Style: {top_style}")
+                st.markdown(
+                    f"""
+                    <div style='line-height: 1.5;'>
+                        <span style='font-size: 20px; font-weight: bold;'>{dec}s Era</span><br>
+                        <span style='font-size: 16px; color: white;'>Most Common Art Style: {top_style}</span>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
                 )
+                html = '<div style="display: flex; height: 30px; border-radius: 8px; overflow: hidden; border: 3px solid #999; margin-bottom: 3px;">'
+                hex_labels = '<div style="display: flex; margin-bottom: 3px;">'
+
+                for c in palette:
+                    hex_code = "#%02x%02x%02x" % (int(c.R), int(c.G), int(c.B))
+                    rgb_val = f"rgb({int(c.R)},{int(c.G)},{int(c.B)})"
+                    html += f'<div style="background-color:{rgb_val}; flex:1;" title="{hex_code.upper()}"></div>'
+                    hex_labels += f'<div style="flex:1; text-align:center; font-size:16px; color:gray; font-family:monospace;">{hex_code.upper()}</div>'
+
+                html += "</div>"
+                hex_labels += "</div>"
+                st.markdown(html + hex_labels, unsafe_allow_html=True)
 
                 # Expandable Year Detail
-                with st.expander(f"🔍 View Year-by-Year breakdown for the {dec}s"):
-                    year_list = sorted(dec_subset["Year"].unique(), reverse=True)
+                with st.expander(f"🔍 View breakdown for the {dec}s"):
+                    year_list = sorted(dec_subset["Year"].unique())  # , reverse=True)
                     for yr in year_list:
                         yr_subset = dec_subset[dec_subset["Year"] == yr]
-                        helper.render_color_strip(yr_subset, f"  ↳ {yr}", f"{len(yr_subset)} games")
+                        yr_palette = helper.get_ranked_colors(yr_subset, count=10)
+
+                        col_label, col_strip = st.columns([1, 7])
+                        col_label.write(f"**{yr}** (Games: {len(yr_subset)})")
+                        with col_strip:
+                            y_html = '<div style="display: flex; height: 30px; border-radius: 4px; overflow: hidden; border: 3px solid #666; margin-bottom: 5px;">'
+                            for ycolor in yr_palette:
+                                y_hex = "#%02x%02x%02x" % (
+                                    int(ycolor.R),
+                                    int(ycolor.G),
+                                    int(ycolor.B),
+                                )
+                                y_html += f'<div style="background-color:{y_hex}; flex:1;" title="{y_hex.upper()}"></div>'
+                            y_html += "</div>"
+                            st.markdown(y_html, unsafe_allow_html=True)
+                        # helper.render_color_strip(yr_subset, f"  ↳ {yr}", f"{len(yr_subset)} games")
 
 
 elif page == "Theme Timelines":
@@ -420,7 +448,7 @@ elif page == "Game Developer Profile":
             p_all = helper.get_representative_palette(all_df, count=10)
 
             # Horizontal Palette Bar
-            html_bar = '<div style="display: flex; height: 40px; border-radius: 8px; overflow: hidden; border: 1px solid #333; margin-bottom: 20px;">'
+            html_bar = '<div style="display: flex; height: 40px; border-radius: 8px; overflow: hidden; border: 3px solid #999; margin-bottom: 20px;">'
             for color in p_all:
                 html_bar += f'<div style="background-color:{color}; flex:1;" title="{color}"></div>'
             html_bar += "</div>"
@@ -451,7 +479,7 @@ elif page == "Game Developer Profile":
                 st.write("#### Core Palette Details")
                 for c in p_all[:8]:
                     st.markdown(
-                        f'<div style="background-color:{c}; padding:5px 10px; border-radius:4px; color:white; font-family:monospace; margin-bottom:2px; font-size:0.9em; border:1px solid #444;">{c}</div>',
+                        f'<div style="background-color:{c}; padding:5px 10px; border-radius:4px; color:white; font-family:monospace; margin-bottom:2px; font-size:0.9em; border:10px solid #999;">{c}</div>',
                         unsafe_allow_html=True,
                     )
 
@@ -482,7 +510,7 @@ elif page == "Game Developer Profile":
             st.write(f"### {final_dec.title()}'s Style in the {dec_sel_s}s")
             p_dec = helper.get_representative_palette(dec_dev_df, count=10)
 
-            html_bar_dec = '<div style="display: flex; height: 40px; border-radius: 8px; overflow: hidden; border: 1px solid #333; margin-bottom: 20px;">'
+            html_bar_dec = '<div style="display: flex; height: 40px; border-radius: 8px; overflow: hidden; border: 3px solid #999; margin-bottom: 20px;">'
             for color in p_dec:
                 html_bar_dec += (
                     f'<div style="background-color:{color}; flex:1;" title="{color}"></div>'
@@ -519,7 +547,7 @@ elif page == "Game Developer Profile":
                 st.write("#### Hex Detail")
                 for c in p_dec[:8]:
                     st.markdown(
-                        f'<div style="background-color:{c}; padding:4px 10px; border-radius:4px; color:white; font-family:monospace; margin-bottom:2px; font-size:0.8em; border:1px solid #444;">{c}</div>',
+                        f'<div style="background-color:{c}; padding:4px 10px; border-radius:4px; color:white; font-family:monospace; margin-bottom:2px; font-size:0.8em; border:10px solid #999;">{c}</div>',
                         unsafe_allow_html=True,
                     )
 
@@ -557,7 +585,7 @@ elif page == "Game Developer Profile":
                 st.caption(f"{len(s_df)} games analyzed")
                 pal = helper.get_representative_palette(s_df, count=8)
 
-                html_comp = '<div style="display: flex; height: 35px; border-radius: 6px; overflow: hidden; border: 1px solid #333; margin-bottom: 15px;">'
+                html_comp = '<div style="display: flex; height: 35px; border-radius: 6px; overflow: hidden; border: 3px solid #999; margin-bottom: 15px;">'
                 for color in pal:
                     html_comp += f'<div style="background-color:{color}; flex:1;"></div>'
                 html_comp += "</div>"
@@ -635,27 +663,9 @@ elif page == "Individual Game Palette":
         with col2:
             st.subheader("🎨 Representative Palette")
 
-            # game_pal_list = []
-            # for i in range(1, 9):
-            #     # We calculate the average R, G, B, and Weight for each cluster slot across all rows
-            #     r = game_rows[f"C{i}_R"].mean()
-            #     g = game_rows[f"C{i}_G"].mean()
-            #     b = game_rows[f"C{i}_B"].mean()
-            #     w = game_rows[f"C{i}_W"].mean()
-            #     if not pd.isna(r):
-            #         game_pal_list.append((r, g, b, w))
-            # game_pal_list.sort(key=lambda x: x[3], reverse=True)
-            # html_bar = '<div style="display: flex; height: 100px; border-radius: 10px; overflow: hidden; border: 2px solid #555;">'
-            # for r, g, b, w in game_pal_list:
-            #     if w > 0:
-            #         html_bar += f'<div style="background-color:rgb({int(r)},{int(g)},{int(b)}); flex:{w};" title="Weight: {w:.1%}"></div>'
-            # html_bar += "</div>"
-            # st.markdown(html_bar, unsafe_allow_html=True)
-            # st.markdown("Weighted average of the top 8 colors for this game")
-
             # st.markdown(html_dna, unsafe_allow_html=True)
             dna_string = main_info["Precalc_DNA"]  # e.g., "#332211,0.4|#ff9900,0.3"
-            html_dna = '<div style="display: flex; height: 100px; border-radius: 12px; overflow: hidden;border: 2px solid #555; box-shadow: 0px 4px 10px rgba(0,0,0,0.3);">'
+            html_dna = '<div style="display: flex; height: 100px; border-radius: 12px; overflow: hidden;border: 3px solid #999; box-shadow: 0px 4px 10px rgba(0,0,0,0.3);">'
             for entry in dna_string.split("|"):
                 color, weight = entry.split(",")
                 html_dna += f'<div style="background-color:{color}; flex:{weight};"></div>'
@@ -697,7 +707,7 @@ elif page == "Individual Game Palette":
         #         st.image(row.Screenshot, width="stretch")
 
         #         # Pull the 5 colors directly from the current row
-        #         mini_html = '<div style="display: flex; height: 12px; margin-top: -5px; border-radius: 0 0 5px 5px; overflow: hidden; border: 1px solid #333;">'
+        #         mini_html = '<div style="display: flex; height: 12px; margin-top: -5px; border-radius: 0 0 5px 5px; overflow: hidden; border: 1px solid #999;">'
 
         #         for j in range(1, 6):  # C1 to C5
         #             # Get the R, G, B values from the row attributes
@@ -720,31 +730,25 @@ elif page == "Individual Game Palette":
 
     for i, row in enumerate(game_rows.itertuples()):
         with cols[i % 5]:
-            st.image(row.Screenshot, width="stretch")
+            st.image(row.Screenshot, use_container_width=True)
 
-            # 1. Container for the uniform mini-bar
+            # Use the UNIFIED math for 5 colors
+            top_5 = helper.get_ranked_colors(row, count=5)
+
             mini_html = (
-                '<div style="display: flex; height: 14px; margin-top: -6px; '
-                'border-radius: 0 0 6px 6px; overflow: hidden; border: 1px solid #333;">'
+                '<div style="display: flex; height: 16px; margin-top: -6px; '
+                'border-radius: 0 0 6px 6px; overflow: hidden; border: 1px solid #222;">'
             )
 
-            # 2. Loop through only the top 5 colors (as you requested)
-            for j in range(1, 6):
-                r = getattr(row, f"C{j}_R")
-                g = getattr(row, f"C{j}_G")
-                b = getattr(row, f"C{j}_B")
+            for c in top_5:
+                mini_html += (
+                    f'<div style="background-color:rgb({int(c.R)},{int(c.G)},{int(c.B)}); '
+                    f'flex:1;" title="R:{int(c.R)} G:{int(c.G)} B:{int(c.B)}"></div>'
+                )
 
-                # Using weight (w) only to check if the cluster exists
-                w = getattr(row, f"C{j}_W")
-
-                if not pd.isna(r) and w > 0:
-                    color_hex = f"rgb({int(r)},{int(g)},{int(b)})"
-
-                    # 3. SET FLEX TO 1: This makes every color block exactly the same width
-                    mini_html += (
-                        f'<div style="background-color:{color_hex}; flex:1; border-right: 0.1px solid rgba(255,255,255,0.1);" '
-                        f'title="R:{int(r)} G:{int(g)} B:{int(b)}"></div>'
-                    )
+            # Padding for games with < 5 colors
+            for _ in range(5 - len(top_5)):
+                mini_html += '<div style="background-color:#000; flex:1;"></div>'
 
             mini_html += "</div>"
             st.markdown(mini_html, unsafe_allow_html=True)

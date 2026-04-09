@@ -70,51 +70,63 @@ def normalize_studio_name(dev_string):
 
 
 def get_weighted_representative_palette(group):
+    from helper_functions import get_ranked_colors
 
-    # 1. Gather all C1-C8 colors into one pool instantly
-    # We reshape the dataframe to have R, G, B, W columns
-    r_cols = [f"C{i}_R" for i in range(1, 9)]
-    g_cols = [f"C{i}_G" for i in range(1, 9)]
-    b_cols = [f"C{i}_B" for i in range(1, 9)]
-    w_cols = [f"C{i}_W" for i in range(1, 9)]
-
-    # Flatten the colors: This is 100x faster than a manual loop
-    r = group[r_cols].values.flatten()
-    g = group[g_cols].values.flatten()
-    b = group[b_cols].values.flatten()
-    w = group[w_cols].values.flatten()
-
-    # Remove NaNs
-    mask = ~np.isnan(r)
-    r, g, b, w = r[mask], g[mask], b[mask], w[mask]
-
-    if len(r) == 0:
+    top_colors = get_ranked_colors(group, count=8)
+    if not top_colors:
         return ""
 
-    # 2. Vectorized Bucketing
-    r_b = (r // 20 * 20).clip(0, 255)
-    g_b = (g // 20 * 20).clip(0, 255)
-    b_b = (b // 20 * 20).clip(0, 255)
-    sat = np.max([r, g, b], axis=0) - np.min([r, g, b], axis=0)
-
-    # 3. Use a temp dataframe for the final aggregation (the only way to group colors)
-    temp = pd.DataFrame({"R": r_b, "G": g_b, "B": b_b, "W": w, "sat": sat})
-    grouped = (
-        temp.groupby(["R", "G", "B"]).agg(total_w=("W", "sum"), max_s=("sat", "max")).reset_index()
-    )
-
-    # Ranking
-    grouped["score"] = (grouped["total_w"] * 10) * (grouped["max_s"] + 5)
-    top = grouped.nlargest(8, "score")
-
-    # Normalize weights
-    total_w = top["total_w"].sum()
+    total_w = sum(c.total_w for c in top_colors)
     return "|".join(
         [
-            f"#{int(row.R):02x}{int(row.G):02x}{int(row.B):02x},{row.total_w / total_w:.3f}"
-            for row in top.itertuples()
+            f"#{int(c.R):02x}{int(c.G):02x}{int(c.B):02x},{c.total_w / total_w:.3f}"
+            for c in top_colors
         ]
     )
+    # # 1. Gather all C1-C8 colors into one pool instantly
+    # # We reshape the dataframe to have R, G, B, W columns
+    # r_cols = [f"C{i}_R" for i in range(1, 9)]
+    # g_cols = [f"C{i}_G" for i in range(1, 9)]
+    # b_cols = [f"C{i}_B" for i in range(1, 9)]
+    # w_cols = [f"C{i}_W" for i in range(1, 9)]
+
+    # # Flatten the colors: This is 100x faster than a manual loop
+    # r = group[r_cols].values.flatten()
+    # g = group[g_cols].values.flatten()
+    # b = group[b_cols].values.flatten()
+    # w = group[w_cols].values.flatten()
+
+    # # Remove NaNs
+    # mask = ~np.isnan(r)
+    # r, g, b, w = r[mask], g[mask], b[mask], w[mask]
+
+    # if len(r) == 0:
+    #     return ""
+
+    # # 2. Vectorized Bucketing
+    # r_b = (r // 20 * 20).clip(0, 255)
+    # g_b = (g // 20 * 20).clip(0, 255)
+    # b_b = (b // 20 * 20).clip(0, 255)
+    # sat = np.max([r, g, b], axis=0) - np.min([r, g, b], axis=0)
+
+    # # 3. Use a temp dataframe for the final aggregation (the only way to group colors)
+    # temp = pd.DataFrame({"R": r_b, "G": g_b, "B": b_b, "W": w, "sat": sat})
+    # grouped = (
+    #     temp.groupby(["R", "G", "B"]).agg(total_w=("W", "sum"), max_s=("sat", "max")).reset_index()
+    # )
+
+    # # Ranking
+    # grouped["score"] = (grouped["total_w"] * 10) * (grouped["max_s"] + 5)
+    # top = grouped.nlargest(8, "score")
+
+    # # Normalize weights
+    # total_w = top["total_w"].sum()
+    # return "|".join(
+    #     [
+    #         f"#{int(row.R):02x}{int(row.G):02x}{int(row.B):02x},{row.total_w / total_w:.3f}"
+    #         for row in top.itertuples()
+    #     ]
+    # )
 
 
 def classify_taxonomy(df):

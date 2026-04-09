@@ -6,7 +6,7 @@ import requests
 
 # IGDB API credentials
 CLIENT_ID = "6k1gmqbtqyihlzrqijshniy5fs3xis"
-ACCESS_TOKEN = "29k238k6a623u6utzjoomusny7wzrv"
+ACCESS_TOKEN = "yev6t8mlqe2uawaa967v3vxtldabt3"
 URL = "https://api.igdb.com/v4/games"
 
 # delete?
