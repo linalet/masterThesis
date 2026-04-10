@@ -39,6 +39,11 @@ path = os.path.join(
 )
 df, unique_devs_list, top_50_global = helper.load_data(path)
 df_safe = df[df["is_nsfw"] == False].copy()
+# decades = sorted(
+#     list(set([(d // 10) * 10 for d in df["Year"].unique() if d >= 1970])), reverse=True
+# )
+decades = sorted(list(set(df["Decade"].unique())))
+# decade_list = sorted(df["Decade"].unique())
 
 if st.session_state.get("trigger_nav"):
     st.session_state["page_selection"] = "Individual Game Palette"
@@ -63,7 +68,6 @@ if st.sidebar.button("🎲 Random Game"):
     st.session_state["search_query"] = random_game
     st.session_state["trigger_nav"] = True
     st.rerun()
-
 
 if page == "Art Style Popularity":
     st.header("📈 Art Style Popularity through Time")
@@ -150,10 +154,7 @@ elif page == "Color through Decades":
     st.subheader("Dominant colors of each decade")
     # st.write("Evolution of the dominant industry palette alongside tech milestones.")
 
-    decade_list = sorted(df["Decade"].unique())
-
-    for dec_label in decade_list:
-        dec_int = int(dec_label.replace("s", ""))
+    for dec_label in decades:
         decade_data = df[df["Decade"] == dec_label]
 
         if not decade_data.empty:
@@ -163,7 +164,7 @@ elif page == "Color through Decades":
             c1, c2 = st.columns([1, 7])
             formatted_count = f"{game_count:,}".replace(",", " ")
 
-            c1.write(f"### {dec_label}\n({formatted_count} games)")
+            c1.write(f"### {dec_label}s\n({formatted_count} games)")
 
             with c2:
                 html = '<div style="display: flex; height: 40px; border-radius: 8px; overflow: hidden; border: 3px solid #999; margin-bottom: 2px;">'
@@ -230,43 +231,44 @@ elif page == "Color through Decades":
 elif page == "Genre Timelines":
     st.header("🎨 Genre-Specific Color Evolution")
     # st.subheader("🕹️ Genre-Specific Evolution")
+    st.write("**☝TOOL TIP**: Click the 🔍 tab to expand and see year-by-year breakdowns")
+    st.write("☝Hover mouse over the colors in the breakdown to see their hex codes")
     all_genres = sorted(list(set(df["Genres"].str.split("|").explode().str.strip().unique())))
-    sel_genre = st.selectbox("Select Genre", [g for g in all_genres if g], key="genre_trace_box")
-    st.write("Click the 🔍 tab to expand and see year-by-year breakdowns")
-    st.write("**☝TOOL TIP**: Hover mouse over the colors in the breakdown to see their hex codes")
+    selected_genre = st.selectbox(
+        "Select Genre", [g for g in all_genres if g], key="genre_trace_box"
+    )
 
-    if sel_genre:
-        g_df = df[df["Genre_Set"].apply(lambda x: sel_genre.lower() in x)]
+    if selected_genre:
+        genre_df = df[df["Genre_Set"].apply(lambda x: selected_genre.lower() in x)]
 
-        decades = sorted([d for d in g_df["Year"].unique() if d >= 1950])  # , reverse=True)
-        unique_decades = sorted(list(set([(d // 10) * 10 for d in decades])))  # , reverse=True)
-
-        for dec in unique_decades:
-            dec_subset = g_df[(g_df["Year"] >= dec) & (g_df["Year"] < dec + 10)]
-            if not dec_subset.empty:
-                valid_styles = dec_subset[dec_subset["Art_Style"] != "Unclassified"]["Art_Style"]
+        for dec in decades:
+            decade_data_g = genre_df[(genre_df["Year"] >= dec) & (genre_df["Year"] < dec + 10)]
+            if not decade_data_g.empty:
+                valid_styles = decade_data_g[decade_data_g["Art_Style"] != "Unclassified"][
+                    "Art_Style"
+                ]
                 top_style = valid_styles.mode()[0] if not valid_styles.empty else "General Industry"
 
-                palette = helper.get_ranked_colors(dec_subset, count=10)
+                palette = helper.get_ranked_colors(decade_data_g, count=10)
                 # st.write(f"#### {dec}s Era")
                 # st.write(f"Most Common Art Style: {top_style}")
                 st.markdown(
                     f"""
                     <div style='line-height: 1.5;'>
-                        <span style='font-size: 20px; font-weight: bold;'>{dec}s Era</span><br>
-                        <span style='font-size: 16px; color: white;'>Most Common Art Style: {top_style}</span>
+                        <span style='font-size: 25px; font-weight: bold;'>{dec}s </span>
+                        <span style='font-size: 18px; color: white;'>Most Common Art Style: {top_style}</span>
                     </div>
                     """,
                     unsafe_allow_html=True,
                 )
-                html = '<div style="display: flex; height: 30px; border-radius: 8px; overflow: hidden; border: 3px solid #999; margin-bottom: 3px;">'
+                html = '<div style="display: flex; height: 35px; border-radius: 8px; overflow: hidden; border: 3px solid #999; margin-bottom: 3px;">'
                 hex_labels = '<div style="display: flex; margin-bottom: 3px;">'
 
-                for c in palette:
-                    hex_code = "#%02x%02x%02x" % (int(c.R), int(c.G), int(c.B))
-                    rgb_val = f"rgb({int(c.R)},{int(c.G)},{int(c.B)})"
+                for col in palette:
+                    hex_code = "#%02x%02x%02x" % (int(col.R), int(col.G), int(col.B))
+                    rgb_val = f"rgb({int(col.R)},{int(col.G)},{int(col.B)})"
                     html += f'<div style="background-color:{rgb_val}; flex:1;" title="{hex_code.upper()}"></div>'
-                    hex_labels += f'<div style="flex:1; text-align:center; font-size:16px; color:gray; font-family:monospace;">{hex_code.upper()}</div>'
+                    hex_labels += f'<div style="flex:1; text-align:center; font-size:14px; color:gray; font-family:monospace;">{hex_code.upper()}</div>'
 
                 html += "</div>"
                 hex_labels += "</div>"
@@ -274,229 +276,258 @@ elif page == "Genre Timelines":
 
                 # Expandable Year Detail
                 with st.expander(f"🔍 View breakdown for the {dec}s"):
-                    year_list = sorted(dec_subset["Year"].unique())  # , reverse=True)
-                    for yr in year_list:
-                        yr_subset = dec_subset[dec_subset["Year"] == yr]
-                        yr_palette = helper.get_ranked_colors(yr_subset, count=10)
+                    year_list = sorted(decade_data_g["Year"].unique())  # , reverse=True)
+                    for year in year_list:
+                        year_data = decade_data_g[decade_data_g["Year"] == year]
+                        year_palette = helper.get_ranked_colors(year_data, count=10)
 
                         col_label, col_strip = st.columns([1, 7])
-                        yr_count = len(yr_subset)
-                        formatted_yr_count = f"{yr_count:,}".replace(",", " ")
-                        col_label.write(f"**{yr}** (Games: {formatted_yr_count})")
+                        year_count = len(year_data)
+                        formatted_year_count = f"{year_count:,}".replace(",", " ")
+                        col_label.write(f"**{year}** (Games: {formatted_year_count})")
                         with col_strip:
                             y_html = '<div style="display: flex; height: 30px; border-radius: 4px; overflow: hidden; border: 3px solid #666; margin-bottom: 5px;">'
-                            for ycolor in yr_palette:
+                            for col in year_palette:
                                 y_hex = "#%02x%02x%02x" % (
-                                    int(ycolor.R),
-                                    int(ycolor.G),
-                                    int(ycolor.B),
+                                    int(col.R),
+                                    int(col.G),
+                                    int(col.B),
                                 )
                                 y_html += f'<div style="background-color:{y_hex}; flex:1;" title="{y_hex.upper()}"></div>'
                             y_html += "</div>"
                             st.markdown(y_html, unsafe_allow_html=True)
-                        # helper.render_color_strip(yr_subset, f"  ↳ {yr}", f"{len(yr_subset)} games")
+                        # helper.render_color_strip(year_data, f"  ↳ {year}", f"{len(year_data)} games")
 
 
 elif page == "Theme Timelines":
-    st.header("📅 Theme-Based Color Evolution")
-    st.write("Explore how visual styles evolved across different themes over time.")
+    st.header("🎨 Theme-Specific Color Evolution")
+    st.write("**👁👄👁TOOL TIP**: Click the 🔍 tab to expand and see year-by-year breakdowns")
+    st.write("💡 Hover mouse over the colors in the breakdown to see their hex codes")
 
-    st.subheader("🎭 Theme-Specific Evolution")
     all_themes = sorted(list(set(df["Themes"].str.split("|").explode().str.strip().unique())))
-    sel_theme = st.selectbox(
-        "Select Theme to Trace",
-        [t for t in all_themes if t],
-        key="theme_trace_box",
-        index=1,
+    selected_theme = st.selectbox(
+        "Select Theme", [t for t in all_themes if t], key="theme_trace_box"
     )
 
-    if sel_theme:
-        t_df = df[df["Theme_Set"].apply(lambda x: sel_theme.lower() in x)]
+    if selected_theme:
+        theme_df = df[df["Theme_Set"].apply(lambda x: selected_theme.lower() in x)]
 
-        t_decades = sorted(
-            list(set([(d // 10) * 10 for d in t_df["Year"].unique() if d >= 1970])), reverse=True
-        )
+        for dec in decades:
+            decade_data_t = theme_df[(theme_df["Year"] >= dec) & (theme_df["Year"] < dec + 10)]
+            if not decade_data_t.empty:
+                valid_styles = decade_data_t[decade_data_t["Art_Style"] != "Unclassified"][
+                    "Art_Style"
+                ]
+                top_style = valid_styles.mode()[0] if not valid_styles.empty else "General Industry"
+                palette = helper.get_ranked_colors(decade_data_t, count=10)
 
-        for dec in t_decades:
-            t_dec_subset = t_df[(t_df["Year"] >= dec) & (t_df["Year"] < dec + 10)]
-            if not t_dec_subset.empty:
-                helper.render_color_strip(
-                    t_dec_subset,
-                    f"{dec}s Theme",
-                    f"Avg Saturation: {t_dec_subset['saturation'].mean():.1f}",
+                st.markdown(
+                    f"""
+                    <div style='line-height: 1.5;'>
+                        <span style='font-size: 25px; font-weight: bold;'>{dec}s </span><span style='font-size: 18px; color: white;'>Most Common Art Style: {top_style}</span>
+                        
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
                 )
+                html = '<div style="display: flex; height: 35px; border-radius: 8px; overflow: hidden; border: 3px solid #999; margin-bottom: 3px;">'
+                hex_labels = '<div style="display: flex; margin-bottom: 3px;">'
 
-                with st.expander(f"🔍 Detail: {sel_theme.title()} in the {dec}s"):
-                    t_year_list = sorted(t_dec_subset["Year"].unique(), reverse=True)
-                    for yr in t_year_list:
-                        t_yr_subset = t_dec_subset[t_dec_subset["Year"] == yr]
-                        helper.render_color_strip(
-                            t_yr_subset, f"  ↳ {yr}", f"{len(t_yr_subset)} titles"
-                        )
+                for col in palette:
+                    hex_code = "#%02x%02x%02x" % (int(col.R), int(col.G), int(col.B))
+                    rgb_val = f"rgb({int(col.R)},{int(col.G)},{int(col.B)})"
+                    html += f'<div style="background-color:{rgb_val}; flex:1;" title="{hex_code.upper()}"></div>'
+                    hex_labels += f'<div style="flex:1; text-align:center; font-size:14px; color:gray; font-family:monospace;">{hex_code.upper()}</div>'
+
+                html += "</div>"
+                hex_labels += "</div>"
+                st.markdown(html + hex_labels, unsafe_allow_html=True)
+
+                with st.expander(f"🔍 Detail: {selected_theme.title()} in the {dec}s"):
+                    year_list = sorted(decade_data_t["Year"].unique())
+                    for year in year_list:
+                        year_data = decade_data_t[decade_data_t["Year"] == year]
+                        year_palette = helper.get_ranked_colors(year_data, count=10)
+
+                        col_label, col_strip = st.columns([1, 7])
+                        year_count = len(year_data)
+                        formatted_year_count = f"{year_count:,}".replace(",", " ")
+                        col_label.write(f"**{year}** (Games: {formatted_year_count})")
+
+                        with col_strip:
+                            y_html = '<div style="display: flex; height: 30px; border-radius: 4px; overflow: hidden; border: 3px solid #666; margin-bottom: 5px;">'
+                            for col in year_palette:
+                                y_hex = "#%02x%02x%02x" % (
+                                    int(col.R),
+                                    int(col.G),
+                                    int(col.B),
+                                )
+                                y_html += f'<div style="background-color:{y_hex}; flex:1;" title="{y_hex.upper()}"></div>'
+                            y_html += "</div>"
+                            st.markdown(y_html, unsafe_allow_html=True)
 
 elif page == "Game Developer Profile":
-    st.header("🏢 Studio Visual Fingerprints")
-    st.write(
-        "Analysis of developer-specific color identities and stylistic preferences across their portfolio."
-    )
+    st.header("🏢 Studios' Color and Style Trends")
+    # st.write(
+    #     "Analysis of developer-specific color identities and stylistic preferences across their portfolio."
+    # )
 
-    # Section 1: All-Time Giants (Pooled Data)
-    st.subheader("🏆 All-Time Industry Giants")
+    st.subheader("🎮Game Studio All-Time Analysis")
+    st.write(
+        "Select a major studio from the dropdown or search by name to see their most used colors and art styles"
+    )
 
     # We use the top_50_global list which was pre-calculated by exploding the pipe strings
     col1, col2 = st.columns([1, 2])
     with col1:
-        sel_all = st.selectbox("Major Studio", ["Select..."] + top_50_global, key="all_time_box")
+        sel_all = st.selectbox(
+            "Major Studios (Top 50)", ["Select..."] + top_50_global, key="all_time_box"
+        )
         search_all = st.text_input(
-            "Or search name:",
+            "Or search by name:",
             "",
             key="all_search",
-            help="Finds any game where this studio is listed.",
+            help="Searches all developer entries",
         )
 
         final_all = search_all if search_all else (sel_all if sel_all != "Select..." else None)
 
     if final_all:
-        # regex=True with \b ensures we find 'nintendo' in 'nintendo|tose' but not 'supernintendo'
         all_df = df[df["Dev_Set"].apply(lambda x: final_all.lower() in x)]
 
         with col2:
             st.write(f"### Palette Signature: {final_all.title()}")
-            st.caption(f"Analyzing {len(all_df)} pooled entries")
-            p_all = helper.get_representative_palette(all_df, count=10)
+            st.caption(f"Analyzing {len(all_df)} entries")
+            palette_studio = helper.get_representative_palette(all_df, count=10)
 
-            # Horizontal Palette Bar
-            html_bar = '<div style="display: flex; height: 40px; border-radius: 8px; overflow: hidden; border: 3px solid #999; margin-bottom: 20px;">'
-            for color in p_all:
+            html_bar = '<div style="display: flex; height: 50px; border-radius: 8px; overflow: hidden; border: 3px solid #999; margin-bottom: 2px;">'
+            hex_labels = '<div style="display: flex; margin-bottom: 20px;">'
+            for color in palette_studio:
                 html_bar += f'<div style="background-color:{color}; flex:1;" title="{color}"></div>'
+                hex_labels += f'<div style="flex:1; text-align:center; font-size:14px; color:gray; font-family:monospace;">{color.upper()}</div>'
             html_bar += "</div>"
-            st.markdown(html_bar, unsafe_allow_html=True)
+            hex_labels += "</div>"
+            st.markdown(html_bar + hex_labels, unsafe_allow_html=True)
 
-            detail_col1, detail_col2 = st.columns(2)
-            with detail_col1:
-                # Filter for Pie Chart (excluding Unclassified)
-                classified_all = all_df[all_df["is_classified"]]
-                if not classified_all.empty:
-                    fig_all = px.pie(
-                        classified_all,
-                        names="Art_Style",
-                        hole=0.4,
-                        height=350,
-                        title="Style Distribution",
-                        color_discrete_sequence=px.colors.qualitative.Pastel,
-                    )
-                    fig_all.update_layout(showlegend=False)
-                    st.plotly_chart(fig_all, width="stretch")
+            classified_all = all_df[all_df["is_classified"]]
+            if not classified_all.empty:
+                fig_all = px.pie(
+                    classified_all,
+                    names="Art_Style",
+                    hole=0.4,
+                    height=450,
+                    title="Style Distribution",
+                    color_discrete_sequence=px.colors.qualitative.Pastel,
+                )
+                fig_all.update_layout(
+                    showlegend=True,
+                    legend=dict(
+                        font=dict(size=20),
+                    ),
+                )
+                st.plotly_chart(fig_all, width="stretch")
 
-                    # Report Unclassified %
-                    uncl_all_pct = ((len(all_df) - len(classified_all)) / len(all_df)) * 100
-                    st.caption(f"**{uncl_all_pct:.1f}%** of portfolio is unclassified.")
-                else:
-                    st.warning("No classified styles for this studio.")
-            with detail_col2:
-                st.write("#### Core Palette Details")
-                for c in p_all[:8]:
-                    st.markdown(
-                        f'<div style="background-color:{c}; padding:5px 10px; border-radius:4px; color:white; font-family:monospace; margin-bottom:2px; font-size:0.9em; border:10px solid #999;">{c}</div>',
-                        unsafe_allow_html=True,
-                    )
+                # Report Unclassified %
+                unclassified = ((len(all_df) - len(classified_all)) / len(all_df)) * 100
+                st.caption(f"**{unclassified:.1f}%** of portfolio is unclassified.")
+            else:
+                st.warning("No classified styles for this studio.")
+            st.info(
+                "TOOL TIP: Hover mouse over the pie chart slices to see the art style names and percentages"
+            )
 
     st.markdown("---")
 
-    # Section 2: Decade-Specific Leaders
-    st.subheader("⏳ Decade-Specific Leaders")
-    dec_sel_s = st.selectbox("Pick Decade", [1970, 1980, 1990, 2000, 2010, 2020])
+    st.subheader("📆 Decade-Specific Leaders")
+    dec_sel_s = st.selectbox("Pick Decade", [1950, 1960, 1970, 1980, 1990, 2000, 2010, 2020])
 
-    # Filter the main DF for the decade first
-    dec_df_full = df[(df["Year"] >= dec_sel_s) & (df["Year"] < dec_sel_s + 10)]
+    decade_df = df[(df["Year"] >= dec_sel_s) & (df["Year"] < dec_sel_s + 10)]
 
-    # Explode the developers for this decade specifically to find the true leaders
-    exploded_dec = dec_df_full["Developers"].str.split("|").explode().str.strip()
-    top_15_dec = exploded_dec[exploded_dec != ""].value_counts().nlargest(15).index.tolist()
+    exploded_dec = decade_df["Developers"].str.split("|").explode().str.strip()
+    top_10_dec = exploded_dec[exploded_dec != ""].value_counts().nlargest(10).index.tolist()
 
     col3, col4 = st.columns([1, 2])
     with col3:
         sel_dec = st.selectbox(
-            f"Top Studios of the {dec_sel_s}s", ["Select..."] + top_15_dec, key="dec_box"
+            f"Top 10 Studios of the {dec_sel_s}s", ["Select..."] + top_10_dec, key="dec_box"
         )
-        search_dec = st.text_input("Or search decade studio:", "", key="dec_search")
+        search_dec = st.text_input("Or search by name:", "", key="dec_search")
         final_dec = search_dec if search_dec else (sel_dec if sel_dec != "Select..." else None)
 
     if final_dec:
-        dec_dev_df = dec_df_full[dec_df_full["Dev_Set"].apply(lambda x: final_dec.lower() in x)]
+        dev_df = decade_df[decade_df["Dev_Set"].apply(lambda x: final_dec.lower() in x)]
         with col4:
             st.write(f"### {final_dec.title()}'s Style in the {dec_sel_s}s")
-            p_dec = helper.get_representative_palette(dec_dev_df, count=10)
+            palette_dec_dev = helper.get_representative_palette(dev_df, count=10)
 
-            html_bar_dec = '<div style="display: flex; height: 40px; border-radius: 8px; overflow: hidden; border: 3px solid #999; margin-bottom: 20px;">'
-            for color in p_dec:
+            html_bar_dec = '<div style="display: flex; height: 40px; border-radius: 8px; overflow: hidden; border: 3px solid #999; margin-bottom: 2px;">'
+            hex_labels = '<div style="display: flex; margin-bottom: 20px;">'
+            for color in palette_dec_dev:
                 html_bar_dec += (
                     f'<div style="background-color:{color}; flex:1;" title="{color}"></div>'
                 )
+                hex_labels += f'<div style="flex:1; text-align:center; font-size:14px; color:gray; font-family:monospace;">{color.upper()}</div>'
             html_bar_dec += "</div>"
-            st.markdown(html_bar_dec, unsafe_allow_html=True)
+            hex_labels += "</div>"
+            st.markdown(html_bar_dec + hex_labels, unsafe_allow_html=True)
 
-            detail_col3, detail_col4 = st.columns(2)
-            with detail_col3:
-                # Bar chart for style volume (Classified only)
-                classified_dec = dec_dev_df[dec_dev_df["is_classified"]]
-                if not classified_dec.empty:
-                    style_counts = (
-                        classified_dec.groupby("Art_Style").size().reset_index(name="Count")
-                    )
-                    fig_pie = px.pie(
-                        style_counts,
-                        values="Count",
-                        names="Art_Style",
-                        hole=0.4,
-                        height=350,
-                        title="Technique Distribution",
-                        color_discrete_sequence=px.colors.qualitative.Pastel,
-                    )
-                    fig_pie.update_layout(showlegend=True)
-                    st.plotly_chart(fig_pie, width="stretch")
-                    uncl_pct = ((len(dec_dev_df) - len(classified_dec)) / len(dec_dev_df)) * 100
-                    st.info(
-                        f"**Note:** {uncl_pct:.1f}% of {final_dec.title()}'s {dec_sel_s}s portfolio is unclassified."
+            classified_dec = dev_df[dev_df["is_classified"]]
+            if not classified_dec.empty:
+                style_counts = classified_dec.groupby("Art_Style").size().reset_index(name="Count")
+                fig_pie = px.pie(
+                    style_counts,
+                    values="Count",
+                    names="Art_Style",
+                    hole=0.4,
+                    height=450,
+                    title="Technique Distribution",
+                    color_discrete_sequence=px.colors.qualitative.Pastel,
+                )
+                fig_pie.update_layout(
+                    showlegend=True,
+                    legend=dict(
+                        font=dict(size=20),
+                    ),
+                )
+                st.plotly_chart(fig_pie, width="stretch")
+                unclassified = ((len(dev_df) - len(classified_dec)) / len(dev_df)) * 100
+                if unclassified > 0:
+                    st.caption(
+                        f"**Note:** {unclassified:.1f}% of {final_dec.title()}'s {dec_sel_s}s portfolio is unclassified."
                     )
                 else:
-                    st.info("No games were classified for this period.")
-            with detail_col4:
-                st.write("#### Hex Detail")
-                for c in p_dec[:8]:
-                    st.markdown(
-                        f'<div style="background-color:{c}; padding:4px 10px; border-radius:4px; color:white; font-family:monospace; margin-bottom:2px; font-size:0.8em; border:10px solid #999;">{c}</div>',
-                        unsafe_allow_html=True,
-                    )
-
+                    st.caption(f"All {final_dec.title()}'s games for this period are classified.")
+            else:
+                st.info("No games were classified for this period.")
+            st.info(
+                "TOOL TIP: Hover mouse over the pie chart slices to see the art style names and percentages"
+            )
     st.markdown("---")
 
-    # Section 3: Studio Head-to-Head Comparison
     st.subheader("⚔️ Studio Head-to-Head Comparison")
     st.write("Directly compare the artistic evolution of two studios within the same decade.")
 
-    comp_dec = st.select_slider(
+    decade_comparison = st.select_slider(
         "Select Comparison Decade", options=[1970, 1980, 1990, 2000, 2010, 2020], key="comp_slider"
     )
-    comp_df = df[(df["Year"] >= comp_dec) & (df["Year"] < comp_dec + 10)]
+    compare_df = df[(df["Year"] >= decade_comparison) & (df["Year"] < decade_comparison + 10)]
 
-    # Extract unique pooled developers for this decade
     active_devs = sorted(
-        comp_df["Developers"].str.split("|").explode().str.strip().unique().tolist()
+        compare_df["Developers"].str.split("|").explode().str.strip().unique().tolist()
     )
-    active_devs = [d for d in active_devs if d]  # Remove empties
+    active_devs = [d for d in active_devs if d]
 
-    ca, cb = st.columns(2)
-    with ca:
+    col_a, col_b = st.columns(2)
+    with col_a:
         studio_a = st.selectbox("Studio A", active_devs, index=0)
-    with cb:
+    with col_b:
         studio_b = st.selectbox("Studio B", active_devs, index=min(1, len(active_devs) - 1))
 
     if studio_a and studio_b:
         res_a, res_b = st.columns(2)
         for studio_name, col in [(studio_a, res_a), (studio_b, res_b)]:
             # Filter using the pooled regex logic
-            s_df = comp_df[comp_df["Dev_Set"].apply(lambda x: studio_name.lower() in x)]
+            s_df = compare_df[compare_df["Dev_Set"].apply(lambda x: studio_name.lower() in x)]
 
             with col:
                 st.write(f"#### {studio_name.title()}")
@@ -518,16 +549,19 @@ elif page == "Game Developer Profile":
                         names="Style",
                         values="Count",
                         hole=0.5,
-                        height=300,
+                        height=350,
                         color_discrete_sequence=px.colors.qualitative.Pastel,
                     )
-                    fig_comp.update_layout(showlegend=True)
+                    fig_comp.update_layout(showlegend=True, legend=dict(font=dict(size=18)))
                     st.plotly_chart(fig_comp, width="stretch")
 
                     uncl_comp_pct = ((len(s_df) - len(s_df_classified)) / len(s_df)) * 100
                     st.caption(f"Unclassified: **{uncl_comp_pct:.1f}%**")
                 else:
                     st.info("No games were classified")
+        st.info(
+            "TOOL TIP: Hover mouse over the pie chart slices to see the art style names and percentages"
+        )
 
 elif page == "Individual Game Palette":
     st.header("🔍 Individual Game Analysis")

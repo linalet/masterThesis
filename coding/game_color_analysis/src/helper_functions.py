@@ -82,18 +82,18 @@ def load_data(path):
 #     return [f"#{int(r):02x}{int(g):02x}{int(b):02x}" for r, g, b in zip(top.R_B, top.G_B, top.B_B)]
 
 
-def render_color_strip(data_subset, label, sub_label=""):
-    pal = get_representative_palette(data_subset, count=10)
-    c1, c2, c3 = st.columns([1, 2, 6])
-    c1.write(f"**{label}**")
-    c2.caption(sub_label)
-    with c3:
-        # Horizontal Pillar View for consistent thesis formatting
-        html = '<div style="display: flex; height: 25px; border-radius: 4px; overflow: hidden; margin-bottom: 8px; border: 5px solid #999;">'
-        for color in pal:
-            html += f'<div style="background-color:{color}; flex:1;" title="{color}"></div>'
-        html += "</div>"
-        st.markdown(html, unsafe_allow_html=True)
+# def render_color_strip(data_subset, label, sub_label=""):
+#     pal = get_representative_palette(data_subset, count=10)
+#     c1, c2, c3 = st.columns([1, 2, 6])
+#     c1.write(f"**{label}**")
+#     c2.caption(sub_label)
+#     with c3:
+#         # Horizontal Pillar View for consistent thesis formatting
+#         html = '<div style="display: flex; height: 25px; border-radius: 4px; overflow: hidden; margin-bottom: 8px; border: 5px solid #999;">'
+#         for color in pal:
+#             html += f'<div style="background-color:{color}; flex:1;" title="{color}"></div>'
+#         html += "</div>"
+#         st.markdown(html, unsafe_allow_html=True)
 
 
 def get_ranked_colors(df_row_or_group, count=5, filter_similarity=True):
@@ -125,7 +125,7 @@ def get_ranked_colors(df_row_or_group, count=5, filter_similarity=True):
         return []
 
     # 1. Bucket and Group
-    r_b, g_b, b_b = (r // 10 * 10), (g // 10 * 10), (b // 10 * 10)
+    r_b, g_b, b_b = (r // 15 * 15), (g // 15 * 15), (b // 15 * 15)
     sat = np.max([r, g, b], axis=0) - np.min([r, g, b], axis=0)
 
     temp = pd.DataFrame({"R": r_b, "G": g_b, "B": b_b, "W": w, "S": sat})
@@ -151,7 +151,7 @@ def get_ranked_colors(df_row_or_group, count=5, filter_similarity=True):
             dist = (
                 (row.R - chosen.R) ** 2 + (row.G - chosen.G) ** 2 + (row.B - chosen.B) ** 2
             ) ** 0.5
-            if dist < 35:  # Standard human eye threshold
+            if dist < 50:
                 is_similar = True
                 break
         if not is_similar:

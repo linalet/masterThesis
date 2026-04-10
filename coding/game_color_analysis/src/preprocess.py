@@ -7,7 +7,7 @@ import pandas as pd
 import preprocess_helper as ph
 
 
-def run_preprocessing(input_path="data/current_game_data.csv"):
+def run_preprocessing(input_path="data/octree_game_data.csv"):
     path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), input_path)
     df = pd.read_csv(path, low_memory=False)
     if "is_nsfw" not in df.columns:
@@ -19,7 +19,7 @@ def run_preprocessing(input_path="data/current_game_data.csv"):
         df[col] = df[col].fillna("").astype(str).str.lower()
 
     df["Year"] = pd.to_numeric(df["Year"], errors="coerce").fillna(0).astype(int)
-    df["Decade"] = (df["Year"] // 10 * 10).astype(int).astype(str) + "s"
+    df["Decade"] = (df["Year"] // 10 * 10).astype(int)
     df["Unique_ID"] = df["Game"] + " (" + df["Year"].astype(str) + ")"
     # df["is_nsfw"] = df["is_nsfw"].fillna(False).astype(bool)
 

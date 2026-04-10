@@ -3,24 +3,9 @@ import numpy as np
 import pandas as pd
 
 studio_map = {
-    "nintendo": [
-        # "nintendo r&d",
-        # "nintendo ead",
-        # "nintendo entertainment",
-        # "nintendo ird",
-        # "nintendo tokyo",
-    ],
+    "nintendo": [],
     "ubisoft": [
         "ubi soft",
-        # "ubisoft montreal",
-        # "ubisoft toronto",
-        # "ubisoft paris",
-        # "ubisoft entertainment",
-        # "ubisoft pune",
-        # "ubisoft milan",
-        # "ubisoft osaka",
-        # "ubisoft sofia",
-        # "ubisoft nagoya",
     ],
     "sega": [
         "sega am",
@@ -83,50 +68,6 @@ def get_weighted_representative_palette(group):
             for c in top_colors
         ]
     )
-    # # 1. Gather all C1-C8 colors into one pool instantly
-    # # We reshape the dataframe to have R, G, B, W columns
-    # r_cols = [f"C{i}_R" for i in range(1, 9)]
-    # g_cols = [f"C{i}_G" for i in range(1, 9)]
-    # b_cols = [f"C{i}_B" for i in range(1, 9)]
-    # w_cols = [f"C{i}_W" for i in range(1, 9)]
-
-    # # Flatten the colors: This is 100x faster than a manual loop
-    # r = group[r_cols].values.flatten()
-    # g = group[g_cols].values.flatten()
-    # b = group[b_cols].values.flatten()
-    # w = group[w_cols].values.flatten()
-
-    # # Remove NaNs
-    # mask = ~np.isnan(r)
-    # r, g, b, w = r[mask], g[mask], b[mask], w[mask]
-
-    # if len(r) == 0:
-    #     return ""
-
-    # # 2. Vectorized Bucketing
-    # r_b = (r // 20 * 20).clip(0, 255)
-    # g_b = (g // 20 * 20).clip(0, 255)
-    # b_b = (b // 20 * 20).clip(0, 255)
-    # sat = np.max([r, g, b], axis=0) - np.min([r, g, b], axis=0)
-
-    # # 3. Use a temp dataframe for the final aggregation (the only way to group colors)
-    # temp = pd.DataFrame({"R": r_b, "G": g_b, "B": b_b, "W": w, "sat": sat})
-    # grouped = (
-    #     temp.groupby(["R", "G", "B"]).agg(total_w=("W", "sum"), max_s=("sat", "max")).reset_index()
-    # )
-
-    # # Ranking
-    # grouped["score"] = (grouped["total_w"] * 10) * (grouped["max_s"] + 5)
-    # top = grouped.nlargest(8, "score")
-
-    # # Normalize weights
-    # total_w = top["total_w"].sum()
-    # return "|".join(
-    #     [
-    #         f"#{int(row.R):02x}{int(row.G):02x}{int(row.B):02x},{row.total_w / total_w:.3f}"
-    #         for row in top.itertuples()
-    #     ]
-    # )
 
 
 def classify_taxonomy(df):
@@ -196,50 +137,6 @@ def classify_taxonomy(df):
     # https://www.imdb.com/list/ls023816644/
 
     return df["Art_Style"]
-
-
-# def classify_taxonomy(row):
-#     text = f"{row['Keywords']} {row['Themes']} {row['Genres']}".lower()
-#     perspective = str(row.get("Player_Perspective", "")).lower().strip()
-
-#     # III. ABSTRACTION
-#     if any(w in text for w in ["text-based", "experimental", "psychedelic", "ascii"]):
-#         return "Abstraction: Symbolic"
-#     if any(w in text for w in ["flat art", "silhouette", "geometric", "minimalist"]):
-#         return "Abstraction: Minimalist"
-
-#     # I. REALISM
-#     if any(w in text for w in ["photoreal", "ray-tracing", "pbr", "realistic", "4k"]):
-#         return "Realism: Photoreal"
-#     if any(w in text for w in ["cinematic", "fantasy realism", "atmospheric"]):
-#         return "Realism: Stylized"  # literally 0 games
-
-#     # II. STYLIZATION
-#     if any(
-#         w in text
-#         for w in ["watercolor", "hand-painted", "comic", "cel-shade", "hand-drawn", "sketch"]
-
-
-#     # fallback
-#     if row["Year"] < 1970:
-#         if "text" in perspective:
-#             return "Abstraction: Symbolic"
-#         return "Abstraction: Minimalist"
-#     if any(w in text for w in ["3d", "3-D"]):
-#         return "Unclassified 3D"
-#     if any(w in text for w in ["2d", "2-D"]):
-#         return "Unclassified 2D"
-#     return "Unclassified"#     ):
-#         return "Stylization: Illustrative"
-#     if any(w in text for w in ["anime", "manga", "chibi", "cartoon"]):
-#         return "Stylization: Caricature"
-#     if any(w in text for w in ["pixel", "8-bit", "16-bit", "voxel"]):
-#         return "Stylization: Pixel Art"
-#     if any(
-#         w in text
-#         for w in ["claymation", "papercraft", "puppet", "stop-motion", "felt", "ballpoint"]
-#     ):
-#         return "Stylization: Material-Based"
 
 
 def manual_classification(main_df, classified_path="data/manual_classification.csv"):
