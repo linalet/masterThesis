@@ -49,7 +49,6 @@ if st.session_state.get("trigger_nav"):
     st.session_state["page_selection"] = "Individual Game Palette"
     st.session_state["trigger_nav"] = False
 
-# --- 3. UI TABS ---
 page = st.sidebar.radio(
     "Analysis Tabs",
     [
@@ -178,7 +177,7 @@ elif page == "Color through Decades":
                 html += "</div>"
                 st.markdown(html + hex_labels, unsafe_allow_html=True)
 
-    st.markdown("---")
+    st.divider()
 
     # helper.render_saturation_heatmap(df)
 
@@ -368,75 +367,82 @@ elif page == "Theme Timelines":
 
 elif page == "Game Developer Profile":
     st.header("🏢 Studios' Color and Style Trends")
-    # st.write(
-    #     "Analysis of developer-specific color identities and stylistic preferences across their portfolio."
-    # )
-
     st.subheader("🎮Game Studio All-Time Analysis")
     st.write(
         "Select a major studio from the dropdown or search by name to see their most used colors and art styles"
     )
-
-    # We use the top_50_global list which was pre-calculated by exploding the pipe strings
     col1, col2 = st.columns([1, 2])
     with col1:
         sel_all = st.selectbox(
-            "Major Studios (Top 50)", ["Select..."] + top_50_global, key="all_time_box"
+            "Major Studios (Top 50)",
+            ["Select..."] + top_50_global,
+            key="all_time_box",
+            on_change=helper.on_selectbox_change,
         )
         search_all = st.text_input(
             "Or search by name:",
             "",
             key="all_search",
+            on_change=helper.on_text_change,
             help="Searches all developer entries",
         )
 
-        final_all = search_all if search_all else (sel_all if sel_all != "Select..." else None)
+        final_all = (
+            sel_all
+            if sel_all != "Select..."
+            else (search_all if search_all.strip() != "" else None)
+        )
 
     if final_all:
         all_df = df[df["Dev_Set"].apply(lambda x: final_all.lower() in x)]
+        if all_df.empty:
+            with col2:
+                st.error(f"❌ Studio '{final_all}' not found. Please check the spelling.")
+        else:
+            with col2:
+                st.write(f"### Palette Signature: {final_all.title()}")
+                st.caption(f"Analyzing {len(all_df)} entries")
+                palette_studio = helper.get_representative_palette(all_df, count=10)
 
-        with col2:
-            st.write(f"### Palette Signature: {final_all.title()}")
-            st.caption(f"Analyzing {len(all_df)} entries")
-            palette_studio = helper.get_representative_palette(all_df, count=10)
+                html_bar = '<div style="display: flex; height: 50px; border-radius: 8px; overflow: hidden; border: 3px solid #999; margin-bottom: 2px;">'
+                hex_labels = '<div style="display: flex; margin-bottom: 20px;">'
+                for color in palette_studio:
+                    html_bar += (
+                        f'<div style="background-color:{color}; flex:1;" title="{color}"></div>'
+                    )
+                    hex_labels += f'<div style="flex:1; text-align:center; font-size:14px; color:gray; font-family:monospace;">{color.upper()}</div>'
+                html_bar += "</div>"
+                hex_labels += "</div>"
+                st.markdown(html_bar + hex_labels, unsafe_allow_html=True)
 
-            html_bar = '<div style="display: flex; height: 50px; border-radius: 8px; overflow: hidden; border: 3px solid #999; margin-bottom: 2px;">'
-            hex_labels = '<div style="display: flex; margin-bottom: 20px;">'
-            for color in palette_studio:
-                html_bar += f'<div style="background-color:{color}; flex:1;" title="{color}"></div>'
-                hex_labels += f'<div style="flex:1; text-align:center; font-size:14px; color:gray; font-family:monospace;">{color.upper()}</div>'
-            html_bar += "</div>"
-            hex_labels += "</div>"
-            st.markdown(html_bar + hex_labels, unsafe_allow_html=True)
+                classified_all = all_df[all_df["is_classified"]]
+                if not classified_all.empty:
+                    fig_all = px.pie(
+                        classified_all,
+                        names="Art_Style",
+                        hole=0.4,
+                        height=450,
+                        title="Style Distribution",
+                        color_discrete_sequence=px.colors.qualitative.Pastel,
+                    )
+                    fig_all.update_layout(
+                        showlegend=True,
+                        legend=dict(
+                            font=dict(size=20),
+                        ),
+                    )
+                    st.plotly_chart(fig_all, width="stretch")
 
-            classified_all = all_df[all_df["is_classified"]]
-            if not classified_all.empty:
-                fig_all = px.pie(
-                    classified_all,
-                    names="Art_Style",
-                    hole=0.4,
-                    height=450,
-                    title="Style Distribution",
-                    color_discrete_sequence=px.colors.qualitative.Pastel,
+                    # Report Unclassified %
+                    unclassified = ((len(all_df) - len(classified_all)) / len(all_df)) * 100
+                    st.caption(f"**{unclassified:.1f}%** of portfolio is unclassified.")
+                else:
+                    st.warning(f"No games by {final_all.title()} were classified.")
+                st.info(
+                    "TOOL TIP: Hover mouse over the pie chart slices to see the art style names and percentages"
                 )
-                fig_all.update_layout(
-                    showlegend=True,
-                    legend=dict(
-                        font=dict(size=20),
-                    ),
-                )
-                st.plotly_chart(fig_all, width="stretch")
 
-                # Report Unclassified %
-                unclassified = ((len(all_df) - len(classified_all)) / len(all_df)) * 100
-                st.caption(f"**{unclassified:.1f}%** of portfolio is unclassified.")
-            else:
-                st.warning("No classified styles for this studio.")
-            st.info(
-                "TOOL TIP: Hover mouse over the pie chart slices to see the art style names and percentages"
-            )
-
-    st.markdown("---")
+    st.divider()
 
     st.subheader("📆 Decade-Specific Leaders")
     dec_sel_s = st.selectbox("Pick Decade", [1950, 1960, 1970, 1980, 1990, 2000, 2010, 2020])
@@ -449,63 +455,85 @@ elif page == "Game Developer Profile":
     col3, col4 = st.columns([1, 2])
     with col3:
         sel_dec = st.selectbox(
-            f"Top 10 Studios of the {dec_sel_s}s", ["Select..."] + top_10_dec, key="dec_box"
+            f"Top 10 Studios of the {dec_sel_s}s",
+            ["Select..."] + top_10_dec,
+            key="dec_box",
+            on_change=helper.on_selectbox_change_dec,
         )
-        search_dec = st.text_input("Or search by name:", "", key="dec_search")
-        final_dec = search_dec if search_dec else (sel_dec if sel_dec != "Select..." else None)
+        search_dec = st.text_input(
+            "Or search by name:", "", key="dec_search", on_change=helper.on_text_change_dec
+        )
+        final_dec = (
+            sel_dec
+            if sel_dec != "Select..."
+            else (search_dec if search_dec.strip() != "" else None)
+        )
 
     if final_dec:
         dev_df = decade_df[decade_df["Dev_Set"].apply(lambda x: final_dec.lower() in x)]
-        with col4:
-            st.write(f"### {final_dec.title()}'s Style in the {dec_sel_s}s")
-            palette_dec_dev = helper.get_representative_palette(dev_df, count=10)
+        if dev_df.empty:
+            with col4:
+                st.error(
+                    f"❌ Studio '{final_dec}' not found in the {dec_sel_s}s. Please check the spelling."
+                )
+        else:
+            with col4:
+                st.write(f"### {final_dec.title()}'s Style in the {dec_sel_s}s")
+                palette_dec_dev = helper.get_representative_palette(dev_df, count=10)
 
-            html_bar_dec = '<div style="display: flex; height: 40px; border-radius: 8px; overflow: hidden; border: 3px solid #999; margin-bottom: 2px;">'
-            hex_labels = '<div style="display: flex; margin-bottom: 20px;">'
-            for color in palette_dec_dev:
-                html_bar_dec += (
-                    f'<div style="background-color:{color}; flex:1;" title="{color}"></div>'
-                )
-                hex_labels += f'<div style="flex:1; text-align:center; font-size:14px; color:gray; font-family:monospace;">{color.upper()}</div>'
-            html_bar_dec += "</div>"
-            hex_labels += "</div>"
-            st.markdown(html_bar_dec + hex_labels, unsafe_allow_html=True)
-
-            classified_dec = dev_df[dev_df["is_classified"]]
-            if not classified_dec.empty:
-                style_counts = classified_dec.groupby("Art_Style").size().reset_index(name="Count")
-                fig_pie = px.pie(
-                    style_counts,
-                    values="Count",
-                    names="Art_Style",
-                    hole=0.4,
-                    height=450,
-                    title="Technique Distribution",
-                    color_discrete_sequence=px.colors.qualitative.Pastel,
-                )
-                fig_pie.update_layout(
-                    showlegend=True,
-                    legend=dict(
-                        font=dict(size=20),
-                    ),
-                )
-                st.plotly_chart(fig_pie, width="stretch")
-                unclassified = ((len(dev_df) - len(classified_dec)) / len(dev_df)) * 100
-                if unclassified > 0:
-                    st.caption(
-                        f"**Note:** {unclassified:.1f}% of {final_dec.title()}'s {dec_sel_s}s portfolio is unclassified."
+                html_bar_dec = '<div style="display: flex; height: 40px; border-radius: 8px; overflow: hidden; border: 3px solid #999; margin-bottom: 2px;">'
+                hex_labels = '<div style="display: flex; margin-bottom: 20px;">'
+                for color in palette_dec_dev:
+                    html_bar_dec += (
+                        f'<div style="background-color:{color}; flex:1;" title="{color}"></div>'
                     )
+                    hex_labels += f'<div style="flex:1; text-align:center; font-size:14px; color:gray; font-family:monospace;">{color.upper()}</div>'
+                html_bar_dec += "</div>"
+                hex_labels += "</div>"
+                st.markdown(html_bar_dec + hex_labels, unsafe_allow_html=True)
+
+                classified_dec = dev_df[dev_df["is_classified"]]
+                if not classified_dec.empty:
+                    style_counts = (
+                        classified_dec.groupby("Art_Style").size().reset_index(name="Count")
+                    )
+                    fig_pie = px.pie(
+                        style_counts,
+                        values="Count",
+                        names="Art_Style",
+                        hole=0.4,
+                        height=450,
+                        title="Technique Distribution",
+                        color_discrete_sequence=px.colors.qualitative.Pastel,
+                    )
+                    fig_pie.update_layout(
+                        showlegend=True,
+                        legend=dict(
+                            font=dict(size=20),
+                        ),
+                    )
+                    st.plotly_chart(fig_pie, width="stretch")
+                    unclassified = ((len(dev_df) - len(classified_dec)) / len(dev_df)) * 100
+                    if unclassified > 0:
+                        st.caption(
+                            f"**Note:** {unclassified:.1f}% of {final_dec.title()}'s {dec_sel_s}s portfolio is unclassified."
+                        )
+                    else:
+                        st.caption(
+                            f"All {final_dec.title()}'s games for this period are classified."
+                        )
                 else:
-                    st.caption(f"All {final_dec.title()}'s games for this period are classified.")
-            else:
-                st.info("No games were classified for this period.")
-            st.info(
-                "TOOL TIP: Hover mouse over the pie chart slices to see the art style names and percentages"
-            )
-    st.markdown("---")
+                    st.warning(f"No games by {final_dec.title()} were classified for this period.")
+                st.info(
+                    "TOOL TIP: Hover mouse over the pie chart slices to see the art style names and percentages"
+                )
+    st.divider()
 
     st.subheader("⚔️ Studio Head-to-Head Comparison")
     st.write("Directly compare the artistic evolution of two studios within the same decade.")
+    st.info(
+        "TOOL TIP: You can write in the selectbox fields to quickly find studios by name instead of scrolling through the list."
+    )
 
     decade_comparison = st.select_slider(
         "Select Comparison Decade", options=[1970, 1980, 1990, 2000, 2010, 2020], key="comp_slider"
@@ -534,11 +562,14 @@ elif page == "Game Developer Profile":
                 st.caption(f"{len(s_df)} games analyzed")
                 pal = helper.get_representative_palette(s_df, count=8)
 
-                html_comp = '<div style="display: flex; height: 35px; border-radius: 6px; overflow: hidden; border: 3px solid #999; margin-bottom: 15px;">'
+                html_comp = '<div style="display: flex; height: 35px; border-radius: 6px; overflow: hidden; border: 3px solid #999; margin-bottom: 2px;">'
+                hex_labels = '<div style="display: flex; margin-bottom: 20px;">'
                 for color in pal:
                     html_comp += f'<div style="background-color:{color}; flex:1;"></div>'
+                    hex_labels += f'<div style="flex:1; text-align:center; font-size:14px; color:gray; font-family:monospace;">{color.upper()}</div>'
                 html_comp += "</div>"
-                st.markdown(html_comp, unsafe_allow_html=True)
+                hex_labels += "</div>"
+                st.markdown(html_comp + hex_labels, unsafe_allow_html=True)
 
                 s_df_classified = s_df[s_df["is_classified"]]
                 if not s_df_classified.empty:
@@ -565,7 +596,7 @@ elif page == "Game Developer Profile":
 
 elif page == "Individual Game Palette":
     st.header("🔍 Individual Game Analysis")
-    st.write("Extracting the visual DNA and metadata for specific titles.")
+    # st.write("Extracting the visual DNA and metadata for specific titles.")
 
     unique_games = sorted(df_safe["Unique_ID"].unique())
 
@@ -576,12 +607,20 @@ elif page == "Individual Game Palette":
     search_query = st.text_input("Filter list by name:", "")
     if search_query:
         filtered_list = [g for g in unique_games if search_query.lower() in g.lower()]
+        if not filtered_list:
+            st.warning(f"🔍 No games found matching '**{search_query}**'.")
+            st.info(
+                "TOOL TIP: Check for typos or try a broader term (e.g., 'Zelda' instead of 'The Legend of Zelda: Breath of the Wild')."
+            )
+            st.stop()
     else:
         filtered_list = unique_games
 
-    selected_game_id = st.selectbox("Select a game:", filtered_list, key="game_selector")
+    # if not filtered_list:
+    #     st.warning(f"No games found matching '{search_query}'. Please try a different name.")
+    #     st.stop()
 
-    # target_game = st.selectbox("Select Game", df_safe["Game"].unique())
+    selected_game_id = st.selectbox("Select a game:", filtered_list, key="game_selector")
 
     if selected_game_id:
         is_nsfw_check = df[df["Unique_ID"] == selected_game_id]["is_nsfw"].any()
@@ -596,7 +635,6 @@ elif page == "Individual Game Palette":
         target_year = selected_meta["Year"]
         game_rows = df[(df["Unique_ID"] == selected_game_id) & (df["Year"] == target_year)]
 
-        # game_rows = df.loc[[selected_game_id]]
         main_info = game_rows.iloc[0]
 
         st.divider()
@@ -615,16 +653,19 @@ elif page == "Individual Game Palette":
         with col2:
             st.subheader("🎨 Representative Palette")
 
-            # st.markdown(html_dna, unsafe_allow_html=True)
-            dna_string = main_info["Precalc_DNA"]  # e.g., "#332211,0.4|#ff9900,0.3"
-            html_dna = '<div style="display: flex; height: 100px; border-radius: 12px; overflow: hidden;border: 3px solid #999; box-shadow: 0px 4px 10px rgba(0,0,0,0.3);">'
+            dna_string = main_info["Precalc_DNA"]
+
+            html_dna = '<div style="display: flex; height: 100px; border-radius: 12px; overflow: hidden;border: 3px solid #999; ">'
             for entry in dna_string.split("|"):
                 color, weight = entry.split(",")
-                html_dna += f'<div style="background-color:{color}; flex:{weight};"></div>'
+                # html_dna += f'<div style="background-color:{color}; flex:{weight};"></div>'
+                html_dna += f'''
+                    <div title="{color.upper()}" 
+                        style="background-color:{color}; flex:{weight}; "cursor: pointer;">
+                    </div>'''
             html_dna += "</div>"
             st.markdown(html_dna, unsafe_allow_html=True)
             st.markdown("Proportionally weighted palette for this game")
-            # st.caption(f"Colors: {', '.join([c['hex'] for c in master_pal])}")
 
             decade_avg_sat = df[df["Decade"] == main_info["Decade"]]["saturation"].mean()
             denom = decade_avg_sat if decade_avg_sat > 0 else 1.0
@@ -641,40 +682,13 @@ elif page == "Individual Game Palette":
             else:
                 comparison_text = "visually consistent with"
 
-            st.info(
+            st.write(
                 f"{main_info['Game'].title()} is {comparison_text} "
                 f" the average game from the {main_info['Decade']}."
             )
+            st.info("💡 TOOL TIP: Hover over the colors to see their hex codes")
 
         st.divider()
-
-        # --- BOTTOM SECTION: Source Screenshots Grid ---
-        # st.subheader("🖼️ Source Screenshots")
-        # # Dynamic columns based on number of screenshots (max 5 per row)
-        # n_screens = len(game_rows)
-        # cols = st.columns(min(n_screens, 5))
-
-        # for i, row in enumerate(game_rows.itertuples()):
-        #     with cols[i % 5]:
-        #         st.image(row.Screenshot, width="stretch")
-
-        #         # Pull the 5 colors directly from the current row
-        #         mini_html = '<div style="display: flex; height: 12px; margin-top: -5px; border-radius: 0 0 5px 5px; overflow: hidden; border: 1px solid #999;">'
-
-        #         for j in range(1, 6):  # C1 to C5
-        #             # Get the R, G, B values from the row attributes
-        #             r = getattr(row, f"C{j}_R")
-        #             g = getattr(row, f"C{j}_G")
-        #             b = getattr(row, f"C{j}_B")
-
-        #             if not pd.isna(r):
-        #                 color_hex = f"rgb({int(r)},{int(g)},{int(b)})"
-        #                 mini_html += f'<div style="background-color:{color_hex}; flex:1;" title="{color_hex}"></div>'
-
-        #         mini_html += "</div>"
-        #         st.markdown(mini_html, unsafe_allow_html=True)
-        # --- BOTTOM SECTION: Source Screenshots Grid ---
-        # --- BOTTOM SECTION: Source Screenshots Grid ---
     st.subheader("🖼️ Source Screenshots")
 
     n_screens = len(game_rows)
@@ -683,24 +697,24 @@ elif page == "Individual Game Palette":
     for i, row in enumerate(game_rows.itertuples()):
         with cols[i % 5]:
             st.image(row.Screenshot, width="stretch")
-
-            # Use the UNIFIED math for 5 colors
             top_5 = helper.get_ranked_colors(row, count=5)
 
             mini_html = (
-                '<div style="display: flex; height: 16px; margin-top: -6px; '
-                'border-radius: 0 0 6px 6px; overflow: hidden; border: 1px solid #222;">'
+                '<div style="display: flex; height: 25px; '
+                'border-radius: 6px; overflow: hidden; border: 3px solid #999; margin-bottom: 25px; margin-top: -5px;">'
             )
 
             for c in top_5:
+                hex_code = f"#{int(c.R):02x}{int(c.G):02x}{int(c.B):02x}".upper()
                 mini_html += (
-                    f'<div style="background-color:rgb({int(c.R)},{int(c.G)},{int(c.B)}); '
-                    f'flex:1;" title="R:{int(c.R)} G:{int(c.G)} B:{int(c.B)}"></div>'
+                    f'<div title="{hex_code}" '
+                    f'style="background-color:{hex_code}; '
+                    f'flex:1; cursor: pointer;"></div>'
                 )
-
             # Padding for games with < 5 colors
             for _ in range(5 - len(top_5)):
                 mini_html += '<div style="background-color:#000; flex:1;"></div>'
 
             mini_html += "</div>"
             st.markdown(mini_html, unsafe_allow_html=True)
+    st.info("💡 TOOL TIP: Hover over the colors to see their hex codes")

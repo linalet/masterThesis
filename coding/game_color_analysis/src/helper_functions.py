@@ -46,56 +46,6 @@ def load_data(path):
     return df_indexed, unique_devs, top_studios
 
 
-# def get_representative_palette(yr_data, count=10):
-#     if yr_data.empty:
-#         return []
-
-#     all_colors = []
-#     # We pool the top 3 clusters from every game to get the 'feel' of the era
-#     for i in range(1, 4):
-#         temp = yr_data[[f"C{i}_R", f"C{i}_G", f"C{i}_B"]].copy()
-#         temp.columns = ["R", "G", "B"]
-#         all_colors.append(temp)
-
-#     pool = pd.concat(all_colors).dropna()
-#     pool["sat"] = pool[["R", "G", "B"]].max(axis=1) - pool[["R", "G", "B"]].min(axis=1)
-
-#     # Bucket colors (Grouping similar shades)
-#     pool["R_B"] = (pool["R"] // 10 * 10).clip(0, 255)
-#     pool["G_B"] = (pool["G"] // 10 * 10).clip(0, 255)
-#     pool["B_B"] = (pool["B"] // 10 * 10).clip(0, 255)
-
-#     grouped = (
-#         pool.groupby(["R_B", "G_B", "B_B"])
-#         .agg(occurrence=("sat", "count"), avg_sat=("sat", "mean"))
-#         .reset_index()
-#     )
-
-#     # LOGIC FIX: If the average saturation is extremely low (< 10), rank by count alone.
-#     # This prevents black/white/grey colors from being ignored.
-#     if grouped["avg_sat"].mean() < 10:
-#         grouped["rank_score"] = grouped["occurrence"]
-#     else:
-#         # For colored games, prioritize vibrant hues while still considering frequency
-#         grouped["rank_score"] = grouped["occurrence"] * (grouped["avg_sat"] + 15)
-#     top = grouped.nlargest(count, "rank_score")
-#     return [f"#{int(r):02x}{int(g):02x}{int(b):02x}" for r, g, b in zip(top.R_B, top.G_B, top.B_B)]
-
-
-# def render_color_strip(data_subset, label, sub_label=""):
-#     pal = get_representative_palette(data_subset, count=10)
-#     c1, c2, c3 = st.columns([1, 2, 6])
-#     c1.write(f"**{label}**")
-#     c2.caption(sub_label)
-#     with c3:
-#         # Horizontal Pillar View for consistent thesis formatting
-#         html = '<div style="display: flex; height: 25px; border-radius: 4px; overflow: hidden; margin-bottom: 8px; border: 5px solid #999;">'
-#         for color in pal:
-#             html += f'<div style="background-color:{color}; flex:1;" title="{color}"></div>'
-#         html += "</div>"
-#         st.markdown(html, unsafe_allow_html=True)
-
-
 def get_ranked_colors(df_row_or_group, count=5, filter_similarity=True):
     """
     The Universal Ranking Logic for the Thesis.
@@ -164,3 +114,23 @@ def get_representative_palette(yr_data, count=10):
     """Now uses the weighted logic for the Era Vibe!"""
     top_colors = get_ranked_colors(yr_data, count=count)
     return [f"#{int(c.R):02x}{int(c.G):02x}{int(c.B):02x}" for c in top_colors]
+
+
+def on_selectbox_change():
+    if st.session_state.all_time_box != "Select...":
+        st.session_state.all_search = ""
+
+
+def on_text_change():
+    if st.session_state.all_search.strip() != "":
+        st.session_state.all_time_box = "Select..."
+
+
+def on_selectbox_change_dec():
+    if st.session_state.dec_box != "Select...":
+        st.session_state.dec_search = ""
+
+
+def on_text_change_dec():
+    if st.session_state.dec_search.strip() != "":
+        st.session_state.dec_box = "Select..."
