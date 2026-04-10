@@ -114,14 +114,13 @@ def classify_taxonomy(df):
     )
     is_free = df["Art_Style"] == "Unclassified"
     df.loc[
-        is_free
-        & text.str.contains("claymation|papercraft|puppet|stop-motion|felt|ballpoint", na=False),
+        is_free & text.str.contains("claymation|papercraft|stop-motion|felt", na=False),
         "Art_Style",
     ] = "Stylization: Material-Based"
     is_free = df["Art_Style"] == "Unclassified"
     df.loc[
         is_free
-        & text.str.contains("watercolor|hand-painted|comic|cel-shade|hand-drawn|sketch", na=False),
+        & text.str.contains("watercolor|hand-painted|cel-shade|hand-drawn|sketch", na=False),
         "Art_Style",
     ] = "Stylization: Illustrative"
 

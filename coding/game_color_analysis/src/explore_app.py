@@ -3,12 +3,10 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import helper_functions as helper
-import json
 
 st.set_page_config(
     layout="wide", page_title="Evolution of Color and Art Styles in Video Game Design"
 )
-# [theme]
 baseFontSize = "23px"
 st.markdown(
     """
@@ -39,11 +37,7 @@ path = os.path.join(
 )
 df, unique_devs_list, top_50_global = helper.load_data(path)
 df_safe = df[df["is_nsfw"] == False].copy()
-# decades = sorted(
-#     list(set([(d // 10) * 10 for d in df["Year"].unique() if d >= 1970])), reverse=True
-# )
 decades = sorted(list(set(df["Decade"].unique())))
-# decade_list = sorted(df["Decade"].unique())
 
 if st.session_state.get("trigger_nav"):
     st.session_state["page_selection"] = "Individual Game Palette"
@@ -52,11 +46,11 @@ if st.session_state.get("trigger_nav"):
 page = st.sidebar.radio(
     "Analysis Tabs",
     [
+        "Project Overview",
         "Art Style Popularity",
         "Color through Decades",
         "Genre Timelines",
         "Theme Timelines",
-        # "Colorfulness",
         "Game Developer Profile",
         "Individual Game Palette",
     ],
@@ -68,7 +62,180 @@ if st.sidebar.button("🎲 Random Game"):
     st.session_state["trigger_nav"] = True
     st.rerun()
 
-if page == "Art Style Popularity":
+if page == "Project Overview":
+    st.title(
+        "Exploring and Visualizing the Evolution of Color",
+        text_alignment="center",
+    )
+    st.title(
+        "and Art Styles in Video Game Design",
+        text_alignment="center",
+    )
+
+    st.divider()
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.header("🧬 The Research Goals")
+        st.write("""
+                 Color and art styles play a crucial role in video games. 
+                 Color can set the mood, guide the player, identify game objects, 
+                 and therefore influence both the aesthetics and gameplay.
+                 The rise in the use of game engines led to a certain uniformization
+                 of color and art style choices.
+        """)
+        st.write("""
+                 This thesis aims to explore
+                 how the use of colors and art styles in video games changed over time by
+                 providing an analysis of the collected data,
+                 vizualizing and allowing for exploration of the collected data.
+        """)
+
+    with col2:
+        st.header("⚙️ Research Questions")
+        st.info("""        
+        **Key Research Questions:**
+        * **BLA BLA AI** How did hardware limitations (CGA, EGA, 8-bit) dictate early color palettes?
+        * **BLA BLA AI** Is there a measurable 'brown period' during the transition to HD (2005-2010)?
+        * **BLA BLA AI** How do genre-specific color identities evolve over decades?
+                """)
+
+    st.divider()
+
+    st.header("🏷️ Art Style Taxonomy & Classification Logic")
+    st.write(
+        """
+        This taxonomy categorizes the visual DNA of games into three overarching branches. 
+        Classification is performed by scanning developer metadata and visual tags against our curated 
+        library of stylistic keywords.
+        """
+    )
+
+    # Detailed Taxonomy Data Structure
+    taxonomy_data = {
+        "I. Realism: Photoreal": {
+            "Photoreal": {
+                "description": "Visuals trying to look as realistic as possible. Can utilize Physically Based Rendering (PBR) and high-resolution textures.",
+                "keywords": [
+                    "ray-tracing",
+                    "pbr",
+                    "realistic",
+                    "4k",
+                ],
+                "example_games": ["Cyberpunk 2077"],
+            },
+            "Realism: Stylized": {
+                "description": "Retains realistic proportions and lighting but adds artistic flair. Often mimics the look of high-end film or fantasy illustration.",
+                "keywords": [
+                    "cinematic",
+                    "atmospheric",
+                ],
+                "example_games": ["The Last of Us Part II"],
+            },
+        },
+        "II. Stylization": {
+            "Stylization: Illustrative": {
+                "description": "Emphasizes the 'art'. Mimics physical media like watercolors, or ink drawings.",
+                "keywords": [
+                    "watercolor",
+                    "hand-painted",
+                    "comic",
+                    "cel-shaded",
+                    "hand-drawn",
+                    "sketch",
+                ],
+                "example_games": ["Machinarium"],
+            },
+            "Stylization: Caricature": {
+                "description": "Focuses on exaggerated proportions and vibrant colors. Often inspired by anime or cartoons.",
+                "keywords": ["anime", "manga", "chibi", "cartoon"],
+                "example_games": ["Team Fortress 2"],
+            },
+            "Stylization: Pixel Art": {
+                "description": "Art style limited by or inspired by the technical constraints of early gaming hardware. Uses simple shapes.",
+                "keywords": ["pixel art", "voxel", "8-bit", "16-bit"],
+                "example_games": ["Stardew Valley"],
+            },
+            "Stylization: Material-Based": {
+                "description": "Games designed to look like they are constructed from physical materials. Often uses stop-motion.",
+                "keywords": [
+                    "claymation",
+                    "papercraft",
+                    "puppet",
+                    "stop-motion",
+                    "felt",
+                ],
+                "example_games": ["It Takes Two", "Unravel"],  # Unravel
+            },
+        },
+        "III. Abstraction": {
+            "Abstraction: Minimalist": {
+                "description": "Reduces visual information to essential shapes and colors. Prioritizes clean lines, silhouettes, and mathematical precision.",
+                "keywords": ["silhouette", "geometric", "minimalist"],
+                "example_games": ["Superhot", "voxel blast"],
+            },
+            "Abstraction: Symbolic": {
+                "description": "High-concept visuals where color and shape represent ideas or mechanics. Also text-based games with limited visual elements.",
+                "keywords": [
+                    "text-based",
+                    "experimental",
+                    "psychedelic",
+                    "ascii",
+                ],
+                "example_games": ["The Hitchhiker'S Guide To The Galaxy"],
+            },
+        },
+    }
+
+    # Rendering the Taxonomy
+    for branch, styles in taxonomy_data.items():
+        # Visual separator for the main branches
+        st.markdown(f"## {branch}")
+
+        for style_name, info in styles.items():
+            # Making the Style Name more visible with a colored background or bold header
+            st.markdown(
+                f"""
+                <div style="background-color: #31333F; padding: 10px; border-radius: 5px; border-left: 5px solid #ff4b4b; margin-top: 20px;">
+                    <h3 style="margin: 0; color: white;">{style_name}</h3>
+                </div>
+            """,
+                unsafe_allow_html=True,
+            )
+
+            # Container for the details and images
+            # Top row for text, bottom row for images to keep it compact
+            st.markdown(f"**Aesthetic Intent:** {info['description']}")
+            kw_html = " ".join([f"`{k}`" for k in info["keywords"]])
+            st.markdown(f"**Keywords:** {kw_html}")
+
+            cols = st.columns(3)
+            for i, game_name in enumerate(info["example_games"]):
+                # Stop if we exceed column count
+                if i >= 3:
+                    break
+                with cols[i]:
+                    # Search for this specific game
+                    match = df_safe[df_safe["Game"].str.contains(game_name, case=False, na=False)]
+
+                    if not match.empty:
+                        st.image(match.iloc[0]["Screenshot"], width="stretch")
+                        st.caption(f"📍 {game_name}")
+                    else:
+                        # Placeholder if game not in dataset
+                        st.info(f"Image for {game_name} not found.")
+    st.divider()
+
+    st.subheader("📖 How to use this Dashboard")
+    st.markdown("""
+    1. **Art Style Popularity:** View the 'Rise and Fall' of specific styles over time.
+    2. **Color through Decades:** See how the industry's average palette has shifted from neon to naturalism.
+    3. **Developer Profile:** Search for your favorite studio (e.g., *Nintendo*, *Sega*, or *Ubisoft*) to see their stylistic signature.
+    4. **Individual Game Palette:** Deep-dive into a specific title to see its exact color distribution.
+    """)
+
+elif page == "Art Style Popularity":
     st.header("📈 Art Style Popularity through Time")
     classified_df = df[df["is_classified"]]
     style_counts = classified_df.groupby(["Year", "Art_Style"]).size().reset_index(name="Count")
@@ -82,7 +249,6 @@ if page == "Art Style Popularity":
         y="Percentage",
         color="Art_Style",
         height=600,
-        # category_orders={"Art_Style": sorted(classified_df["Art_Style"].unique())},
     )
     fig.update_yaxes(range=[0, 100])
     fig.update_xaxes(type="linear", range=[1950, 2026])
@@ -147,11 +313,53 @@ if page == "Art Style Popularity":
         f"We have successfully classified **{classified_total} out of {total_games}** games (**{percent_complete:.1f}%**) using image-based DNA."
     )
 
+    st.divider()
+    st.subheader("🔍 Style Explorer: Random Gallery")
+    st.write("Select an art style to explore random examples from the classified dataset.")
+
+    # 1. Setup Selection and Button
+    # Get the list of unique art styles present in your classified data
+    available_styles = classified_df["Art_Style"].unique().tolist()
+
+    col_sel, col_btn = st.columns([3, 1])
+    with col_sel:
+        selected_style = st.selectbox("Choose a style to explore:", available_styles)
+    with col_btn:
+        st.write(" ")  # Padding
+        refresh_button = st.button("🔄 Show Different Games")
+
+    # 2. Filter the dataset for the selected style
+    style_pool = classified_df[classified_df["Art_Style"] == selected_style]
+
+    if not style_pool.empty:
+        # Pick 3 random games from this style
+        # .sample() handles the randomness
+        n_samples = min(len(style_pool), 3)
+        random_games = style_pool.sample(n_samples)
+
+        # 3. Display the Gallery
+        for idx, game_row in random_games.iterrows():
+            game_name = str(game_row["Game"]).title()
+            studio_name = str(game_row.get("Developer", "Unknown Studio")).title()
+            year = int(game_row["Year"])
+
+            st.markdown(f"#### 🎮 {game_name} ({year})")
+            st.markdown(f"**Studio:** {studio_name}")
+
+            # Logic: Finding multiple screenshots for the SAME game ID
+            game_screenshots = df[df["Unique_ID"] == game_row["Unique_ID"]].head(3)
+
+            img_cols = st.columns(3)
+            for i, shot in enumerate(game_screenshots.itertuples()):
+                with img_cols[i]:
+                    st.image(shot.Screenshot, use_container_width=True)
+    else:
+        st.warning("No games found for this specific style in the current filter.")
+
 
 elif page == "Color through Decades":
     st.header("🎨 Color through Decades")
     st.subheader("Dominant colors of each decade")
-    # st.write("Evolution of the dominant industry palette alongside tech milestones.")
 
     for dec_label in decades:
         decade_data = df[df["Decade"] == dec_label]
@@ -178,8 +386,6 @@ elif page == "Color through Decades":
                 st.markdown(html + hex_labels, unsafe_allow_html=True)
 
     st.divider()
-
-    # helper.render_saturation_heatmap(df)
 
     st.subheader("Dominant colors in a decade by art style")
     col_decade, col_style = st.columns(2)
@@ -249,8 +455,6 @@ elif page == "Genre Timelines":
                 top_style = valid_styles.mode()[0] if not valid_styles.empty else "General Industry"
 
                 palette = helper.get_ranked_colors(decade_data_g, count=10)
-                # st.write(f"#### {dec}s Era")
-                # st.write(f"Most Common Art Style: {top_style}")
                 st.markdown(
                     f"""
                     <div style='line-height: 1.5;'>
@@ -295,8 +499,6 @@ elif page == "Genre Timelines":
                                 y_html += f'<div style="background-color:{y_hex}; flex:1;" title="{y_hex.upper()}"></div>'
                             y_html += "</div>"
                             st.markdown(y_html, unsafe_allow_html=True)
-                        # helper.render_color_strip(year_data, f"  ↳ {year}", f"{len(year_data)} games")
-
 
 elif page == "Theme Timelines":
     st.header("🎨 Theme-Specific Color Evolution")
@@ -596,7 +798,6 @@ elif page == "Game Developer Profile":
 
 elif page == "Individual Game Palette":
     st.header("🔍 Individual Game Analysis")
-    # st.write("Extracting the visual DNA and metadata for specific titles.")
 
     unique_games = sorted(df_safe["Unique_ID"].unique())
 
@@ -615,10 +816,6 @@ elif page == "Individual Game Palette":
             st.stop()
     else:
         filtered_list = unique_games
-
-    # if not filtered_list:
-    #     st.warning(f"No games found matching '{search_query}'. Please try a different name.")
-    #     st.stop()
 
     selected_game_id = st.selectbox("Select a game:", filtered_list, key="game_selector")
 
@@ -658,7 +855,6 @@ elif page == "Individual Game Palette":
             html_dna = '<div style="display: flex; height: 100px; border-radius: 12px; overflow: hidden;border: 3px solid #999; ">'
             for entry in dna_string.split("|"):
                 color, weight = entry.split(",")
-                # html_dna += f'<div style="background-color:{color}; flex:{weight};"></div>'
                 html_dna += f'''
                     <div title="{color.upper()}" 
                         style="background-color:{color}; flex:{weight}; "cursor: pointer;">
