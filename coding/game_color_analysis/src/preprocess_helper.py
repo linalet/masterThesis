@@ -119,19 +119,18 @@ def classify_taxonomy(df):
     ] = "Stylization: Material-Based"
     is_free = df["Art_Style"] == "Unclassified"
     df.loc[
-        is_free
-        & text.str.contains("watercolor|hand-painted|cel-shade|hand-drawn|sketch", na=False),
+        is_free & text.str.contains("watercolor|hand-painted|hand-drawn|sketch", na=False),
         "Art_Style",
     ] = "Stylization: Illustrative"
 
-    is_free = df["Art_Style"] == "Unclassified"
-    df.loc[is_free & text.str.contains("3d|3-d", na=False), "Art_Style"] = "Unclassified 3D"
-    is_free = df["Art_Style"] == "Unclassified"
-    df.loc[is_free & text.str.contains("2d|2-d", na=False), "Art_Style"] = "Unclassified 2D"
+    # is_free = df["Art_Style"] == "Unclassified"
+    # df.loc[is_free & text.str.contains("3d|3-d", na=False), "Art_Style"] = "Unclassified 3D"
+    # is_free = df["Art_Style"] == "Unclassified"
+    # df.loc[is_free & text.str.contains("2d|2-d", na=False), "Art_Style"] = "Unclassified 2D"
     is_free = df["Art_Style"] == "Unclassified"
     df["is_classified"] = ~df["Art_Style"].str.startswith("Unclassified")
 
-    # manual assignment for top gaames of each year
+    # manual assignment for top games of each year
     # https://www.imdb.com/list/ls023816644/
 
     return df["Art_Style"]

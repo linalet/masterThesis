@@ -38,7 +38,17 @@ path = os.path.join(
 df, unique_devs_list, top_50_global = helper.load_data(path)
 df_safe = df[df["is_nsfw"] == False].copy()
 decades = sorted(list(set(df["Decade"].unique())))
-
+custom_style_order = [
+    "Realism: Photoreal",
+    "Realism: Stylized",
+    "Stylization: Cartoon",
+    "Stylization: Illustrative",
+    "Stylization: Pixel Art",
+    "Stylization: Material-Based",
+    "Abstraction: Minimalist",
+    "Abstraction: Symbolic",
+]
+unclassified_labels = ["Unclassified", "Unclassified 2D", "Unclassified 3D"]
 if st.session_state.get("trigger_nav"):
     st.session_state["page_selection"] = "Individual Game Palette"
     st.session_state["trigger_nav"] = False
@@ -118,9 +128,9 @@ if page == "Project Overview":
 
     # Detailed Taxonomy Data Structure
     taxonomy_data = {
-        "I. Realism": {
+        "1️⃣ Realism": {
             "Photoreal": {
-                "description": "Visuals trying to look as realistic as possible. Can utilize Physically Based Rendering (PBR) and high-resolution textures.",
+                "description": "Visuals trying to look as realistic as possible. Can utilize physically based rendering (PBR) and high-resolution textures.",
                 "keywords": [
                     "ray-tracing",
                     "pbr",
@@ -133,7 +143,7 @@ if page == "Project Overview":
                     {"id": "forza horizon 5 (2021)", "shot_index": 0},
                 ],
             },
-            "Realism: Stylized": {
+            "Stylized": {
                 "description": "Retains realistic proportions and lighting but adds artistic flair. Often mimics the look of high-end film or fantasy illustration.",
                 "keywords": [
                     "cinematic",
@@ -146,13 +156,21 @@ if page == "Project Overview":
                 ],
             },
         },
-        "II. Stylization": {
-            "Stylization: Illustrative": {
+        "2️⃣ Stylization": {
+            "Cartoon": {
+                "description": "Focuses on exaggerated proportions and vibrant colors. Often inspired by anime or cartoons.",
+                "keywords": ["anime", "manga", "chibi", "cartoon"],
+                "example_games": [
+                    {"id": "team fortress 2 (2007)", "shot_index": 0},
+                    {"id": "the legend of zelda: breath of the wild (2017)", "shot_index": 6},
+                    {"id": "super mario odyssey (2017)", "shot_index": 0},
+                ],
+            },
+            "Illustrative": {
                 "description": "Emphasizes the 'art'. Mimics physical media like watercolors, or ink drawings.",
                 "keywords": [
                     "watercolor",
                     "hand-painted",
-                    "cel-shaded",
                     "hand-drawn",
                     "sketch",
                 ],
@@ -162,16 +180,7 @@ if page == "Project Overview":
                     {"id": "don't starve (2013)", "shot_index": 0},
                 ],
             },
-            "Stylization: Cartoon": {
-                "description": "Focuses on exaggerated proportions and vibrant colors. Often inspired by anime or cartoons.",
-                "keywords": ["anime", "manga", "chibi", "cartoon"],
-                "example_games": [
-                    {"id": "team fortress 2 (2007)", "shot_index": 0},
-                    {"id": "the legend of zelda: breath of the wild (2017)", "shot_index": 6},
-                    {"id": "super mario odyssey (2017)", "shot_index": 0},
-                ],
-            },
-            "Stylization: Pixel Art": {
+            "Pixel Art": {
                 "description": "Art style limited by or inspired by the technical constraints of early gaming hardware. Uses simple shapes.",
                 "keywords": ["pixel art", "8-bit", "16-bit"],
                 "example_games": [
@@ -180,7 +189,7 @@ if page == "Project Overview":
                     {"id": "undertale (2015)", "shot_index": 3},
                 ],
             },
-            "Stylization: Material-Based": {
+            "Material-Based": {
                 "description": "Games designed to look like they are constructed from physical materials. Often uses stop-motion.",
                 "keywords": [
                     "claymation",
@@ -195,8 +204,8 @@ if page == "Project Overview":
                 ],
             },
         },
-        "III. Abstraction": {
-            "Abstraction: Minimalist": {
+        "3️⃣ Abstraction": {
+            "Minimalist": {
                 "description": "Reduces visual information to essential shapes and colors. Prioritizes clean lines, silhouettes, and mathematical precision.",
                 "keywords": ["silhouette", "geometric", "minimalist"],
                 "example_games": [
@@ -205,7 +214,7 @@ if page == "Project Overview":
                     {"id": "limbo (2010)", "shot_index": 4},
                 ],
             },
-            "Abstraction: Symbolic": {
+            "Symbolic": {
                 "description": "High-concept visuals where color and shape represent ideas or mechanics. Also text-based and audio-based games with limited visual elements.",
                 "keywords": [
                     "text-based",
@@ -246,7 +255,7 @@ if page == "Project Overview":
                             idx = 0
 
                         target_row = match.iloc[idx]
-                        st.image(target_row["Screenshot"], use_container_width=True)
+                        st.image(target_row["Screenshot"], width="stretch")
                         st.caption(f"🎮 {target_row['Unique_ID']}")
                     else:
                         st.info(f"Image for {game_ref['id']} not found.")
@@ -257,16 +266,16 @@ if page == "Project Overview":
             The automated assignment is often incorrect, but the only viable option available with current resources.
             I have manually classified around 300 games to ensure some level accuracy, however it is only a fraction (0.1%) of the total dataset.
             Art is subjective and complex, so my opinion may not always be correct. 
-            Some games can fit into multiple categories, such as Samorost 3, which could be both **Stylization: Illustrative** and **Stylization: Material-Based**.""")
+            Some games can fit into multiple categories, such as *Worse Than Death (2019)*, which could be both **Stylization: Pixel Art** and **Stylization: Illustrative**.""")
     col1, col2 = st.columns(2)
     with col1:
         st.image(
-            df[df["Game"].str.contains("Unravel", case=False)]["Screenshot"].iloc[0],
+            df[df["Unique_ID"] == "worse than death (2019)"].iloc[0]["Screenshot"],
             width="stretch",
         )
     with col2:
         st.image(
-            df[df["Game"].str.contains("Unravel", case=False)]["Screenshot"].iloc[1],
+            df[df["Unique_ID"] == "worse than death (2019)"].iloc[4]["Screenshot"],
             width="stretch",
         )
     st.divider()
@@ -276,30 +285,45 @@ if page == "Project Overview":
         If you cannot see the side menu and the tabs inside, press the arrows EMOJI in the top left corner.
         Go through the different tabs to explore the data and find insights about the evolution of color and art styles in video games.
     """)
-    st.write("""What do the tabs mean?""")
+    st.write("""##### 🤔What do the tabs mean?""")
     st.markdown("""
-    1. **Art Style Popularity:** View the 'Rise and Fall' of specific styles over time.
-    2. **Color through Decades:** See how the industry's average palette has shifted from neon to naturalism.
+    1. **Art Style Popularity:** View the popularitty of specific styles over time.
+    2. **Color through Decades:** See how the industry's average palette has shifted.
     3. **Genre Timelines:** Explore how color trends differ across genres.
     4. **Theme Timelines:** Explore how color trends differ across themes.
-    3. **Game Developer Profile:** Search for your favorite studio (e.g., *Nintendo*, *Sega*, or *Ubisoft*) to see their stylistic signature.
-    4. **Individual Game Palette:** Deep-dive into a specific title to see its exact color distribution.
+    3. **Game Developer Profile:** Explore game studio's most common art styles and colors.
+    4. **Individual Game Palette:** Deep-dive into a specific game and look at its screenshots.
     """)
 
 elif page == "Art Style Popularity":
     st.header("📈 Art Style Popularity through Time")
+    st.write("""
+        This graph shows the division of art styles over time. 
+        It shows how many percent of the successfully classified games each style represents in a given year.
+        Another graph showing the classification success rate is shown below.
+        """)
     classified_df = df[df["is_classified"]]
     style_counts = classified_df.groupby(["Year", "Art_Style"]).size().reset_index(name="Count")
     year_totals = classified_df.groupby("Year").size().reset_index(name="Total")
     perc_df = style_counts.merge(year_totals, on="Year")
     perc_df["Percentage"] = (perc_df["Count"] / perc_df["Total"]) * 100
 
-    fig = px.area(
+    # fig = px.area(
+    #     perc_df,
+    #     x="Year",
+    #     y="Percentage",
+    #     color="Art_Style",
+    #     height=600,
+    #     category_orders={"Art_Style": custom_style_order},
+    # )
+    fig = px.bar(
         perc_df,
         x="Year",
         y="Percentage",
         color="Art_Style",
         height=600,
+        category_orders={"Art_Style": custom_style_order},
+        barmode="stack",
     )
     fig.update_yaxes(range=[0, 100])
     fig.update_xaxes(type="linear", range=[1950, 2026])
@@ -322,8 +346,14 @@ elif page == "Art Style Popularity":
         font=dict(size=20),
     )
     st.plotly_chart(fig, width="stretch")
+    st.info(
+        """ 💡TOOL TIP: Hover over the graph to see exact percentages for each style in a given year. 
+        You can zoom in and out, and pan over the graph using the icons above the legend.
+        You can select which styles to show by clicking on the legend items. Use autoscale to reset the zoom sfter picking the styles."""
+    )
 
     st.divider()
+
     st.subheader("📈 Dataset Classification Success")
     all_games_decade = df.groupby("Decade")["Unique_ID"].nunique().reset_index(name="Total_Games")
     classified_decade = (
@@ -360,8 +390,8 @@ elif page == "Art Style Popularity":
     classified_total = classified_df["Unique_ID"].nunique()
     percent_complete = (classified_total / total_games) * 100
 
-    st.info(
-        f"We have successfully classified **{classified_total} out of {total_games}** games (**{percent_complete:.1f}%**) using image-based DNA."
+    st.caption(
+        f"I have successfully classified **{classified_total} out of {total_games}** games (**{percent_complete:.1f}%**)."
     )
 
     st.divider()
@@ -486,9 +516,8 @@ elif page == "Color through Decades":
 
 elif page == "Genre Timelines":
     st.header("🎨 Genre-Specific Color Evolution")
-    # st.subheader("🕹️ Genre-Specific Evolution")
-    st.write("**☝TOOL TIP**: Click the 🔍 tab to expand and see year-by-year breakdowns")
-    st.write("☝Hover mouse over the colors in the breakdown to see their hex codes")
+    st.info("**💡TOOL TIP**: Click the 🔍 tab to expand and see year-by-year breakdowns")
+    st.info("💡Hover mouse over the colors in the breakdown to see their hex codes")
     all_genres = sorted(list(set(df["Genres"].str.split("|").explode().str.strip().unique())))
     selected_genre = st.selectbox(
         "Select Genre", [g for g in all_genres if g], key="genre_trace_box"
@@ -500,17 +529,17 @@ elif page == "Genre Timelines":
         for dec in decades:
             decade_data_g = genre_df[(genre_df["Year"] >= dec) & (genre_df["Year"] < dec + 10)]
             if not decade_data_g.empty:
-                valid_styles = decade_data_g[decade_data_g["Art_Style"] != "Unclassified"][
+                valid_styles = decade_data_g[~decade_data_g["Art_Style"].isin(unclassified_labels)][
                     "Art_Style"
                 ]
-                top_style = valid_styles.mode()[0] if not valid_styles.empty else "General Industry"
+                top_style = valid_styles.mode()[0] if not valid_styles.empty else "Unknown"
 
                 palette = helper.get_ranked_colors(decade_data_g, count=10)
                 st.markdown(
                     f"""
                     <div style='line-height: 1.5;'>
                         <span style='font-size: 25px; font-weight: bold;'>{dec}s </span>
-                        <span style='font-size: 18px; color: white;'>Most Common Art Style: {top_style}</span>
+                        <span style='font-size: 18px; color: white;'>Most common art style: {top_style}</span>
                     </div>
                     """,
                     unsafe_allow_html=True,
@@ -538,7 +567,7 @@ elif page == "Genre Timelines":
                         col_label, col_strip = st.columns([1, 7])
                         year_count = len(year_data)
                         formatted_year_count = f"{year_count:,}".replace(",", " ")
-                        col_label.write(f"**{year}** (Games: {formatted_year_count})")
+                        col_label.write(f"**{year}** ({formatted_year_count} games)")
                         with col_strip:
                             y_html = '<div style="display: flex; height: 30px; border-radius: 4px; overflow: hidden; border: 3px solid #666; margin-bottom: 5px;">'
                             for col in year_palette:
@@ -550,11 +579,14 @@ elif page == "Genre Timelines":
                                 y_html += f'<div style="background-color:{y_hex}; flex:1;" title="{y_hex.upper()}"></div>'
                             y_html += "</div>"
                             st.markdown(y_html, unsafe_allow_html=True)
+    st.info(
+        """ ☝NOTE: If no games were classified for a specific genre in a decade, the art style will be marked as "Unknown"."""
+    )
 
 elif page == "Theme Timelines":
     st.header("🎨 Theme-Specific Color Evolution")
-    st.write("**👁👄👁TOOL TIP**: Click the 🔍 tab to expand and see year-by-year breakdowns")
-    st.write("💡 Hover mouse over the colors in the breakdown to see their hex codes")
+    st.info("**💡TOOL TIP**: Click the 🔍 tab to expand and see year-by-year breakdowns")
+    st.info("💡 Hover mouse over the colors in the breakdown to see their hex codes")
 
     all_themes = sorted(list(set(df["Themes"].str.split("|").explode().str.strip().unique())))
     selected_theme = st.selectbox(
@@ -567,16 +599,16 @@ elif page == "Theme Timelines":
         for dec in decades:
             decade_data_t = theme_df[(theme_df["Year"] >= dec) & (theme_df["Year"] < dec + 10)]
             if not decade_data_t.empty:
-                valid_styles = decade_data_t[decade_data_t["Art_Style"] != "Unclassified"][
+                valid_styles = decade_data_t[~decade_data_t["Art_Style"].isin(unclassified_labels)][
                     "Art_Style"
                 ]
-                top_style = valid_styles.mode()[0] if not valid_styles.empty else "General Industry"
+                top_style = valid_styles.mode()[0] if not valid_styles.empty else "Unknown"
                 palette = helper.get_ranked_colors(decade_data_t, count=10)
 
                 st.markdown(
                     f"""
                     <div style='line-height: 1.5;'>
-                        <span style='font-size: 25px; font-weight: bold;'>{dec}s </span><span style='font-size: 18px; color: white;'>Most Common Art Style: {top_style}</span>
+                        <span style='font-size: 25px; font-weight: bold;'>{dec}s </span><span style='font-size: 18px; color: white;'>Most common art style: {top_style}</span>
                         
                     </div>
                     """,
@@ -604,7 +636,7 @@ elif page == "Theme Timelines":
                         col_label, col_strip = st.columns([1, 7])
                         year_count = len(year_data)
                         formatted_year_count = f"{year_count:,}".replace(",", " ")
-                        col_label.write(f"**{year}** (Games: {formatted_year_count})")
+                        col_label.write(f"**{year}** ({formatted_year_count} games)")
 
                         with col_strip:
                             y_html = '<div style="display: flex; height: 30px; border-radius: 4px; overflow: hidden; border: 3px solid #666; margin-bottom: 5px;">'
@@ -617,6 +649,9 @@ elif page == "Theme Timelines":
                                 y_html += f'<div style="background-color:{y_hex}; flex:1;" title="{y_hex.upper()}"></div>'
                             y_html += "</div>"
                             st.markdown(y_html, unsafe_allow_html=True)
+    st.info(
+        """ ☝NOTE: If no games were classified for a specific theme in a decade, the art style will be marked as "Unknown"."""
+    )
 
 elif page == "Game Developer Profile":
     st.header("🏢 Studios' Color and Style Trends")
@@ -677,6 +712,7 @@ elif page == "Game Developer Profile":
                         height=450,
                         title="Style Distribution",
                         color_discrete_sequence=px.colors.qualitative.Pastel,
+                        category_orders={"Art_Style": custom_style_order},
                     )
                     fig_all.update_layout(
                         showlegend=True,
@@ -686,13 +722,12 @@ elif page == "Game Developer Profile":
                     )
                     st.plotly_chart(fig_all, width="stretch")
 
-                    # Report Unclassified %
                     unclassified = ((len(all_df) - len(classified_all)) / len(all_df)) * 100
                     st.caption(f"**{unclassified:.1f}%** of portfolio is unclassified.")
                 else:
                     st.warning(f"No games by {final_all.title()} were classified.")
                 st.info(
-                    "TOOL TIP: Hover mouse over the pie chart slices to see the art style names and percentages"
+                    "💡TOOL TIP: Hover mouse over the pie chart slices to see the art style names and percentages"
                 )
 
     st.divider()
@@ -758,6 +793,7 @@ elif page == "Game Developer Profile":
                         height=450,
                         title="Technique Distribution",
                         color_discrete_sequence=px.colors.qualitative.Pastel,
+                        category_orders={"Art_Style": custom_style_order},
                     )
                     fig_pie.update_layout(
                         showlegend=True,
@@ -769,7 +805,7 @@ elif page == "Game Developer Profile":
                     unclassified = ((len(dev_df) - len(classified_dec)) / len(dev_df)) * 100
                     if unclassified > 0:
                         st.caption(
-                            f"**Note:** {unclassified:.1f}% of {final_dec.title()}'s {dec_sel_s}s portfolio is unclassified."
+                            f"{unclassified:.1f}% of {final_dec.title()}'s {dec_sel_s}s portfolio is unclassified."
                         )
                     else:
                         st.caption(
@@ -778,14 +814,14 @@ elif page == "Game Developer Profile":
                 else:
                     st.warning(f"No games by {final_dec.title()} were classified for this period.")
                 st.info(
-                    "TOOL TIP: Hover mouse over the pie chart slices to see the art style names and percentages"
+                    "💡TOOL TIP: Hover mouse over the pie chart slices to see the art style names and percentages"
                 )
     st.divider()
 
     st.subheader("⚔️ Studio Head-to-Head Comparison")
     st.write("Directly compare the artistic evolution of two studios within the same decade.")
     st.info(
-        "TOOL TIP: You can write in the selectbox fields to quickly find studios by name instead of scrolling through the list."
+        "💡TOOL TIP: You can write in the selectbox fields to quickly find studios by name instead of scrolling through the list."
     )
 
     decade_comparison = st.select_slider(
@@ -827,14 +863,15 @@ elif page == "Game Developer Profile":
                 s_df_classified = s_df[s_df["is_classified"]]
                 if not s_df_classified.empty:
                     style_data = s_df_classified["Art_Style"].value_counts().reset_index()
-                    style_data.columns = ["Style", "Count"]
+                    style_data.columns = ["Art_Style", "Count"]
                     fig_comp = px.pie(
                         style_data,
-                        names="Style",
+                        names="Art_Style",
                         values="Count",
                         hole=0.5,
-                        height=350,
+                        height=375,
                         color_discrete_sequence=px.colors.qualitative.Pastel,
+                        category_orders={"Art_Style": custom_style_order},
                     )
                     fig_comp.update_layout(showlegend=True, legend=dict(font=dict(size=18)))
                     st.plotly_chart(fig_comp, width="stretch")
@@ -844,7 +881,7 @@ elif page == "Game Developer Profile":
                 else:
                     st.info("No games were classified")
         st.info(
-            "TOOL TIP: Hover mouse over the pie chart slices to see the art style names and percentages"
+            "💡TOOL TIP: Hover mouse over the pie chart slices to see the art style names and percentages"
         )
 
 elif page == "Individual Game Palette":
@@ -862,7 +899,7 @@ elif page == "Individual Game Palette":
         if not filtered_list:
             st.warning(f"🔍 No games found matching '**{search_query}**'.")
             st.info(
-                "TOOL TIP: Check for typos or try a broader term (e.g., 'Zelda' instead of 'The Legend of Zelda: Breath of the Wild')."
+                "💡TOOL TIP: Check for typos or try a broader term (e.g., 'Zelda' instead of 'The Legend of Zelda: Breath of the Wild')."
             )
             st.stop()
     else:
@@ -933,7 +970,7 @@ elif page == "Individual Game Palette":
                 f"{main_info['Game'].title()} is {comparison_text} "
                 f" the average game from the {main_info['Decade']}."
             )
-            st.info("💡 TOOL TIP: Hover over the colors to see their hex codes")
+            st.info("💡TOOL TIP: Hover over the colors to see their hex codes")
 
         st.divider()
     st.subheader("🖼️ Source Screenshots")
@@ -964,7 +1001,7 @@ elif page == "Individual Game Palette":
 
             mini_html += "</div>"
             st.markdown(mini_html, unsafe_allow_html=True)
-    st.info("💡 TOOL TIP: Hover over the colors to see their hex codes")
+    st.info("💡TOOL TIP: Hover over the colors to see their hex codes")
 
 
 elif page == "Style Categorizer":
@@ -982,8 +1019,6 @@ elif page == "Style Categorizer":
         pd.DataFrame(columns=["Unique_ID", "Manual_Art_Style"]).to_csv(manual_file, index=False)
     manual_df = pd.read_csv(manual_file)
     done_ids = manual_df["Unique_ID"].unique()
-
-    unclassified_labels = ["Unclassified", "Unclassified 2D", "Unclassified 3D"]
 
     if "current_game_id" not in st.session_state or st.button("🔄 Get New Random Game"):
         to_verify_pool = df[
@@ -1063,7 +1098,7 @@ elif page == "Style Categorizer":
     with col_confirm:
         st.write(" ")
         if not is_unclassified:
-            if st.button(f"✅ Confirm: {current_auto_style}", use_container_width=True):
+            if st.button(f"✅ Confirm: {current_auto_style}", width="stretch"):
                 save_and_next(st.session_state.current_game_id, current_auto_style)
         else:
             st.write("⚠️ *Unclassified*")
