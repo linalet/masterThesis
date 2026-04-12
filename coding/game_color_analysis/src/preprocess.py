@@ -21,7 +21,6 @@ def run_preprocessing(input_path="data/octree_game_data.csv"):
     df["Year"] = pd.to_numeric(df["Year"], errors="coerce").fillna(0).astype(int)
     df["Decade"] = (df["Year"] // 10 * 10).astype(int)
     df["Unique_ID"] = df["Game"] + " (" + df["Year"].astype(str) + ")"
-    # df["is_nsfw"] = df["is_nsfw"].fillna(False).astype(bool)
 
     # 2. Vectorized Color Math (Fast)
     print("🎨 Calculating Color Metrics...")
@@ -30,9 +29,6 @@ def run_preprocessing(input_path="data/octree_game_data.csv"):
     )
     df["luminance"] = (0.2126 * df["C1_R"] + 0.7152 * df["C1_G"] + 0.0722 * df["C1_B"]) / 255.0
 
-    # 3. Apply Thesis Logic (Taxonomy & Studio Normalization)
-    # print("🏷️  Applying Taxonomy & Studio Normalization...")
-    # df["Art_Style"] = df.apply(classify_taxonomy, axis=1)
     print("🏷️ Applying Vectorized Taxonomy...")
     df["Art_Style"] = ph.classify_taxonomy(df)
 

@@ -48,6 +48,7 @@ page = st.sidebar.radio(
     [
         "Project Overview",
         "Art Style Popularity",
+        "Style Categorizer",
         "Color through Decades",
         "Genre Timelines",
         "Theme Timelines",
@@ -89,9 +90,12 @@ if page == "Project Overview":
                  This thesis aims to explore
                  how the use of colors and art styles in video games changed over time by
                  providing an analysis of the collected data,
-                 vizualizing and allowing for exploration of the collected data.
+                 vizualizing the data and allowing for exploration of the collected data.
         """)
-
+        url = "https://www.igdb.com"
+        st.write("""
+                 I have collected all my data from [IGDB.com](%s), which is currently the largest video game database in the world.
+        """)
     with col2:
         st.header("⚙️ Research Questions")
         st.info("""        
@@ -106,15 +110,24 @@ if page == "Project Overview":
     st.header("🏷️ Art Style Taxonomy & Classification Logic")
     st.write(
         """
-        This taxonomy categorizes the visual DNA of games into three overarching branches. 
-        Classification is performed by scanning developer metadata and visual tags against our curated 
-        library of stylistic keywords.
+        I have developed my own game art style taxonomy for the purposes of this thesis. 
+        Games are divided into 3 main categories: **Realism**, **Stylization**, and **Abstraction**.
+        They are further divided into sub-categories based on keywords used to describe the game.
         """
+    )
+    st.write("""Since these keywords are added to IGDB by users, they are not always accurate.
+        The automated assignment is often incorrect, but the only viable option available with current resources.
+        I have manually classified around 300 games to ensure some accuracy, however it is only a fraction (0.1%) of the total dataset.
+        Art is subjective and complex, so my opinion may not always be correct. 
+        Some games can fit into multiple categories, such as Samorost 3, which could be both Stylization: Illustrative and Stylization: Material-Based.""")
+    st.image(
+        df[df["Game"].str.contains("Samorost 3", case=False)]["Screenshot"].iloc[0],
+        use_container_width=True,
     )
 
     # Detailed Taxonomy Data Structure
     taxonomy_data = {
-        "I. Realism: Photoreal": {
+        "I. Realism": {
             "Photoreal": {
                 "description": "Visuals trying to look as realistic as possible. Can utilize Physically Based Rendering (PBR) and high-resolution textures.",
                 "keywords": [
@@ -123,7 +136,7 @@ if page == "Project Overview":
                     "realistic",
                     "4k",
                 ],
-                "example_games": ["Cyberpunk 2077"],
+                "example_games": ["Cyberpunk 2077", "The Last of Us Part II", "Forza Horizon 5"],
             },
             "Realism: Stylized": {
                 "description": "Retains realistic proportions and lighting but adds artistic flair. Often mimics the look of high-end film or fantasy illustration.",
@@ -131,7 +144,7 @@ if page == "Project Overview":
                     "cinematic",
                     "atmospheric",
                 ],
-                "example_games": ["The Last of Us Part II"],
+                "example_games": ["The Sims 4", "Portal 2", "The Witcher 3"],
             },
         },
         "II. Stylization": {
@@ -140,98 +153,98 @@ if page == "Project Overview":
                 "keywords": [
                     "watercolor",
                     "hand-painted",
-                    "comic",
                     "cel-shaded",
                     "hand-drawn",
                     "sketch",
                 ],
-                "example_games": ["Machinarium"],
+                "example_games": ["Machinarium", "Okami", "Don't Starve"],
             },
-            "Stylization: Caricature": {
+            "Stylization: Cartoon": {
                 "description": "Focuses on exaggerated proportions and vibrant colors. Often inspired by anime or cartoons.",
                 "keywords": ["anime", "manga", "chibi", "cartoon"],
-                "example_games": ["Team Fortress 2"],
+                "example_games": [
+                    "Team Fortress 2",
+                    "The Legend of Zelda: Breath of the Wild",
+                    "Super Mario Odyssey",
+                ],
             },
             "Stylization: Pixel Art": {
                 "description": "Art style limited by or inspired by the technical constraints of early gaming hardware. Uses simple shapes.",
-                "keywords": ["pixel art", "voxel", "8-bit", "16-bit"],
-                "example_games": ["Stardew Valley"],
+                "keywords": ["pixel art", "8-bit", "16-bit"],
+                "example_games": ["Stardew Valley", "Super Mario Bros. 3", "Undertale"],
             },
             "Stylization: Material-Based": {
                 "description": "Games designed to look like they are constructed from physical materials. Often uses stop-motion.",
                 "keywords": [
                     "claymation",
                     "papercraft",
-                    "puppet",
                     "stop-motion",
                     "felt",
                 ],
-                "example_games": ["It Takes Two", "Unravel"],  # Unravel
+                "example_games": ["It Takes Two", "Unravel", "Samorost 3"],  # Unravel
             },
         },
         "III. Abstraction": {
             "Abstraction: Minimalist": {
                 "description": "Reduces visual information to essential shapes and colors. Prioritizes clean lines, silhouettes, and mathematical precision.",
                 "keywords": ["silhouette", "geometric", "minimalist"],
-                "example_games": ["Superhot", "voxel blast"],
+                "example_games": ["Superhot", "voxel blast", "Limbo"],
             },
             "Abstraction: Symbolic": {
-                "description": "High-concept visuals where color and shape represent ideas or mechanics. Also text-based games with limited visual elements.",
+                "description": "High-concept visuals where color and shape represent ideas or mechanics. Also text-based and audio-based games with limited visual elements.",
                 "keywords": [
                     "text-based",
                     "experimental",
                     "psychedelic",
                     "ascii",
                 ],
-                "example_games": ["The Hitchhiker'S Guide To The Galaxy"],
+                "example_games": [
+                    "The Hitchhiker'S Guide To The Galaxy",
+                    "Thomas Was Alone",
+                    "Dark Echo",
+                ],
             },
         },
     }
 
-    # Rendering the Taxonomy
     for branch, styles in taxonomy_data.items():
-        # Visual separator for the main branches
-        st.markdown(f"## {branch}")
+        st.subheader(f"{branch}")
 
         for style_name, info in styles.items():
-            # Making the Style Name more visible with a colored background or bold header
             st.markdown(
-                f"""
-                <div style="background-color: #31333F; padding: 10px; border-radius: 5px; border-left: 5px solid #ff4b4b; margin-top: 20px;">
-                    <h3 style="margin: 0; color: white;">{style_name}</h3>
-                </div>
-            """,
+                f"#### {style_name}",
                 unsafe_allow_html=True,
             )
-
-            # Container for the details and images
-            # Top row for text, bottom row for images to keep it compact
             st.markdown(f"**Aesthetic Intent:** {info['description']}")
             kw_html = " ".join([f"`{k}`" for k in info["keywords"]])
             st.markdown(f"**Keywords:** {kw_html}")
 
             cols = st.columns(3)
             for i, game_name in enumerate(info["example_games"]):
-                # Stop if we exceed column count
                 if i >= 3:
                     break
                 with cols[i]:
-                    # Search for this specific game
                     match = df_safe[df_safe["Game"].str.contains(game_name, case=False, na=False)]
 
                     if not match.empty:
                         st.image(match.iloc[0]["Screenshot"], width="stretch")
                         st.caption(f"📍 {game_name}")
                     else:
-                        # Placeholder if game not in dataset
                         st.info(f"Image for {game_name} not found.")
     st.divider()
 
-    st.subheader("📖 How to use this Dashboard")
+    st.subheader("📖 What do I do now?")
+    st.write("""
+        If you cannot see the side menu and the tabs inside, press the arrows EMOJI in the top left corner.
+        Go through the different tabs to explore the data and find insights about the evolution of color and art styles in video games.
+    """)
+    st.write("""What do the tabs mean?""")
     st.markdown("""
     1. **Art Style Popularity:** View the 'Rise and Fall' of specific styles over time.
     2. **Color through Decades:** See how the industry's average palette has shifted from neon to naturalism.
-    3. **Developer Profile:** Search for your favorite studio (e.g., *Nintendo*, *Sega*, or *Ubisoft*) to see their stylistic signature.
+    3. **Genre Timelines:** Explore how color trends differ across genres.
+    4. **Theme Timelines:** Explore how color trends differ across themes.
+    3. **Game Developer Profile:** Search for your favorite studio (e.g., *Nintendo*, *Sega*, or *Ubisoft*) to see their stylistic signature.
     4. **Individual Game Palette:** Deep-dive into a specific title to see its exact color distribution.
     """)
 
@@ -352,7 +365,7 @@ elif page == "Art Style Popularity":
             img_cols = st.columns(3)
             for i, shot in enumerate(game_screenshots.itertuples()):
                 with img_cols[i]:
-                    st.image(shot.Screenshot, use_container_width=True)
+                    st.image(shot.Screenshot, width="stretch")
     else:
         st.warning("No games found for this specific style in the current filter.")
 
@@ -914,3 +927,85 @@ elif page == "Individual Game Palette":
             mini_html += "</div>"
             st.markdown(mini_html, unsafe_allow_html=True)
     st.info("💡 TOOL TIP: Hover over the colors to see their hex codes")
+
+
+elif page == "Style Categorizer":
+    st.header("🏷️ Manual Style Categorizer")
+    st.write(
+        "Use this tool to verify and fix game art styles. Entries are saved to `manual_classification.csv`."
+    )
+
+    # 1. Load or Initialize the Manual CSV
+    # manual_file = "manual_classification.csv"
+    manual_file = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "data/manual_classification.csv",
+    )
+    if not os.path.exists(manual_file):
+        pd.DataFrame(columns=["Unique_ID", "Manual_Art_Style"]).to_csv(manual_file, index=False)
+
+    # 2. Handle Random Selection via Session State
+    # This prevents the game from changing every time you interact with a button
+    if "current_game_id" not in st.session_state or st.button("🔄 Get New Random Game"):
+        # We sample from the whole df (or you can filter for unclassified)
+        random_row = df.sample(1).iloc[0]
+        st.session_state.current_game_id = random_row["Unique_ID"]
+
+    # Get the data for the currently selected game
+    current_game = df[df["Unique_ID"] == st.session_state.current_game_id].iloc[0]
+
+    # 3. Display Game Info
+    st.markdown(f"### 🎮 {current_game['Game']} ({int(current_game['Year'])})")
+    st.markdown(f"**Developer:** {current_game.get('Developer', 'Unknown')}")
+    st.info(f"**Current Auto-Classification:** {current_game['Art_Style']}")
+
+    # 4. Display Gallery (all screenshots for this ID)
+    game_screenshots = df[df["Unique_ID"] == st.session_state.current_game_id]
+    img_cols = st.columns(len(game_screenshots.head(4)))  # Show up to 4
+    for i, shot in enumerate(game_screenshots.head(4).itertuples()):
+        with img_cols[i]:
+            st.image(shot.Screenshot, width="stretch")
+
+    # 5. Categorization Interface
+    st.markdown("---")
+    style_options = [
+        "Realism: Stylized",
+        "Realism: Photoreal",
+        "Abstraction: Minimalist",
+        "Abstraction: Symbolic",
+        "Stylization: Cartoon",
+        "Stylization: Pixel Art",
+        "Stylization: Material-Based",
+        "Stylization: Illustrative",
+    ]
+
+    # Selection and Save Button
+    col_sel, col_save = st.columns([3, 1])
+    with col_sel:
+        chosen_style = st.selectbox("Assign correct style:", style_options, key="style_select")
+
+    with col_save:
+        st.write(" ")  # Padding
+        if st.button("💾 Save & Next"):
+            # Prepare new entry
+            new_entry = pd.DataFrame(
+                {
+                    "Unique_ID": [st.session_state.current_game_id],
+                    "Manual_Art_Style": [chosen_style],
+                }
+            )
+
+            # Append to CSV
+            new_entry.to_csv(manual_file, mode="a", header=False, index=False)
+
+            st.success(f"Saved {current_game['Game']} as {chosen_style}!")
+
+            # Trigger a refresh for a new game
+            random_row = df.sample(1).iloc[0]
+            st.session_state.current_game_id = random_row["Unique_ID"]
+            st.rerun()
+
+    st.markdown("---")
+    # Show progress
+    manual_count = len(pd.read_csv(manual_file))
+    st.caption(f"📊 You have manually categorized **{manual_count}** games so far.")

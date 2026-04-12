@@ -106,7 +106,7 @@ def classify_taxonomy(df):
     )
     is_free = df["Art_Style"] == "Unclassified"
     df.loc[is_free & text.str.contains("anime|manga|chibi|cartoon", na=False), "Art_Style"] = (
-        "Stylization: Caricature"
+        "Stylization: Cartoon"
     )
     is_free = df["Art_Style"] == "Unclassified"
     df.loc[is_free & text.str.contains("pixel|8-bit|16-bit|voxel", na=False), "Art_Style"] = (
@@ -124,7 +124,6 @@ def classify_taxonomy(df):
         "Art_Style",
     ] = "Stylization: Illustrative"
 
-    # Priority 3: Final Fallbacks
     is_free = df["Art_Style"] == "Unclassified"
     df.loc[is_free & text.str.contains("3d|3-d", na=False), "Art_Style"] = "Unclassified 3D"
     is_free = df["Art_Style"] == "Unclassified"

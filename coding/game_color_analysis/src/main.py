@@ -8,7 +8,7 @@ from PIL import Image
 from igdb_api import download_image, query_igdb
 
 
-START_YEAR = 2017
+START_YEAR = 2021
 END_YEAR = 2026
 SCREENSHOT_COUNT = 5  # possibly increase to 10
 COLOR_COUNT = 10
