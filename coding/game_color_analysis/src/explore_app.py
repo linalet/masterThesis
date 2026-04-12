@@ -110,19 +110,10 @@ if page == "Project Overview":
     st.header("🏷️ Art Style Taxonomy & Classification Logic")
     st.write(
         """
-        I have developed my own game art style taxonomy for the purposes of this thesis. 
-        Games are divided into 3 main categories: **Realism**, **Stylization**, and **Abstraction**.
-        They are further divided into sub-categories based on keywords used to describe the game.
-        """
-    )
-    st.write("""Since these keywords are added to IGDB by users, they are not always accurate.
-        The automated assignment is often incorrect, but the only viable option available with current resources.
-        I have manually classified around 300 games to ensure some accuracy, however it is only a fraction (0.1%) of the total dataset.
-        Art is subjective and complex, so my opinion may not always be correct. 
-        Some games can fit into multiple categories, such as Samorost 3, which could be both Stylization: Illustrative and Stylization: Material-Based.""")
-    st.image(
-        df[df["Game"].str.contains("Samorost 3", case=False)]["Screenshot"].iloc[0],
-        use_container_width=True,
+            I have developed my own game art style taxonomy for the purposes of this thesis. 
+            Games are divided into 3 main categories: **Realism**, **Stylization**, and **Abstraction**.
+            They are further divided into sub-categories based on keywords used to describe the game. Read more below for the detailed classification logic and examples.
+            """
     )
 
     # Detailed Taxonomy Data Structure
@@ -136,7 +127,11 @@ if page == "Project Overview":
                     "realistic",
                     "4k",
                 ],
-                "example_games": ["Cyberpunk 2077", "The Last of Us Part II", "Forza Horizon 5"],
+                "example_games": [
+                    {"id": "cyberpunk 2077 (2020)", "shot_index": 9},
+                    {"id": "the last of us part ii (2020)", "shot_index": 0},
+                    {"id": "forza horizon 5 (2021)", "shot_index": 0},
+                ],
             },
             "Realism: Stylized": {
                 "description": "Retains realistic proportions and lighting but adds artistic flair. Often mimics the look of high-end film or fantasy illustration.",
@@ -144,7 +139,11 @@ if page == "Project Overview":
                     "cinematic",
                     "atmospheric",
                 ],
-                "example_games": ["The Sims 4", "Portal 2", "The Witcher 3"],
+                "example_games": [
+                    {"id": "the sims 4 (2014)", "shot_index": 4},
+                    {"id": "portal 2 (2011)", "shot_index": 1},
+                    {"id": "the witcher 3: wild hunt (2015)", "shot_index": 10},
+                ],
             },
         },
         "II. Stylization": {
@@ -157,21 +156,29 @@ if page == "Project Overview":
                     "hand-drawn",
                     "sketch",
                 ],
-                "example_games": ["Machinarium", "Okami", "Don't Starve"],
+                "example_games": [
+                    {"id": "machinarium (2009)", "shot_index": 0},
+                    {"id": "ōkami (2006)", "shot_index": 2},
+                    {"id": "don't starve (2013)", "shot_index": 0},
+                ],
             },
             "Stylization: Cartoon": {
                 "description": "Focuses on exaggerated proportions and vibrant colors. Often inspired by anime or cartoons.",
                 "keywords": ["anime", "manga", "chibi", "cartoon"],
                 "example_games": [
-                    "Team Fortress 2",
-                    "The Legend of Zelda: Breath of the Wild",
-                    "Super Mario Odyssey",
+                    {"id": "team fortress 2 (2007)", "shot_index": 0},
+                    {"id": "the legend of zelda: breath of the wild (2017)", "shot_index": 6},
+                    {"id": "super mario odyssey (2017)", "shot_index": 0},
                 ],
             },
             "Stylization: Pixel Art": {
                 "description": "Art style limited by or inspired by the technical constraints of early gaming hardware. Uses simple shapes.",
                 "keywords": ["pixel art", "8-bit", "16-bit"],
-                "example_games": ["Stardew Valley", "Super Mario Bros. 3", "Undertale"],
+                "example_games": [
+                    {"id": "stardew valley (2016)", "shot_index": 0},
+                    {"id": "super mario bros. 3 (1988)", "shot_index": 0},
+                    {"id": "undertale (2015)", "shot_index": 3},
+                ],
             },
             "Stylization: Material-Based": {
                 "description": "Games designed to look like they are constructed from physical materials. Often uses stop-motion.",
@@ -181,14 +188,22 @@ if page == "Project Overview":
                     "stop-motion",
                     "felt",
                 ],
-                "example_games": ["It Takes Two", "Unravel", "Samorost 3"],  # Unravel
+                "example_games": [
+                    {"id": "it takes two (2021)", "shot_index": 0},
+                    {"id": "the neverhood (1996)", "shot_index": 2},
+                    {"id": "samorost 3 (2016)", "shot_index": 3},
+                ],
             },
         },
         "III. Abstraction": {
             "Abstraction: Minimalist": {
                 "description": "Reduces visual information to essential shapes and colors. Prioritizes clean lines, silhouettes, and mathematical precision.",
                 "keywords": ["silhouette", "geometric", "minimalist"],
-                "example_games": ["Superhot", "voxel blast", "Limbo"],
+                "example_games": [
+                    {"id": "superhot (2016)", "shot_index": 0},
+                    {"id": "voxel blast (2015)", "shot_index": 1},
+                    {"id": "limbo (2010)", "shot_index": 4},
+                ],
             },
             "Abstraction: Symbolic": {
                 "description": "High-concept visuals where color and shape represent ideas or mechanics. Also text-based and audio-based games with limited visual elements.",
@@ -199,9 +214,9 @@ if page == "Project Overview":
                     "ascii",
                 ],
                 "example_games": [
-                    "The Hitchhiker'S Guide To The Galaxy",
-                    "Thomas Was Alone",
-                    "Dark Echo",
+                    {"id": "the hitchhiker's guide to the galaxy (1984)", "shot_index": 0},
+                    {"id": "thomas was alone (2012)", "shot_index": 2},
+                    {"id": "dark echo (2015)", "shot_index": 1},
                 ],
             },
         },
@@ -220,17 +235,40 @@ if page == "Project Overview":
             st.markdown(f"**Keywords:** {kw_html}")
 
             cols = st.columns(3)
-            for i, game_name in enumerate(info["example_games"]):
+            for i, game_ref in enumerate(info["example_games"]):
                 if i >= 3:
                     break
                 with cols[i]:
-                    match = df_safe[df_safe["Game"].str.contains(game_name, case=False, na=False)]
-
+                    match = df[df["Unique_ID"] == game_ref["id"]]
                     if not match.empty:
-                        st.image(match.iloc[0]["Screenshot"], width="stretch")
-                        st.caption(f"📍 {game_name}")
+                        idx = game_ref["shot_index"]
+                        if idx >= len(match):
+                            idx = 0
+
+                        target_row = match.iloc[idx]
+                        st.image(target_row["Screenshot"], use_container_width=True)
+                        st.caption(f"🎮 {target_row['Unique_ID']}")
                     else:
-                        st.info(f"Image for {game_name} not found.")
+                        st.info(f"Image for {game_ref['id']} not found.")
+    st.divider()
+
+    st.subheader("⚠️ Disclaimer on Classification Accuracy")
+    st.write("""Since these keywords are added to IGDB by users, they are not always accurate or consistent.
+            The automated assignment is often incorrect, but the only viable option available with current resources.
+            I have manually classified around 300 games to ensure some level accuracy, however it is only a fraction (0.1%) of the total dataset.
+            Art is subjective and complex, so my opinion may not always be correct. 
+            Some games can fit into multiple categories, such as Samorost 3, which could be both **Stylization: Illustrative** and **Stylization: Material-Based**.""")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.image(
+            df[df["Game"].str.contains("Unravel", case=False)]["Screenshot"].iloc[0],
+            width="stretch",
+        )
+    with col2:
+        st.image(
+            df[df["Game"].str.contains("Unravel", case=False)]["Screenshot"].iloc[1],
+            width="stretch",
+        )
     st.divider()
 
     st.subheader("📖 What do I do now?")
@@ -935,39 +973,72 @@ elif page == "Style Categorizer":
         "Use this tool to verify and fix game art styles. Entries are saved to `manual_classification.csv`."
     )
 
-    # 1. Load or Initialize the Manual CSV
-    # manual_file = "manual_classification.csv"
     manual_file = os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
         "data/manual_classification.csv",
     )
+
     if not os.path.exists(manual_file):
         pd.DataFrame(columns=["Unique_ID", "Manual_Art_Style"]).to_csv(manual_file, index=False)
+    manual_df = pd.read_csv(manual_file)
+    done_ids = manual_df["Unique_ID"].unique()
 
-    # 2. Handle Random Selection via Session State
-    # This prevents the game from changing every time you interact with a button
+    unclassified_labels = ["Unclassified", "Unclassified 2D", "Unclassified 3D"]
+
     if "current_game_id" not in st.session_state or st.button("🔄 Get New Random Game"):
-        # We sample from the whole df (or you can filter for unclassified)
-        random_row = df.sample(1).iloc[0]
+        to_verify_pool = df[
+            (df["Art_Style"].notna())
+            & (~df["Art_Style"].isin(unclassified_labels))
+            & (~df["Unique_ID"].isin(done_ids))
+        ]
+        remaining_pool = df[~df["Unique_ID"].isin(done_ids)]
+        if not to_verify_pool.empty:
+            random_row = to_verify_pool.sample(1).iloc[0]
+            st.warning(f"🔍 **Verification Mode**: Auto-tagged as '{random_row['Art_Style']}'")
+        elif not remaining_pool.empty:
+            random_row = remaining_pool.sample(1).iloc[0]
+            st.success("✅ Auto-tagged games finished. Now showing Unclassified games.")
+        else:
+            st.balloons()
+            st.write("🎉 All games in the dataset have been manually categorized!")
+            st.stop()
         st.session_state.current_game_id = random_row["Unique_ID"]
 
-    # Get the data for the currently selected game
     current_game = df[df["Unique_ID"] == st.session_state.current_game_id].iloc[0]
 
-    # 3. Display Game Info
     st.markdown(f"### 🎮 {current_game['Game']} ({int(current_game['Year'])})")
     st.markdown(f"**Developer:** {current_game.get('Developer', 'Unknown')}")
     st.info(f"**Current Auto-Classification:** {current_game['Art_Style']}")
 
-    # 4. Display Gallery (all screenshots for this ID)
     game_screenshots = df[df["Unique_ID"] == st.session_state.current_game_id]
     img_cols = st.columns(len(game_screenshots.head(4)))  # Show up to 4
     for i, shot in enumerate(game_screenshots.head(4).itertuples()):
         with img_cols[i]:
             st.image(shot.Screenshot, width="stretch")
 
-    # 5. Categorization Interface
-    st.markdown("---")
+    st.divider()
+
+    def save_and_next(game_id, style_to_save):
+        new_entry = pd.DataFrame({"Unique_ID": [game_id], "Manual_Art_Style": [style_to_save]})
+        new_entry.to_csv(manual_file, mode="a", header=False, index=False)
+
+        # Recalculate pools to find the next game
+        updated_done_ids = pd.read_csv(manual_file)["Unique_ID"].unique()
+        to_verify = df[
+            (df["Art_Style"].notna())
+            & (~df["Art_Style"].isin(unclassified_labels))
+            & (~df["Unique_ID"].isin(updated_done_ids))
+        ]
+        remaining = df[~df["Unique_ID"].isin(updated_done_ids)]
+
+        if not to_verify.empty:
+            st.session_state.current_game_id = to_verify.sample(1).iloc[0]["Unique_ID"]
+        elif not remaining.empty:
+            st.session_state.current_game_id = remaining.sample(1).iloc[0]["Unique_ID"]
+        else:
+            st.session_state.current_game_id = None
+        st.rerun()
+
     style_options = [
         "Realism: Stylized",
         "Realism: Photoreal",
@@ -979,33 +1050,58 @@ elif page == "Style Categorizer":
         "Stylization: Illustrative",
     ]
 
-    # Selection and Save Button
-    col_sel, col_save = st.columns([3, 1])
+    current_auto_style = current_game["Art_Style"]
+    is_unclassified = current_auto_style in unclassified_labels
+    col_confirm, col_sel, col_save = st.columns([1.5, 2, 1])
     with col_sel:
-        chosen_style = st.selectbox("Assign correct style:", style_options, key="style_select")
+        default_idx = (
+            style_options.index(current_auto_style) if current_auto_style in style_options else 0
+        )
+        chosen_style = st.selectbox("Or fix category:", style_options, index=default_idx)
+        # chosen_style = st.selectbox("Assign correct style:", style_options, key="style_select")
+
+    with col_confirm:
+        st.write(" ")
+        if not is_unclassified:
+            if st.button(f"✅ Confirm: {current_auto_style}", use_container_width=True):
+                save_and_next(st.session_state.current_game_id, current_auto_style)
+        else:
+            st.write("⚠️ *Unclassified*")
 
     with col_save:
-        st.write(" ")  # Padding
+        st.write(" ")
         if st.button("💾 Save & Next"):
-            # Prepare new entry
             new_entry = pd.DataFrame(
                 {
                     "Unique_ID": [st.session_state.current_game_id],
                     "Manual_Art_Style": [chosen_style],
                 }
             )
-
-            # Append to CSV
             new_entry.to_csv(manual_file, mode="a", header=False, index=False)
 
             st.success(f"Saved {current_game['Game']} as {chosen_style}!")
 
-            # Trigger a refresh for a new game
-            random_row = df.sample(1).iloc[0]
-            st.session_state.current_game_id = random_row["Unique_ID"]
+            updated_manual_df = pd.read_csv(manual_file)
+            updated_done_ids = updated_manual_df["Unique_ID"].unique()
+
+            to_verify_pool = df[
+                (df["Art_Style"].notna())
+                & (~df["Art_Style"].isin(unclassified_labels))
+                & (~df["Unique_ID"].isin(updated_done_ids))
+            ]
+
+            if not to_verify_pool.empty:
+                next_row = to_verify_pool.sample(1).iloc[0]
+            else:
+                remaining_pool = df[~df["Unique_ID"].isin(updated_done_ids)]
+                if not remaining_pool.empty:
+                    next_row = remaining_pool.sample(1).iloc[0]
+                else:
+                    st.session_state.current_game_id = None
+                    st.rerun()
+            st.session_state.current_game_id = next_row["Unique_ID"]
             st.rerun()
 
-    st.markdown("---")
-    # Show progress
+    st.divider()
     manual_count = len(pd.read_csv(manual_file))
     st.caption(f"📊 You have manually categorized **{manual_count}** games so far.")
