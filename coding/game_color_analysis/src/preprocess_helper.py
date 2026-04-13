@@ -1,5 +1,4 @@
 import os
-import numpy as np
 import pandas as pd
 
 studio_map = {
@@ -36,7 +35,6 @@ studio_map = {
 
 
 def normalize_studio_name(dev_string):
-    # Split pipe-connected studios first
     parts = [p.strip() for p in dev_string.split("|")]
     cleaned_parts = []
 
@@ -50,7 +48,6 @@ def normalize_studio_name(dev_string):
         if not found_parent:
             cleaned_parts.append(part)
 
-    # Return joined string to keep original data structure for pooling
     return "|".join(list(set(cleaned_parts)))
 
 
@@ -68,6 +65,31 @@ def get_weighted_representative_palette(group):
             for c in top_colors
         ]
     )
+
+
+def manual_classification(main_df, classified_path="data/manual_classification.csv"):
+    try:
+        path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))), classified_path
+        )
+        classified = pd.read_csv(path)
+
+        classified["Unique_ID"] = classified["Unique_ID"].str.lower()
+
+        df = main_df.merge(classified, on="Unique_ID", how="left")
+
+        mask = df["Manual_Art_Style"].notna()
+        df.loc[mask, "Art_Style"] = df.loc[mask, "Manual_Art_Style"]
+
+        # 3. Clean up the temp column and mark as classified
+        df.loc[mask, "is_classified"] = True
+        df = df.drop(columns=["Manual_Art_Style"])
+
+        print(f"✅ Successfully applied {mask.sum()} manual overrides.")
+        return df
+    except FileNotFoundError:
+        print("⚠️ No overrides file found, skipping manual labels.")
+        return main_df
 
 
 def classify_taxonomy(df):
@@ -130,32 +152,4 @@ def classify_taxonomy(df):
     is_free = df["Art_Style"] == "Unclassified"
     df["is_classified"] = ~df["Art_Style"].str.startswith("Unclassified")
 
-    # manual assignment for top games of each year
-    # https://www.imdb.com/list/ls023816644/
-
     return df["Art_Style"]
-
-
-def manual_classification(main_df, classified_path="data/manual_classification.csv"):
-    try:
-        path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))), classified_path
-        )
-        classified = pd.read_csv(path)
-
-        classified["Unique_ID"] = classified["Unique_ID"].str.lower()
-
-        df = main_df.merge(classified, on="Unique_ID", how="left")
-
-        mask = df["Manual_Art_Style"].notna()
-        df.loc[mask, "Art_Style"] = df.loc[mask, "Manual_Art_Style"]
-
-        # 3. Clean up the temp column and mark as classified
-        df.loc[mask, "is_classified"] = True
-        df = df.drop(columns=["Manual_Art_Style"])
-
-        print(f"✅ Successfully applied {mask.sum()} manual overrides.")
-        return df
-    except FileNotFoundError:
-        print("⚠️ No overrides file found, skipping manual labels.")
-        return main_df

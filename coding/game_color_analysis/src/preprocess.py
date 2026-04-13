@@ -2,8 +2,6 @@
 
 import os
 import pandas as pd
-
-# import helper_functions as helper
 import preprocess_helper as ph
 
 
@@ -22,7 +20,12 @@ def run_preprocessing(input_path="data/octree_game_data.csv"):
     df["Decade"] = (df["Year"] // 10 * 10).astype(int)
     df["Developers"] = df["Developers"].apply(ph.normalize_studio_name)
     df["Unique_ID"] = (
-        df["Game"] + " (" + df["Year"].astype(str) + ") " + df["Developers"].str.split("|").str[0]
+        df["Game"]
+        + " ("
+        + df["Year"].astype(str)
+        + ") ["
+        + df["Developers"].str.split("|").str[0]
+        + "]"
     )
 
     print("🏷️ Applying Vectorized Taxonomy...")
@@ -32,11 +35,11 @@ def run_preprocessing(input_path="data/octree_game_data.csv"):
     df["saturation"] = df[["C1_R", "C1_G", "C1_B"]].max(axis=1) - df[["C1_R", "C1_G", "C1_B"]].min(
         axis=1
     )
-    df["luminance"] = (0.2126 * df["C1_R"] + 0.7152 * df["C1_G"] + 0.0722 * df["C1_B"]) / 255.0
+    # df["luminance"] = (0.2126 * df["C1_R"] + 0.7152 * df["C1_G"] + 0.0722 * df["C1_B"]) / 255.0
 
     print("🧬 Generating Game DNA...")
-    dna_results = df.groupby("Unique_ID").apply(ph.get_weighted_representative_palette)
-    df["Precalc_DNA"] = df["Unique_ID"].map(dna_results)
+    color_profiles = df.groupby("Unique_ID").apply(ph.get_weighted_representative_palette)
+    df["Color_profile"] = df["Unique_ID"].map(color_profiles)
 
     df["is_classified"] = ~df["Art_Style"].str.startswith("Unclassified")
     print("💾 Saving to Parquet...")

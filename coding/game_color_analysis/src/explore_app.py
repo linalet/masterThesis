@@ -3,6 +3,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import helper_functions as helper
+import csv
 
 st.set_page_config(
     layout="wide", page_title="Evolution of Color and Art Styles in Video Game Design"
@@ -36,7 +37,7 @@ path = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/processed_game_data.parquet"
 )
 df, unique_devs_list, top_50_global = helper.load_data(path)
-df_safe = df[df["is_nsfw"] == False].copy()
+df_safe = df[~df["is_nsfw"]].copy()
 decades = sorted(list(set(df["Decade"].unique())))
 custom_style_order = [
     "Realism: Photoreal",
@@ -163,8 +164,8 @@ if page == "Project Overview":
                 "example_games": [
                     {"id": "team fortress 2 (2007) [valve]", "shot_index": 0},
                     {
-                        "id": "the legend of zelda: breath of the wild (2017) [nintendo]",
-                        "shot_index": 6,
+                        "id": "genshin impact (2020) [Cognosphere]",
+                        "shot_index": 10,
                     },
                     {"id": "super mario odyssey (2017) [nintendo]", "shot_index": 0},
                 ],
@@ -179,16 +180,16 @@ if page == "Project Overview":
                 ],
                 "example_games": [
                     {"id": "machinarium (2009) [amanita design]", "shot_index": 0},
-                    {"id": "ōkami (2006) [clover studio]", "shot_index": 2},
+                    {"id": "ōkami (2006) [Hexadrive]", "shot_index": 2},
                     {"id": "don't starve (2013) [klei entertainment]", "shot_index": 0},
                 ],
             },
             "Pixel Art": {
-                "description": "Art style limited by or inspired by the technical constraints of early gaming hardware. Uses simple shapes.",
+                "description": "Art style limited or inspired by the technical constraints of early gaming hardware. Uses simple shapes.",
                 "keywords": ["pixel art", "8-bit", "16-bit"],
                 "example_games": [
                     {"id": "stardew valley (2016) [concernedape]", "shot_index": 0},
-                    {"id": "super mario bros. 3 (1988) [nintendo]", "shot_index": 0},
+                    {"id": "minecraft (2011) [mojang studios]", "shot_index": 3},
                     {"id": "undertale (2015) [tobyfox]", "shot_index": 3},
                 ],
             },
@@ -212,9 +213,9 @@ if page == "Project Overview":
                 "description": "Reduces visual information to essential shapes and colors. Prioritizes clean lines, silhouettes, and mathematical precision.",
                 "keywords": ["silhouette", "geometric", "minimalist"],
                 "example_games": [
-                    {"id": "superhot (2016) [superhot team]", "shot_index": 0},
+                    {"id": "superhot (2016) [ea]", "shot_index": 0},
                     {"id": "voxel blast (2015) [ceiba software & arts]", "shot_index": 1},
-                    {"id": "limbo (2010) [playdead]", "shot_index": 4},
+                    {"id": "limbo (2010) [ea]", "shot_index": 4},
                 ],
             },
             "Symbolic": {
@@ -254,7 +255,8 @@ if page == "Project Overview":
                 if i >= 3:
                     break
                 with cols[i]:
-                    match = df[df["Unique_ID"] == game_ref["id"]]
+                    # match = df[df["Unique_ID"] == game_ref["id"]]
+                    match = df[df["Unique_ID"].str.lower() == game_ref["id"].lower()]
                     if not match.empty:
                         idx = game_ref["shot_index"]
                         if idx >= len(match):
@@ -505,7 +507,7 @@ elif page == "Color through Decades":
 
         st.subheader(f"Randomized examples from {style_choice} in the {decade_sel}s")
         st.write("Games may be categorized incorrectly, due to the use of user generated keywords")
-        style_df_safe = style_df[style_df["is_nsfw"] == False]
+        style_df_safe = style_df[~style_df["is_nsfw"]]
         if not style_df_safe.empty:
             samples = style_df_safe.sample(min(4, len(style_df_safe)))
             scols = st.columns(4)
@@ -922,7 +924,7 @@ elif page == "Individual Game Palette":
 
         if is_nsfw_check:
             st.warning(
-                "⚠️ This title has been filtered from visual display due to content maturity settings."
+                "⚠️ This title has been filtered from visual display due to inappropriate content."
             )
             st.stop()
 
@@ -948,17 +950,17 @@ elif page == "Individual Game Palette":
         with col2:
             st.subheader("🎨 Representative Palette")
 
-            dna_string = main_info["Precalc_DNA"]
+            color_profile_str = main_info["Color_profile"]
 
-            html_dna = '<div style="display: flex; height: 100px; border-radius: 12px; overflow: hidden;border: 3px solid #999; ">'
-            for entry in dna_string.split("|"):
+            html_color_strip = '<div style="display: flex; height: 100px; border-radius: 12px; overflow: hidden;border: 3px solid #999; ">'
+            for entry in color_profile_str.split("|"):
                 color, weight = entry.split(",")
-                html_dna += f'''
+                html_color_strip += f'''
                     <div title="{color.upper()}" 
                         style="background-color:{color}; flex:{weight}; "cursor: pointer;">
                     </div>'''
-            html_dna += "</div>"
-            st.markdown(html_dna, unsafe_allow_html=True)
+            html_color_strip += "</div>"
+            st.markdown(html_color_strip, unsafe_allow_html=True)
             st.markdown("Proportionally weighted palette for this game")
 
             decade_avg_sat = df[df["Decade"] == main_info["Decade"]]["saturation"].mean()
@@ -1015,138 +1017,119 @@ elif page == "Individual Game Palette":
 
 
 elif page == "Style Categorizer":
-    st.header("🏷️ Manual Style Categorizer")
-    st.write(
-        "Use this tool to verify and fix game art styles. Entries are saved to `manual_classification.csv`."
-    )
+    st.header("🏷️ Chronological Style Categorizer")
 
     manual_file = os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
         "data/manual_classification.csv",
     )
 
-    if not os.path.exists(manual_file):
+    # 1. Load finished games
+    if os.path.exists(manual_file):
+        manual_df = pd.read_csv(manual_file)
+        done_ids = set(manual_df["Unique_ID"].str.lower().unique())
+
+        # Smart Resume: If session is fresh, start where the CSV left off
+        if not manual_df.empty and "target_year" not in st.session_state:
+            last_id = manual_df["Unique_ID"].iloc[-1]
+            last_match = df[df["Unique_ID"] == last_id]
+            if not last_match.empty:
+                st.session_state.target_year = int(last_match["Year"].iloc[0])
+    else:
         pd.DataFrame(columns=["Unique_ID", "Manual_Art_Style"]).to_csv(manual_file, index=False)
-    manual_df = pd.read_csv(manual_file)
-    done_ids = manual_df["Unique_ID"].unique()
+        done_ids = set()
 
-    if "current_game_id" not in st.session_state or st.button("🔄 Get New Random Game"):
-        to_verify_pool = df[
-            (df["Art_Style"].notna())
-            & (~df["Art_Style"].isin(unclassified_labels))
-            & (~df["Unique_ID"].isin(done_ids))
-        ]
-        remaining_pool = df[~df["Unique_ID"].isin(done_ids)]
-        if not to_verify_pool.empty:
-            random_row = to_verify_pool.sample(1).iloc[0]
-            st.warning(f"🔍 **Verification Mode**: Auto-tagged as '{random_row['Art_Style']}'")
-        elif not remaining_pool.empty:
-            random_row = remaining_pool.sample(1).iloc[0]
-            st.success("✅ Auto-tagged games finished. Now showing Unclassified games.")
-        else:
-            st.balloons()
-            st.write("🎉 All games in the dataset have been manually categorized!")
-            st.stop()
-        st.session_state.current_game_id = random_row["Unique_ID"]
+    # 2. Filter data
+    unique_games_df = df.drop_duplicates(subset=["Unique_ID"])
+    # available_data = unique_games_df[~unique_games_df["Unique_ID"].str.lower().isin(done_ids)]
+    available_data = unique_games_df[
+        ~unique_games_df["Unique_ID"].str.lower().isin(done_ids)
+    ].copy()
 
-    current_game = df[df["Unique_ID"] == st.session_state.current_game_id].iloc[0]
+    if available_data.empty:
+        st.balloons()
+        st.success("🎉 All games categorized!")
+        st.stop()
 
-    st.markdown(f"### 🎮 {current_game['Game']} ({int(current_game['Year'])})")
-    st.markdown(f"**Developer:** {current_game.get('Developer', 'Unknown')}")
-    st.info(f"**Current Auto-Classification:** {current_game['Art_Style']}")
+    # 3. Handle Session State for Year and Current Selection
+    if "target_year" not in st.session_state:
+        st.session_state.target_year = int(available_data["Year"].min())
 
-    game_screenshots = df[df["Unique_ID"] == st.session_state.current_game_id]
-    img_cols = st.columns(len(game_screenshots.head(4)))  # Show up to 4
-    for i, shot in enumerate(game_screenshots.head(4).itertuples()):
+    # --- THE FIX: LOCK THE GAME ID ---
+    # We only pick a new game if we don't have one "active" in the session state
+    if "active_id" not in st.session_state or st.session_state.active_id.lower() in done_ids:
+        year_pool = available_data[available_data["Year"] == st.session_state.target_year]
+
+        while year_pool.empty and st.session_state.target_year <= df["Year"].max():
+            st.session_state.target_year += 1
+            year_pool = available_data[available_data["Year"] == st.session_state.target_year]
+
+        if year_pool.empty:
+            st.session_state.target_year = int(available_data["Year"].min())
+            st.rerun()
+
+        st.session_state.active_id = year_pool.sample(1).iloc[0]["Unique_ID"]
+
+    # Load the locked game data
+    game_rows = df[df["Unique_ID"] == st.session_state.active_id].copy()
+    current_game = game_rows.iloc[0]
+
+    # --- UI ---
+    col_info, col_stats = st.columns([3, 1])
+    with col_info:
+        st.markdown(f"### 🎮 {current_game['Game']} ({int(current_game['Year'])})")
+        st.write(f"📅 **Year Loop:** `{st.session_state.target_year}`")
+
+    with col_stats:
+        st.metric("Total Categorized", len(done_ids))
+
+    # Display Screenshots
+    img_cols = st.columns(min(len(game_rows), 4))
+    for i, shot in enumerate(game_rows.head(4).itertuples()):
         with img_cols[i]:
             st.image(shot.Screenshot, width="stretch")
 
     st.divider()
 
-    def save_and_next(game_id, style_to_save):
-        new_entry = pd.DataFrame({"Unique_ID": [game_id], "Manual_Art_Style": [style_to_save]})
-        new_entry.to_csv(manual_file, mode="a", header=False, index=False)
-
-        # Recalculate pools to find the next game
-        updated_done_ids = pd.read_csv(manual_file)["Unique_ID"].unique()
-        to_verify = df[
-            (df["Art_Style"].notna())
-            & (~df["Art_Style"].isin(unclassified_labels))
-            & (~df["Unique_ID"].isin(updated_done_ids))
-        ]
-        remaining = df[~df["Unique_ID"].isin(updated_done_ids)]
-
-        if not to_verify.empty:
-            st.session_state.current_game_id = to_verify.sample(1).iloc[0]["Unique_ID"]
-        elif not remaining.empty:
-            st.session_state.current_game_id = remaining.sample(1).iloc[0]["Unique_ID"]
-        else:
-            st.session_state.current_game_id = None
-        st.rerun()
-
-    style_options = [
-        "Realism: Stylized",
-        "Realism: Photoreal",
-        "Abstraction: Minimalist",
-        "Abstraction: Symbolic",
-        "Stylization: Cartoon",
-        "Stylization: Pixel Art",
-        "Stylization: Material-Based",
-        "Stylization: Illustrative",
-    ]
-
+    # --- SAVE LOGIC ---
     current_auto_style = current_game["Art_Style"]
-    is_unclassified = current_auto_style in unclassified_labels
     col_confirm, col_sel, col_save = st.columns([1.5, 2, 1])
+
     with col_sel:
         default_idx = (
-            style_options.index(current_auto_style) if current_auto_style in style_options else 0
+            custom_style_order.index(current_auto_style)
+            if current_auto_style in custom_style_order
+            else 0
         )
-        chosen_style = st.selectbox("Or fix category:", style_options, index=default_idx)
-        # chosen_style = st.selectbox("Assign correct style:", style_options, key="style_select")
+        chosen_style = st.selectbox("Assign Style:", custom_style_order, index=default_idx)
+
+    # Use session state to ensure we save the ID that was actually displayed
+
+    def save_data(style_to_save):
+        target_id = st.session_state.active_id
+        new_row = pd.DataFrame({"Unique_ID": [target_id], "Manual_Art_Style": [style_to_save]})
+
+        # Updated this line to handle commas safely
+        new_row.to_csv(manual_file, mode="a", header=False, index=False, quoting=csv.QUOTE_MINIMAL)
+
+        st.session_state.target_year += 1
+        if st.session_state.target_year > df["Year"].max():
+            st.session_state.target_year = int(df["Year"].min())
+
+        if "active_id" in st.session_state:
+            del st.session_state.active_id
+        st.rerun()
 
     with col_confirm:
-        st.write(" ")
-        if not is_unclassified:
-            if st.button(f"✅ Confirm: {current_auto_style}", width="stretch"):
-                save_and_next(st.session_state.current_game_id, current_auto_style)
-        else:
-            st.write("⚠️ *Unclassified*")
+        if st.button(f"✅ Confirm {current_auto_style}", width="stretch"):
+            save_data(current_auto_style)
 
     with col_save:
-        st.write(" ")
-        if st.button("💾 Save & Next"):
-            new_entry = pd.DataFrame(
-                {
-                    "Unique_ID": [st.session_state.current_game_id],
-                    "Manual_Art_Style": [chosen_style],
-                }
-            )
-            new_entry.to_csv(manual_file, mode="a", header=False, index=False)
+        if st.button("💾 Save & Next", width="stretch"):
+            save_data(chosen_style)
 
-            st.success(f"Saved {current_game['Game']} as {chosen_style}!")
-
-            updated_manual_df = pd.read_csv(manual_file)
-            updated_done_ids = updated_manual_df["Unique_ID"].unique()
-
-            to_verify_pool = df[
-                (df["Art_Style"].notna())
-                & (~df["Art_Style"].isin(unclassified_labels))
-                & (~df["Unique_ID"].isin(updated_done_ids))
-            ]
-
-            if not to_verify_pool.empty:
-                next_row = to_verify_pool.sample(1).iloc[0]
-            else:
-                remaining_pool = df[~df["Unique_ID"].isin(updated_done_ids)]
-                if not remaining_pool.empty:
-                    next_row = remaining_pool.sample(1).iloc[0]
-                else:
-                    st.session_state.current_game_id = None
-                    st.rerun()
-            st.session_state.current_game_id = next_row["Unique_ID"]
-            st.rerun()
-
-    st.divider()
-    manual_count = len(pd.read_csv(manual_file))
-    st.caption(f"📊 You have manually categorized **{manual_count}** games so far.")
+    if st.button("⏭️ Skip to Next Year"):
+        st.session_state.target_year += 1
+        if "active_id" in st.session_state:
+            del st.session_state.active_id
+        st.rerun()

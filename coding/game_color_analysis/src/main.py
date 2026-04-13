@@ -8,7 +8,7 @@ from PIL import Image
 from igdb_api import download_image, query_igdb
 
 
-START_YEAR = 2022
+START_YEAR = 2023
 END_YEAR = 2026
 SCREENSHOT_COUNT = 5  # possibly increase to 10
 COLOR_COUNT = 10
@@ -36,13 +36,13 @@ NSFW_WORDS = [
 
 def get_palette(image_path, n_clusters=10):
     """
-    Gets the color palette using Median Cut.
+    Gets the color palette using Octree quantization.
     Returns a list of tuples sorted by weight.
     """
     try:
         with Image.open(image_path) as image:
             image = image.convert("RGB")
-            quantized_image = image.quantize(colors=n_clusters, method=Image.Quantize.MEDIANCUT)
+            # quantized_image = image.quantize(colors=n_clusters, method=Image.Quantize.MEDIANCUT)
             quantized_image = image.quantize(colors=20, method=Image.Quantize.FASTOCTREE)
 
             # get palettes

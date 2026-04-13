@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
 import numpy as np
 
 
@@ -14,12 +13,11 @@ def load_data(path):
         df = df.rename(columns={rename_map["game"]: "Game"})
 
     if "Game" not in df.columns:
-        # Check if maybe 'Name' was used instead?
-        if "name" in rename_map:
-            df = df.rename(columns={rename_map["name"]: "Game"})
-        else:
-            available = ", ".join(df.columns)
-            raise KeyError(f"Critical Column 'Game' missing from Parquet. Available: {available}")
+        # if "name" in rename_map:
+        #     df = df.rename(columns={rename_map["name"]: "Game"})
+        # else:
+        available = ", ".join(df.columns)
+        raise KeyError(f"Critical Column 'Game' missing from Parquet. Available: {available}")
 
     standard_cols = ["Year", "Developers", "Themes", "Genres", "Art_Style", "Screenshot"]
     for col in standard_cols:
@@ -36,11 +34,10 @@ def load_data(path):
     df["Theme_Set"] = df["Themes"].apply(lambda x: set(x.split("|")))
     df["Genre_Set"] = df["Genres"].apply(lambda x: set(x.split("|")))
 
-    # 2. Get Global Lists for UI Selectboxes
     all_devs = df["Developers"].str.split("|").explode().str.strip()
     unique_devs = sorted(all_devs[all_devs != ""].unique().tolist())
     top_studios = all_devs[all_devs != ""].value_counts().nlargest(50).index.tolist()
-    # 3. Filter for Thesis Scope
+
     df_indexed = df.set_index("Game", drop=False)
 
     return df_indexed, unique_devs, top_studios
@@ -49,14 +46,13 @@ def load_data(path):
 def get_ranked_colors(df_row_or_group, count=5, filter_similarity=True):
     """
     The Universal Ranking Logic for the Thesis.
-    Prioritizes: (Weight * 10) * (Saturation + 5)
+    Prioritizes saturated colors: (Weight * 10) * (Saturation + 5)
     """
     r_cols = [f"C{i}_R" for i in range(1, 9)]
     g_cols = [f"C{i}_G" for i in range(1, 9)]
     b_cols = [f"C{i}_B" for i in range(1, 9)]
     w_cols = [f"C{i}_W" for i in range(1, 9)]
 
-    # Handle both single rows (itertuples) and dataframes (groups)
     if isinstance(df_row_or_group, pd.DataFrame):
         r = df_row_or_group[r_cols].values.flatten()
         g = df_row_or_group[g_cols].values.flatten()
@@ -74,7 +70,6 @@ def get_ranked_colors(df_row_or_group, count=5, filter_similarity=True):
     if len(r) == 0:
         return []
 
-    # 1. Bucket and Group
     r_b, g_b, b_b = (r // 15 * 15), (g // 15 * 15), (b // 15 * 15)
     sat = np.max([r, g, b], axis=0) - np.min([r, g, b], axis=0)
 
@@ -83,15 +78,12 @@ def get_ranked_colors(df_row_or_group, count=5, filter_similarity=True):
         temp.groupby(["R", "G", "B"]).agg(total_w=("W", "sum"), max_s=("S", "max")).reset_index()
     )
 
-    # 2. The Thesis Score
     grouped["score"] = (grouped["total_w"] * 10) * (grouped["max_s"] + 5)
-
     all_sorted = grouped.sort_values("score", ascending=False)
 
     if not filter_similarity:
         return all_sorted.head(count)
 
-    # 4. Diversity Filter (The "Human Distinction" Fix)
     final_selection = []
     for row in all_sorted.itertuples():
         if len(final_selection) >= count:
