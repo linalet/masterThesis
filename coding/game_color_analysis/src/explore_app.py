@@ -138,9 +138,9 @@ if page == "Project Overview":
                     "4k",
                 ],
                 "example_games": [
-                    {"id": "cyberpunk 2077 (2020)", "shot_index": 9},
-                    {"id": "the last of us part ii (2020)", "shot_index": 0},
-                    {"id": "forza horizon 5 (2021)", "shot_index": 0},
+                    {"id": "cyberpunk 2077 (2020) [cd projekt red]", "shot_index": 9},
+                    {"id": "the last of us part ii (2020) [naughty dog]", "shot_index": 0},
+                    {"id": "forza horizon 5 (2021) [playground games]", "shot_index": 0},
                 ],
             },
             "Stylized": {
@@ -150,9 +150,9 @@ if page == "Project Overview":
                     "atmospheric",
                 ],
                 "example_games": [
-                    {"id": "the sims 4 (2014)", "shot_index": 4},
-                    {"id": "portal 2 (2011)", "shot_index": 1},
-                    {"id": "the witcher 3: wild hunt (2015)", "shot_index": 10},
+                    {"id": "the sims 4 (2014) [the sims studio]", "shot_index": 4},
+                    {"id": "portal 2 (2011) [valve]", "shot_index": 1},
+                    {"id": "the witcher 3: wild hunt (2015) [cd projekt red]", "shot_index": 10},
                 ],
             },
         },
@@ -161,9 +161,12 @@ if page == "Project Overview":
                 "description": "Focuses on exaggerated proportions and vibrant colors. Often inspired by anime or cartoons.",
                 "keywords": ["anime", "manga", "chibi", "cartoon"],
                 "example_games": [
-                    {"id": "team fortress 2 (2007)", "shot_index": 0},
-                    {"id": "the legend of zelda: breath of the wild (2017)", "shot_index": 6},
-                    {"id": "super mario odyssey (2017)", "shot_index": 0},
+                    {"id": "team fortress 2 (2007) [valve]", "shot_index": 0},
+                    {
+                        "id": "the legend of zelda: breath of the wild (2017) [nintendo]",
+                        "shot_index": 6,
+                    },
+                    {"id": "super mario odyssey (2017) [nintendo]", "shot_index": 0},
                 ],
             },
             "Illustrative": {
@@ -175,18 +178,18 @@ if page == "Project Overview":
                     "sketch",
                 ],
                 "example_games": [
-                    {"id": "machinarium (2009)", "shot_index": 0},
-                    {"id": "ōkami (2006)", "shot_index": 2},
-                    {"id": "don't starve (2013)", "shot_index": 0},
+                    {"id": "machinarium (2009) [amanita design]", "shot_index": 0},
+                    {"id": "ōkami (2006) [clover studio]", "shot_index": 2},
+                    {"id": "don't starve (2013) [klei entertainment]", "shot_index": 0},
                 ],
             },
             "Pixel Art": {
                 "description": "Art style limited by or inspired by the technical constraints of early gaming hardware. Uses simple shapes.",
                 "keywords": ["pixel art", "8-bit", "16-bit"],
                 "example_games": [
-                    {"id": "stardew valley (2016)", "shot_index": 0},
-                    {"id": "super mario bros. 3 (1988)", "shot_index": 0},
-                    {"id": "undertale (2015)", "shot_index": 3},
+                    {"id": "stardew valley (2016) [concernedape]", "shot_index": 0},
+                    {"id": "super mario bros. 3 (1988) [nintendo]", "shot_index": 0},
+                    {"id": "undertale (2015) [tobyfox]", "shot_index": 3},
                 ],
             },
             "Material-Based": {
@@ -198,9 +201,9 @@ if page == "Project Overview":
                     "felt",
                 ],
                 "example_games": [
-                    {"id": "it takes two (2021)", "shot_index": 0},
-                    {"id": "the neverhood (1996)", "shot_index": 2},
-                    {"id": "samorost 3 (2016)", "shot_index": 3},
+                    {"id": "it takes two (2021) [hazelight studios]", "shot_index": 0},
+                    {"id": "the neverhood (1996) [the neverhood, inc.]", "shot_index": 2},
+                    {"id": "samorost 3 (2016) [amanita design]", "shot_index": 3},
                 ],
             },
         },
@@ -209,9 +212,9 @@ if page == "Project Overview":
                 "description": "Reduces visual information to essential shapes and colors. Prioritizes clean lines, silhouettes, and mathematical precision.",
                 "keywords": ["silhouette", "geometric", "minimalist"],
                 "example_games": [
-                    {"id": "superhot (2016)", "shot_index": 0},
-                    {"id": "voxel blast (2015)", "shot_index": 1},
-                    {"id": "limbo (2010)", "shot_index": 4},
+                    {"id": "superhot (2016) [superhot team]", "shot_index": 0},
+                    {"id": "voxel blast (2015) [ceiba software & arts]", "shot_index": 1},
+                    {"id": "limbo (2010) [playdead]", "shot_index": 4},
                 ],
             },
             "Symbolic": {
@@ -223,9 +226,12 @@ if page == "Project Overview":
                     "ascii",
                 ],
                 "example_games": [
-                    {"id": "the hitchhiker's guide to the galaxy (1984)", "shot_index": 0},
-                    {"id": "thomas was alone (2012)", "shot_index": 2},
-                    {"id": "dark echo (2015)", "shot_index": 1},
+                    {
+                        "id": "the hitchhiker's guide to the galaxy (1984) [infocom]",
+                        "shot_index": 0,
+                    },
+                    {"id": "thomas was alone (2012) [bithell games]", "shot_index": 2},
+                    {"id": "dark echo (2015) [rac7 games]", "shot_index": 1},
                 ],
             },
         },
@@ -270,12 +276,16 @@ if page == "Project Overview":
     col1, col2 = st.columns(2)
     with col1:
         st.image(
-            df[df["Unique_ID"] == "worse than death (2019)"].iloc[0]["Screenshot"],
+            df[df["Unique_ID"] == "worse than death (2019) [benjamin rivers]"].iloc[0][
+                "Screenshot"
+            ],
             width="stretch",
         )
     with col2:
         st.image(
-            df[df["Unique_ID"] == "worse than death (2019)"].iloc[4]["Screenshot"],
+            df[df["Unique_ID"] == "worse than death (2019) [benjamin rivers]"].iloc[4][
+                "Screenshot"
+            ],
             width="stretch",
         )
     st.divider()
