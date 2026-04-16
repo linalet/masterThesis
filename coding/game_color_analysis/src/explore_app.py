@@ -34,7 +34,9 @@ st.markdown(
 )
 
 path = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/processed_game_data.parquet"
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    # "data/final_processed_game_data.parquet",
+    "data/processed_game_data.parquet",
 )
 df, unique_devs_list, top_50_global = helper.load_data(path)
 df_safe = df[~df["is_nsfw"]].copy()
@@ -110,10 +112,10 @@ if page == "Project Overview":
     with col2:
         st.header("⚙️ Research Questions")
         st.info("""        
-        **Key Research Questions:**
-        * **BLA BLA AI** How did hardware limitations (CGA, EGA, 8-bit) dictate early color palettes?
-        * **BLA BLA AI** Is there a measurable 'brown period' during the transition to HD (2005-2010)?
-        * **BLA BLA AI** How do genre-specific color identities evolve over decades?
+        **Research Questions:**
+        * **Q1:** How have the distributions of art styles and dominant color palettes evolved from 1950 to 2026
+        * **Q2:** How effectively do aggregated "Decade Palettes" communicate the aesthetic identity of different eras?
+        * **Q3:** How do genre-specific color identities evolve over decades?
                 """)
 
     st.divider()
@@ -151,7 +153,7 @@ if page == "Project Overview":
                     "atmospheric",
                 ],
                 "example_games": [
-                    {"id": "the sims 4 (2014) [the sims studio]", "shot_index": 4},
+                    {"id": "the sims 4 (2014) [maxis]", "shot_index": 4},
                     {"id": "portal 2 (2011) [valve]", "shot_index": 1},
                     {"id": "the witcher 3: wild hunt (2015) [cd projekt red]", "shot_index": 10},
                 ],
@@ -171,7 +173,7 @@ if page == "Project Overview":
                 ],
             },
             "Illustrative": {
-                "description": "Emphasizes the 'art'. Mimics physical media like watercolors, or ink drawings.",
+                "description": "Emphasizes the 'art'. Mimics physical media like watercolors or ink drawings.",
                 "keywords": [
                     "watercolor",
                     "hand-painted",
@@ -180,12 +182,12 @@ if page == "Project Overview":
                 ],
                 "example_games": [
                     {"id": "machinarium (2009) [amanita design]", "shot_index": 0},
-                    {"id": "ōkami (2006) [Hexadrive]", "shot_index": 2},
+                    {"id": "ōkami (2006) [clover studio]", "shot_index": 2},
                     {"id": "don't starve (2013) [klei entertainment]", "shot_index": 0},
                 ],
             },
             "Pixel Art": {
-                "description": "Art style limited or inspired by the technical constraints of early gaming hardware. Uses simple shapes.",
+                "description": "Art style limited or inspired by the technical constraints of early gaming hardware. Uses squares.",
                 "keywords": ["pixel art", "8-bit", "16-bit"],
                 "example_games": [
                     {"id": "stardew valley (2016) [concernedape]", "shot_index": 0},
@@ -210,7 +212,7 @@ if page == "Project Overview":
         },
         "3️⃣ Abstraction": {
             "Minimalist": {
-                "description": "Reduces visual information to essential shapes and colors. Prioritizes clean lines, silhouettes, and mathematical precision.",
+                "description": "Reduces visuals to only essential elements. Uses clean lines, silhouettes, and simple shapes.",
                 "keywords": ["silhouette", "geometric", "minimalist"],
                 "example_games": [
                     {"id": "superhot (2016) [ea]", "shot_index": 0},
@@ -219,7 +221,7 @@ if page == "Project Overview":
                 ],
             },
             "Symbolic": {
-                "description": "High-concept visuals where color and shape represent ideas or mechanics. Also text-based and audio-based games with limited visual elements.",
+                "description": "Color and shape represent ideas or mechanics. Also includestext-based and audio-based games with limited visual art.",
                 "keywords": [
                     "text-based",
                     "experimental",
@@ -264,15 +266,15 @@ if page == "Project Overview":
 
                         target_row = match.iloc[idx]
                         st.image(target_row["Screenshot"], width="stretch")
-                        st.caption(f"🎮 {target_row['Unique_ID']}")
+                        st.caption(f"🎮 **{target_row['Game']}** ({int(target_row['Year'])})")
                     else:
                         st.info(f"Image for {game_ref['id']} not found.")
     st.divider()
 
     st.subheader("⚠️ Disclaimer on Classification Accuracy")
-    st.write("""Since these keywords are added to IGDB by users, they are not always accurate or consistent.
-            The automated assignment is often incorrect, but the only viable option available with current resources.
-            I have manually classified around 300 games to ensure some level accuracy, however it is only a fraction (0.1%) of the total dataset.
+    st.write("""Since the keywords used to classify games are added to IGDB by the users, they are not always accurate or consistent.
+            The automated assignment is often incorrect, but it is the only viable option available with my current resources.
+            I have manually classified around 300 games to ensure some level of accuracy, however, it is only a fraction (0.1%) of the total dataset.
             Art is subjective and complex, so my opinion may not always be correct. 
             Some games can fit into multiple categories, such as *Worse Than Death (2019)*, which could be both **Stylization: Pixel Art** and **Stylization: Illustrative**.""")
     col1, col2 = st.columns(2)
@@ -294,8 +296,8 @@ if page == "Project Overview":
 
     st.subheader("📖 What do I do now?")
     st.write("""
-        If you cannot see the side menu and the tabs inside, press the arrows EMOJI in the top left corner.
-        Go through the different tabs to explore the data and find insights about the evolution of color and art styles in video games.
+        If you cannot see the side menu and the tabs inside, press the arrows ⏩ in the top left corner.
+        Navigate through the various tabs to explore the data and discover insights into the evolution of color and art styles in video games.
     """)
     st.write("""##### 🤔What do the tabs mean?""")
     st.markdown("""
@@ -320,14 +322,6 @@ elif page == "Art Style Popularity":
     perc_df = style_counts.merge(year_totals, on="Year")
     perc_df["Percentage"] = (perc_df["Count"] / perc_df["Total"]) * 100
 
-    # fig = px.area(
-    #     perc_df,
-    #     x="Year",
-    #     y="Percentage",
-    #     color="Art_Style",
-    #     height=600,
-    #     category_orders={"Art_Style": custom_style_order},
-    # )
     fig = px.bar(
         perc_df,
         x="Year",
@@ -341,8 +335,8 @@ elif page == "Art Style Popularity":
     fig.update_xaxes(type="linear", range=[1950, 2026])
     fig.update_layout(
         yaxis=dict(
-            title_font=dict(size=22),  # Y-axis title
-            tickfont=dict(size=20),  # Y-axis numbers (0, 20, 40...)
+            title_font=dict(size=22),
+            tickfont=dict(size=20),
         ),
         xaxis=dict(
             title_font=dict(size=22),
@@ -352,7 +346,7 @@ elif page == "Art Style Popularity":
             title="Art Styles",
             font=dict(size=20),
             title_font=dict(size=24),
-            itemsizing="constant",  # Keeps the color icons consistent
+            itemsizing="constant",
         ),
         legend_title_side="top center",
         font=dict(size=20),
@@ -407,47 +401,47 @@ elif page == "Art Style Popularity":
     )
 
     st.divider()
-    st.subheader("🔍 Style Explorer: Random Gallery")
-    st.write("Select an art style to explore random examples from the classified dataset.")
+    # st.subheader("🔍 Style Explorer: Random Gallery")
+    # st.write("Select an art style to explore random examples from the classified dataset.")
 
-    # 1. Setup Selection and Button
-    # Get the list of unique art styles present in your classified data
-    available_styles = classified_df["Art_Style"].unique().tolist()
+    # # 1. Setup Selection and Button
+    # # Get the list of unique art styles present in your classified data
+    # available_styles = classified_df["Art_Style"].unique().tolist()
 
-    col_sel, col_btn = st.columns([3, 1])
-    with col_sel:
-        selected_style = st.selectbox("Choose a style to explore:", available_styles)
-    with col_btn:
-        st.write(" ")  # Padding
-        refresh_button = st.button("🔄 Show Different Games")
+    # col_sel, col_btn = st.columns([3, 1])
+    # with col_sel:
+    #     selected_style = st.selectbox("Choose a style to explore:", available_styles)
+    # with col_btn:
+    #     st.write(" ")  # Padding
+    #     refresh_button = st.button("🔄 Show Different Games")
 
-    # 2. Filter the dataset for the selected style
-    style_pool = classified_df[classified_df["Art_Style"] == selected_style]
+    # # 2. Filter the dataset for the selected style
+    # style_pool = classified_df[classified_df["Art_Style"] == selected_style]
 
-    if not style_pool.empty:
-        # Pick 3 random games from this style
-        # .sample() handles the randomness
-        n_samples = min(len(style_pool), 3)
-        random_games = style_pool.sample(n_samples)
+    # if not style_pool.empty:
+    #     # Pick 3 random games from this style
+    #     # .sample() handles the randomness
+    #     n_samples = min(len(style_pool), 3)
+    #     random_games = style_pool.sample(n_samples)
 
-        # 3. Display the Gallery
-        for idx, game_row in random_games.iterrows():
-            game_name = str(game_row["Game"]).title()
-            studio_name = str(game_row.get("Developer", "Unknown Studio")).title()
-            year = int(game_row["Year"])
+    #     # 3. Display the Gallery
+    #     for idx, game_row in random_games.iterrows():
+    #         game_name = str(game_row["Game"]).title()
+    #         studio_name = str(game_row.get("Developer", "Unknown Studio")).title()
+    #         year = int(game_row["Year"])
 
-            st.markdown(f"#### 🎮 {game_name} ({year})")
-            st.markdown(f"**Studio:** {studio_name}")
+    #         st.markdown(f"#### 🎮 {game_name} ({year})")
+    #         st.markdown(f"**Studio:** {studio_name}")
 
-            # Logic: Finding multiple screenshots for the SAME game ID
-            game_screenshots = df[df["Unique_ID"] == game_row["Unique_ID"]].head(3)
+    #         # Logic: Finding multiple screenshots for the SAME game ID
+    #         game_screenshots = df[df["Unique_ID"] == game_row["Unique_ID"]].head(3)
 
-            img_cols = st.columns(3)
-            for i, shot in enumerate(game_screenshots.itertuples()):
-                with img_cols[i]:
-                    st.image(shot.Screenshot, width="stretch")
-    else:
-        st.warning("No games found for this specific style in the current filter.")
+    #         img_cols = st.columns(3)
+    #         for i, shot in enumerate(game_screenshots.itertuples()):
+    #             with img_cols[i]:
+    #                 st.image(shot.Screenshot, width="stretch")
+    # else:
+    #     st.warning("No games found for this specific style in the current filter.")
 
 
 elif page == "Color through Decades":
@@ -701,7 +695,7 @@ elif page == "Game Developer Profile":
         else:
             with col2:
                 st.write(f"### Palette Signature: {final_all.title()}")
-                st.caption(f"Analyzing {len(all_df)} entries")
+                st.caption(f"{len(all_df)} games analyzed")
                 palette_studio = helper.get_representative_palette(all_df, count=10)
 
                 html_bar = '<div style="display: flex; height: 50px; border-radius: 8px; overflow: hidden; border: 3px solid #999; margin-bottom: 2px;">'
@@ -745,12 +739,15 @@ elif page == "Game Developer Profile":
     st.divider()
 
     st.subheader("📆 Decade-Specific Leaders")
-    dec_sel_s = st.selectbox("Pick Decade", [1950, 1960, 1970, 1980, 1990, 2000, 2010, 2020])
+    # dec_sel_s = st.selectbox("Pick Decade", [1950, 1960, 1970, 1980, 1990, 2000, 2010, 2020])
+    dec_sel_s = st.select_slider(
+        "Select Comparison Decade", options=[1970, 1980, 1990, 2000, 2010, 2020], key="dec_slider"
+    )
 
     decade_df = df[(df["Year"] >= dec_sel_s) & (df["Year"] < dec_sel_s + 10)]
 
     exploded_dec = decade_df["Developers"].str.split("|").explode().str.strip()
-    top_10_dec = exploded_dec[exploded_dec != ""].value_counts().nlargest(10).index.tolist()
+    top_10_dec = exploded_dec[exploded_dec != "unknown"].value_counts().nlargest(10).index.tolist()
 
     col3, col4 = st.columns([1, 2])
     with col3:
@@ -779,6 +776,7 @@ elif page == "Game Developer Profile":
         else:
             with col4:
                 st.write(f"### {final_dec.title()}'s Style in the {dec_sel_s}s")
+                st.caption(f"{len(dev_df)} games analyzed")
                 palette_dec_dev = helper.get_representative_palette(dev_df, count=10)
 
                 html_bar_dec = '<div style="display: flex; height: 40px; border-radius: 8px; overflow: hidden; border: 3px solid #999; margin-bottom: 2px;">'
@@ -841,10 +839,10 @@ elif page == "Game Developer Profile":
     )
     compare_df = df[(df["Year"] >= decade_comparison) & (df["Year"] < decade_comparison + 10)]
 
+    all_devs = compare_df["Developers"].str.split("|").explode().str.strip()
     active_devs = sorted(
-        compare_df["Developers"].str.split("|").explode().str.strip().unique().tolist()
+        [d for d in all_devs.unique().tolist() if d and str(d).lower() != "unknown"]
     )
-    active_devs = [d for d in active_devs if d]
 
     col_a, col_b = st.columns(2)
     with col_a:
@@ -905,9 +903,12 @@ elif page == "Individual Game Palette":
         st.session_state["game_selector"] = st.session_state["search_query"]
         del st.session_state["search_query"]
 
-    search_query = st.text_input("Filter list by name:", "")
+    search_query = st.text_input("Search by name:", "mario")
     if search_query:
         filtered_list = [g for g in unique_games if search_query.lower() in g.lower()]
+        filtered_list = [
+            g for g in unique_games if search_query.lower() in g.split("[")[0].strip().lower()
+        ]
         if not filtered_list:
             st.warning(f"🔍 No games found matching '**{search_query}**'.")
             st.info(
@@ -923,6 +924,7 @@ elif page == "Individual Game Palette":
         is_nsfw_check = df[df["Unique_ID"] == selected_game_id]["is_nsfw"].any()
 
         if is_nsfw_check:
+            st.error("⚠️ Content Restricted")
             st.warning(
                 "⚠️ This title has been filtered from visual display due to inappropriate content."
             )
@@ -1015,75 +1017,84 @@ elif page == "Individual Game Palette":
             st.markdown(mini_html, unsafe_allow_html=True)
     st.info("💡TOOL TIP: Hover over the colors to see their hex codes")
 
-
 elif page == "Style Categorizer":
     st.header("🏷️ Chronological Style Categorizer")
 
-    manual_file = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        "data/manual_classification.csv",
-    )
+    # --- 1. File Paths & Initialization ---
+    data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
+    manual_file = os.path.join(data_dir, "manual_classification.csv")
+    valid_ids_file = os.path.join(data_dir, "validated_log.txt")
 
-    # 1. Load finished games
-    if os.path.exists(manual_file):
-        manual_df = pd.read_csv(manual_file)
-        done_ids = set(manual_df["Unique_ID"].str.lower().unique())
-
-        # Smart Resume: If session is fresh, start where the CSV left off
-        if not manual_df.empty and "target_year" not in st.session_state:
-            last_id = manual_df["Unique_ID"].iloc[-1]
-            last_match = df[df["Unique_ID"] == last_id]
-            if not last_match.empty:
-                st.session_state.target_year = int(last_match["Year"].iloc[0])
-    else:
+    if not os.path.exists(manual_file):
         pd.DataFrame(columns=["Unique_ID", "Manual_Art_Style"]).to_csv(manual_file, index=False)
-        done_ids = set()
 
-    # 2. Filter data
-    unique_games_df = df.drop_duplicates(subset=["Unique_ID"])
-    # available_data = unique_games_df[~unique_games_df["Unique_ID"].str.lower().isin(done_ids)]
+    if not os.path.exists(valid_ids_file):
+        with open(valid_ids_file, "w", encoding="utf-8") as f:
+            f.write("unique_id\n")
+
+    # --- 2. Load Progress ---
+    manual_df = pd.read_csv(manual_file)
+    with open(valid_ids_file, "r", encoding="utf-8") as f:
+        confirmed_ids = set(line.strip().lower() for line in f.readlines()[1:] if line.strip())
+
+    csv_ids = set(manual_df["Unique_ID"].astype(str).str.lower().str.strip().unique())
+    done_ids = csv_ids.union(confirmed_ids)
+
+    # --- 3. Filter Data ---
+    unique_games_df = df_safe.drop_duplicates(subset=["Unique_ID"]).copy()
     available_data = unique_games_df[
-        ~unique_games_df["Unique_ID"].str.lower().isin(done_ids)
+        ~unique_games_df["Unique_ID"].str.lower().str.strip().isin(done_ids)
     ].copy()
 
     if available_data.empty:
         st.balloons()
-        st.success("🎉 All games categorized!")
+        st.success("🎉 All games have been categorized!")
         st.stop()
 
-    # 3. Handle Session State for Year and Current Selection
+    # --- 4. 3-Game Year Cycling Logic ---
     if "target_year" not in st.session_state:
         st.session_state.target_year = int(available_data["Year"].min())
 
-    # --- THE FIX: LOCK THE GAME ID ---
-    # We only pick a new game if we don't have one "active" in the session state
-    if "active_id" not in st.session_state or st.session_state.active_id.lower() in done_ids:
-        year_pool = available_data[available_data["Year"] == st.session_state.target_year]
+    if "year_counter" not in st.session_state:
+        st.session_state.year_counter = 0
 
-        while year_pool.empty and st.session_state.target_year <= df["Year"].max():
-            st.session_state.target_year += 1
-            year_pool = available_data[available_data["Year"] == st.session_state.target_year]
+    # If we've done 3 games or this year is empty, jump to the next year
+    year_pool = available_data[available_data["Year"] == st.session_state.target_year]
 
-        if year_pool.empty:
+    if st.session_state.year_counter >= 3 or year_pool.empty:
+        remaining_years = available_data[available_data["Year"] > st.session_state.target_year]
+        if remaining_years.empty:
             st.session_state.target_year = int(available_data["Year"].min())
-            st.rerun()
+        else:
+            st.session_state.target_year = int(remaining_years["Year"].min())
 
-        st.session_state.active_id = year_pool.sample(1).iloc[0]["Unique_ID"]
+        st.session_state.year_counter = 0  # Reset counter for the new year
+        if "active_id" in st.session_state:
+            del st.session_state.active_id
+        st.rerun()
 
-    # Load the locked game data
-    game_rows = df[df["Unique_ID"] == st.session_state.active_id].copy()
+    # Lock in the active game
+    if (
+        "active_id" not in st.session_state
+        or st.session_state.active_id.lower().strip() in done_ids
+    ):
+        st.session_state.active_id = year_pool.iloc[0]["Unique_ID"]
+
+    # Load UI data
+    game_rows = df[df["Unique_ID"] == st.session_state.active_id]
     current_game = game_rows.iloc[0]
+    auto_style = str(current_game["Art_Style"])
 
-    # --- UI ---
+    # --- 5. UI ---
     col_info, col_stats = st.columns([3, 1])
     with col_info:
         st.markdown(f"### 🎮 {current_game['Game']} ({int(current_game['Year'])})")
-        st.write(f"📅 **Year Loop:** `{st.session_state.target_year}`")
+        st.write(f"Year Progress: **{st.session_state.year_counter + 1} / 3**")
 
     with col_stats:
-        st.metric("Total Categorized", len(done_ids))
+        st.metric("Total Done", len(done_ids))
+        st.metric("Current Year", st.session_state.target_year)
 
-    # Display Screenshots
     img_cols = st.columns(min(len(game_rows), 4))
     for i, shot in enumerate(game_rows.head(4).itertuples()):
         with img_cols[i]:
@@ -1091,45 +1102,100 @@ elif page == "Style Categorizer":
 
     st.divider()
 
-    # --- SAVE LOGIC ---
-    current_auto_style = current_game["Art_Style"]
-    col_confirm, col_sel, col_save = st.columns([1.5, 2, 1])
-
-    with col_sel:
-        default_idx = (
-            custom_style_order.index(current_auto_style)
-            if current_auto_style in custom_style_order
-            else 0
-        )
-        chosen_style = st.selectbox("Assign Style:", custom_style_order, index=default_idx)
-
-    # Use session state to ensure we save the ID that was actually displayed
-
-    def save_data(style_to_save):
-        target_id = st.session_state.active_id
-        new_row = pd.DataFrame({"Unique_ID": [target_id], "Manual_Art_Style": [style_to_save]})
-
-        # Updated this line to handle commas safely
-        new_row.to_csv(manual_file, mode="a", header=False, index=False, quoting=csv.QUOTE_MINIMAL)
-
-        st.session_state.target_year += 1
-        if st.session_state.target_year > df["Year"].max():
-            st.session_state.target_year = int(df["Year"].min())
-
-        if "active_id" in st.session_state:
-            del st.session_state.active_id
-        st.rerun()
+    # --- 6. Actions ---
+    col_confirm, col_sel, col_save = st.columns([1, 2, 1])
 
     with col_confirm:
-        if st.button(f"✅ Confirm {current_auto_style}", width="stretch"):
-            save_data(current_auto_style)
+        if st.button(f"✅ Yes, {auto_style}", type="primary", width="stretch"):
+            with open(valid_ids_file, "a", encoding="utf-8") as f:
+                f.write(f"{st.session_state.active_id}\n")
+            st.session_state.year_counter += 1  # Increment counter
+            del st.session_state.active_id
+            st.rerun()
+
+    with col_sel:
+        try:
+            d_idx = custom_style_order.index(auto_style)
+        except ValueError:
+            d_idx = 0
+        chosen_style = st.selectbox("Correct Style:", custom_style_order, index=d_idx)
 
     with col_save:
         if st.button("💾 Save & Next", width="stretch"):
-            save_data(chosen_style)
+            new_row = pd.DataFrame(
+                {"Unique_ID": [st.session_state.active_id], "Manual_Art_Style": [chosen_style]}
+            )
+            new_row.to_csv(manual_file, mode="a", header=False, index=False)
+            with open(valid_ids_file, "a", encoding="utf-8") as f:
+                f.write(f"{st.session_state.active_id}\n")
+
+            st.session_state.year_counter += 1  # Increment counter
+            del st.session_state.active_id
+            st.rerun()
 
     if st.button("⏭️ Skip to Next Year"):
-        st.session_state.target_year += 1
-        if "active_id" in st.session_state:
-            del st.session_state.active_id
+        st.session_state.year_counter = 3  # Force the jump logic
         st.rerun()
+
+    # --- SECTION 2: MARIO PRIORITY QUEUE ---
+    st.divider()
+    st.header("🍄 Named Priority Queue")
+
+    mario_available = unique_games_df[
+        (unique_games_df["Game"].str.contains("pac-man", case=False, na=False))
+        & (~unique_games_df["Unique_ID"].str.lower().str.strip().isin(done_ids))
+    ].copy()
+
+    if mario_available.empty:
+        st.success("🍄 No more games to categorize!")
+    else:
+        if (
+            "mario_active_id" not in st.session_state
+            or st.session_state.mario_active_id.lower().strip() in done_ids
+        ):
+            st.session_state.mario_active_id = mario_available.iloc[0]["Unique_ID"]
+
+        m_game_rows = df[df["Unique_ID"] == st.session_state.mario_active_id]
+        m_current = m_game_rows.iloc[0]
+        m_auto_style = str(m_current["Art_Style"])
+
+        st.subheader(f"{m_current['Game']} ({int(m_current['Year'])})")
+
+        m_img_cols = st.columns(min(len(m_game_rows), 4))
+        for i, shot in enumerate(m_game_rows.head(4).itertuples()):
+            with m_img_cols[i]:
+                st.image(shot.Screenshot, width="stretch")
+
+        m_col1, m_col2, m_col3 = st.columns([1, 2, 1])
+
+        with m_col1:
+            if st.button(f"✅ Confirm: {m_auto_style}", key="m_confirm"):
+                with open(valid_ids_file, "a", encoding="utf-8") as f:
+                    f.write(f"{st.session_state.mario_active_id}\n")
+                del st.session_state.mario_active_id
+                st.rerun()
+
+        with m_col2:
+            try:
+                m_d_idx = custom_style_order.index(m_auto_style)
+            except ValueError:
+                m_d_idx = 0
+            m_chosen_style = st.selectbox(
+                "Correct Style:", custom_style_order, index=m_d_idx, key="m_select"
+            )
+            st.write(f"{len(mario_available)} games left")
+
+        with m_col3:
+            if st.button("💾 Save & Next", key="m_save"):
+                m_new_row = pd.DataFrame(
+                    {
+                        "Unique_ID": [st.session_state.mario_active_id],
+                        "Manual_Art_Style": [m_chosen_style],
+                    }
+                )
+                m_new_row.to_csv(manual_file, mode="a", header=False, index=False)
+                with open(valid_ids_file, "a", encoding="utf-8") as f:
+                    f.write(f"{st.session_state.mario_active_id}\n")
+
+                del st.session_state.mario_active_id
+                st.rerun()

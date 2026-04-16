@@ -5,7 +5,7 @@ import pandas as pd
 import preprocess_helper as ph
 
 
-def run_preprocessing(input_path="data/octree_game_data.csv"):
+def run_preprocessing(input_path="data/final_game_data.csv"):
     path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), input_path)
     df = pd.read_csv(path, low_memory=False)
     if "is_nsfw" not in df.columns:
@@ -24,7 +24,15 @@ def run_preprocessing(input_path="data/octree_game_data.csv"):
         + " ("
         + df["Year"].astype(str)
         + ") ["
-        + df["Developers"].str.split("|").str[0]
+        + df["Developers"]
+        .str.split("|")
+        .apply(
+            lambda x: (
+                sorted([i for i in x if i.strip()])[0]
+                if isinstance(x, list) and any(i.strip() for i in x)
+                else "unknown"
+            )
+        )
         + "]"
     )
 
@@ -41,11 +49,15 @@ def run_preprocessing(input_path="data/octree_game_data.csv"):
     color_profiles = df.groupby("Unique_ID").apply(ph.get_weighted_representative_palette)
     df["Color_profile"] = df["Unique_ID"].map(color_profiles)
 
+    print("🖼 Saving screenshot URLs...")
+    df = ph.finalize_screenshot_urls(df)
+    df.to_parquet(path, engine="pyarrow")
+
     df["is_classified"] = ~df["Art_Style"].str.startswith("Unclassified")
     print("💾 Saving to Parquet...")
     path = os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        "data/processed_game_data.parquet",
+        "data/final_processed_game_data.parquet",
     )
     df.to_parquet(path, engine="pyarrow", index=True)
     print("✅ Preprocessing Complete.")

@@ -1,4 +1,5 @@
 import os
+from os import path
 import pandas as pd
 
 studio_map = {
@@ -47,6 +48,8 @@ def normalize_studio_name(dev_string):
                 break
         if not found_parent:
             cleaned_parts.append(part)
+    if cleaned_parts == [""]:
+        return "unknown"
 
     return "|".join(list(set(cleaned_parts)))
 
@@ -153,3 +156,25 @@ def classify_taxonomy(df):
     df["is_classified"] = ~df["Art_Style"].str.startswith("Unclassified")
 
     return df["Art_Style"]
+
+
+def finalize_screenshot_urls(df):
+    """
+    Converts local screenshot filenames/paths into IGDB CDN URLs.
+    Format: https://images.igdb.com/igdb/image/upload/t_screenshot_huge/{image_id}.jpg
+    """
+
+    def convert_to_url(path):
+        if pd.isna(path) or path == "":
+            return "https://via.placeholder.com/1280x720?text=No+Image"
+
+        # Extract the filename (e.g., 'co1r98.jpg') from the path
+        filename = os.path.basename(str(path))
+        # Get the ID without the extension
+        image_id = os.path.splitext(filename)[0]
+
+        return f"https://images.igdb.com/igdb/image/upload/t_screenshot_huge/{image_id}.jpg"
+
+    # Overwrite the Screenshot column with the web URL
+    df["Screenshot"] = df["Screenshot"].apply(convert_to_url)
+    return df

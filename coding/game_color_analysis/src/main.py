@@ -8,14 +8,14 @@ from PIL import Image
 from igdb_api import download_image, query_igdb
 
 
-START_YEAR = 2023
+START_YEAR = 2026
 END_YEAR = 2026
 SCREENSHOT_COUNT = 5  # possibly increase to 10
 COLOR_COUNT = 10
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(ROOT_DIR, "data")
-OUTPUT_CSV = os.path.join(DATA_DIR, "octree_game_data.csv")
+OUTPUT_CSV = os.path.join(DATA_DIR, "final_game_data.csv")
 
 # List of keywords to filter nsfw images
 NSFW_WORDS = [
@@ -95,12 +95,14 @@ def main():
     else:
         os.makedirs(DATA_DIR, exist_ok=True)
         with open(OUTPUT_CSV, mode="w", newline="", encoding="utf-8") as file:
-            writer = csv.writer(file)
+            writer = csv.writer(file, quoting=csv.QUOTE_ALL)
             writer.writerow(header)
+            # writer = csv.writer(file)
+            # writer.writerow(header)
         processed = set()
 
     with open(OUTPUT_CSV, mode="a", newline="", encoding="utf-8") as file:
-        writer = csv.writer(file)
+        writer = csv.writer(file, quoting=csv.QUOTE_ALL)
 
         for year in range(START_YEAR, END_YEAR + 1):
             print(f"[INFO] Getting games from {year}...")

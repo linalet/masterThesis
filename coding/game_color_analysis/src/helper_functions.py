@@ -36,7 +36,7 @@ def load_data(path):
 
     all_devs = df["Developers"].str.split("|").explode().str.strip()
     unique_devs = sorted(all_devs[all_devs != ""].unique().tolist())
-    top_studios = all_devs[all_devs != ""].value_counts().nlargest(50).index.tolist()
+    top_studios = all_devs[all_devs != "unknown"].value_counts().nlargest(50).index.tolist()
 
     df_indexed = df.set_index("Game", drop=False)
 
