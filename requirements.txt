@@ -1,8 +1,16 @@
-colorthief==0.2.1
-numpy==2.4.4
-pandas==3.0.2
-Pillow==12.2.0
-plotly==6.5.2
-Requests==2.33.1
-scikit_learn==1.8.0
-streamlit==1.54.0
+# numpy==2.4.4
+# pandas==3.0.2
+# Pillow==12.2.0
+# plotly==6.5.2
+# Requests==2.33.1
+# scikit_learn==1.8.0
+# streamlit==1.54.0
+pandas
+streamlit
+pandas
+plotly
+numpy
+# csv
+# os
+# requests
+# PIL

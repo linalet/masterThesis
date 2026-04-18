@@ -1,5 +1,5 @@
 import os
-from os import path
+# from os import path
 import pandas as pd
 
 studio_map = {
