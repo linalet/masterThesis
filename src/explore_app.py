@@ -65,7 +65,7 @@ page = st.sidebar.radio(
     [
         "Project Overview",
         "Art Style Popularity",
-        "Style Categorizer",
+        # "Style Categorizer",
         "Color through Decades",
         "Genre Timelines",
         "Theme Timelines",
@@ -1021,185 +1021,185 @@ elif page == "Individual Game Palette":
             st.markdown(mini_html, unsafe_allow_html=True)
     st.info("💡TOOL TIP: Hover over the colors to see their hex codes")
 
-elif page == "Style Categorizer":
-    st.header("🏷️ Chronological Style Categorizer")
+# elif page == "Style Categorizer":
+#     st.header("🏷️ Chronological Style Categorizer")
 
-    # --- 1. File Paths & Initialization ---
-    data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
-    manual_file = os.path.join(data_dir, "manual_classification.csv")
-    valid_ids_file = os.path.join(data_dir, "validated_log.txt")
+#     # --- 1. File Paths & Initialization ---
+#     data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
+#     manual_file = os.path.join(data_dir, "manual_classification.csv")
+#     valid_ids_file = os.path.join(data_dir, "validated_log.txt")
 
-    if not os.path.exists(manual_file):
-        pd.DataFrame(columns=["Unique_ID", "Manual_Art_Style"]).to_csv(manual_file, index=False)
+#     if not os.path.exists(manual_file):
+#         pd.DataFrame(columns=["Unique_ID", "Manual_Art_Style"]).to_csv(manual_file, index=False)
 
-    if not os.path.exists(valid_ids_file):
-        with open(valid_ids_file, "w", encoding="utf-8") as f:
-            f.write("unique_id\n")
+#     if not os.path.exists(valid_ids_file):
+#         with open(valid_ids_file, "w", encoding="utf-8") as f:
+#             f.write("unique_id\n")
 
-    # --- 2. Load Progress ---
-    manual_df = pd.read_csv(manual_file)
-    with open(valid_ids_file, "r", encoding="utf-8") as f:
-        confirmed_ids = set(line.strip().lower() for line in f.readlines()[1:] if line.strip())
+#     # --- 2. Load Progress ---
+#     manual_df = pd.read_csv(manual_file)
+#     with open(valid_ids_file, "r", encoding="utf-8") as f:
+#         confirmed_ids = set(line.strip().lower() for line in f.readlines()[1:] if line.strip())
 
-    csv_ids = set(manual_df["Unique_ID"].astype(str).str.lower().str.strip().unique())
-    done_ids = csv_ids.union(confirmed_ids)
+#     csv_ids = set(manual_df["Unique_ID"].astype(str).str.lower().str.strip().unique())
+#     done_ids = csv_ids.union(confirmed_ids)
 
-    # --- 3. Filter Data ---
-    unique_games_df = df_safe.drop_duplicates(subset=["Unique_ID"]).copy()
-    available_data = unique_games_df[
-        ~unique_games_df["Unique_ID"].str.lower().str.strip().isin(done_ids)
-    ].copy()
+#     # --- 3. Filter Data ---
+#     unique_games_df = df_safe.drop_duplicates(subset=["Unique_ID"]).copy()
+#     available_data = unique_games_df[
+#         ~unique_games_df["Unique_ID"].str.lower().str.strip().isin(done_ids)
+#     ].copy()
 
-    if available_data.empty:
-        st.balloons()
-        st.success("🎉 All games have been categorized!")
-        st.stop()
+#     if available_data.empty:
+#         st.balloons()
+#         st.success("🎉 All games have been categorized!")
+#         st.stop()
 
-    # --- 4. 3-Game Year Cycling Logic ---
-    if "target_year" not in st.session_state:
-        st.session_state.target_year = int(available_data["Year"].min())
+#     # --- 4. 3-Game Year Cycling Logic ---
+#     if "target_year" not in st.session_state:
+#         st.session_state.target_year = int(available_data["Year"].min())
 
-    if "year_counter" not in st.session_state:
-        st.session_state.year_counter = 0
+#     if "year_counter" not in st.session_state:
+#         st.session_state.year_counter = 0
 
-    # If we've done 3 games or this year is empty, jump to the next year
-    year_pool = available_data[available_data["Year"] == st.session_state.target_year]
+#     # If we've done 3 games or this year is empty, jump to the next year
+#     year_pool = available_data[available_data["Year"] == st.session_state.target_year]
 
-    if st.session_state.year_counter >= 3 or year_pool.empty:
-        remaining_years = available_data[available_data["Year"] > st.session_state.target_year]
-        if remaining_years.empty:
-            st.session_state.target_year = int(available_data["Year"].min())
-        else:
-            st.session_state.target_year = int(remaining_years["Year"].min())
+#     if st.session_state.year_counter >= 3 or year_pool.empty:
+#         remaining_years = available_data[available_data["Year"] > st.session_state.target_year]
+#         if remaining_years.empty:
+#             st.session_state.target_year = int(available_data["Year"].min())
+#         else:
+#             st.session_state.target_year = int(remaining_years["Year"].min())
 
-        st.session_state.year_counter = 0  # Reset counter for the new year
-        if "active_id" in st.session_state:
-            del st.session_state.active_id
-        st.rerun()
+#         st.session_state.year_counter = 0  # Reset counter for the new year
+#         if "active_id" in st.session_state:
+#             del st.session_state.active_id
+#         st.rerun()
 
-    # Lock in the active game
-    if (
-        "active_id" not in st.session_state
-        or st.session_state.active_id.lower().strip() in done_ids
-    ):
-        st.session_state.active_id = year_pool.iloc[0]["Unique_ID"]
+#     # Lock in the active game
+#     if (
+#         "active_id" not in st.session_state
+#         or st.session_state.active_id.lower().strip() in done_ids
+#     ):
+#         st.session_state.active_id = year_pool.iloc[0]["Unique_ID"]
 
-    # Load UI data
-    game_rows = df[df["Unique_ID"] == st.session_state.active_id]
-    current_game = game_rows.iloc[0]
-    auto_style = str(current_game["Art_Style"])
+#     # Load UI data
+#     game_rows = df[df["Unique_ID"] == st.session_state.active_id]
+#     current_game = game_rows.iloc[0]
+#     auto_style = str(current_game["Art_Style"])
 
-    # --- 5. UI ---
-    col_info, col_stats = st.columns([3, 1])
-    with col_info:
-        st.markdown(f"### 🎮 {current_game['Game']} ({int(current_game['Year'])})")
-        st.write(f"Year Progress: **{st.session_state.year_counter + 1} / 3**")
+#     # --- 5. UI ---
+#     col_info, col_stats = st.columns([3, 1])
+#     with col_info:
+#         st.markdown(f"### 🎮 {current_game['Game']} ({int(current_game['Year'])})")
+#         st.write(f"Year Progress: **{st.session_state.year_counter + 1} / 3**")
 
-    with col_stats:
-        st.metric("Total Done", len(done_ids))
-        st.metric("Current Year", st.session_state.target_year)
+#     with col_stats:
+#         st.metric("Total Done", len(done_ids))
+#         st.metric("Current Year", st.session_state.target_year)
 
-    img_cols = st.columns(min(len(game_rows), 4))
-    for i, shot in enumerate(game_rows.head(4).itertuples()):
-        with img_cols[i]:
-            st.image(shot.Screenshot, width="stretch")
+#     img_cols = st.columns(min(len(game_rows), 4))
+#     for i, shot in enumerate(game_rows.head(4).itertuples()):
+#         with img_cols[i]:
+#             st.image(shot.Screenshot, width="stretch")
 
-    st.divider()
+#     st.divider()
 
-    # --- 6. Actions ---
-    col_confirm, col_sel, col_save = st.columns([1, 2, 1])
+#     # --- 6. Actions ---
+#     col_confirm, col_sel, col_save = st.columns([1, 2, 1])
 
-    with col_confirm:
-        if st.button(f"✅ Yes, {auto_style}", type="primary", width="stretch"):
-            with open(valid_ids_file, "a", encoding="utf-8") as f:
-                f.write(f"{st.session_state.active_id}\n")
-            st.session_state.year_counter += 1  # Increment counter
-            del st.session_state.active_id
-            st.rerun()
+#     with col_confirm:
+#         if st.button(f"✅ Yes, {auto_style}", type="primary", width="stretch"):
+#             with open(valid_ids_file, "a", encoding="utf-8") as f:
+#                 f.write(f"{st.session_state.active_id}\n")
+#             st.session_state.year_counter += 1  # Increment counter
+#             del st.session_state.active_id
+#             st.rerun()
 
-    with col_sel:
-        try:
-            d_idx = custom_style_order.index(auto_style)
-        except ValueError:
-            d_idx = 0
-        chosen_style = st.selectbox("Correct Style:", custom_style_order, index=d_idx)
+#     with col_sel:
+#         try:
+#             d_idx = custom_style_order.index(auto_style)
+#         except ValueError:
+#             d_idx = 0
+#         chosen_style = st.selectbox("Correct Style:", custom_style_order, index=d_idx)
 
-    with col_save:
-        if st.button("💾 Save & Next", width="stretch"):
-            new_row = pd.DataFrame(
-                {"Unique_ID": [st.session_state.active_id], "Manual_Art_Style": [chosen_style]}
-            )
-            new_row.to_csv(manual_file, mode="a", header=False, index=False)
-            with open(valid_ids_file, "a", encoding="utf-8") as f:
-                f.write(f"{st.session_state.active_id}\n")
+#     with col_save:
+#         if st.button("💾 Save & Next", width="stretch"):
+#             new_row = pd.DataFrame(
+#                 {"Unique_ID": [st.session_state.active_id], "Manual_Art_Style": [chosen_style]}
+#             )
+#             new_row.to_csv(manual_file, mode="a", header=False, index=False)
+#             with open(valid_ids_file, "a", encoding="utf-8") as f:
+#                 f.write(f"{st.session_state.active_id}\n")
 
-            st.session_state.year_counter += 1  # Increment counter
-            del st.session_state.active_id
-            st.rerun()
+#             st.session_state.year_counter += 1  # Increment counter
+#             del st.session_state.active_id
+#             st.rerun()
 
-    if st.button("⏭️ Skip to Next Year"):
-        st.session_state.year_counter = 3  # Force the jump logic
-        st.rerun()
+#     if st.button("⏭️ Skip to Next Year"):
+#         st.session_state.year_counter = 3  # Force the jump logic
+#         st.rerun()
 
-    # --- SECTION 2: MARIO PRIORITY QUEUE ---
-    st.divider()
-    st.header("🍄 Named Priority Queue")
+#     # --- SECTION 2: MARIO PRIORITY QUEUE ---
+#     st.divider()
+#     st.header("🍄 Named Priority Queue")
 
-    mario_available = unique_games_df[
-        (unique_games_df["Game"].str.contains("zelda", case=False, na=False))
-        & (~unique_games_df["Unique_ID"].str.lower().str.strip().isin(done_ids))
-    ].copy()
+#     mario_available = unique_games_df[
+#         (unique_games_df["Game"].str.contains("zelda", case=False, na=False))
+#         & (~unique_games_df["Unique_ID"].str.lower().str.strip().isin(done_ids))
+#     ].copy()
 
-    if mario_available.empty:
-        st.success("🍄 No more games to categorize!")
-    else:
-        if (
-            "mario_active_id" not in st.session_state
-            or st.session_state.mario_active_id.lower().strip() in done_ids
-        ):
-            st.session_state.mario_active_id = mario_available.iloc[0]["Unique_ID"]
+#     if mario_available.empty:
+#         st.success("🍄 No more games to categorize!")
+#     else:
+#         if (
+#             "mario_active_id" not in st.session_state
+#             or st.session_state.mario_active_id.lower().strip() in done_ids
+#         ):
+#             st.session_state.mario_active_id = mario_available.iloc[0]["Unique_ID"]
 
-        m_game_rows = df[df["Unique_ID"] == st.session_state.mario_active_id]
-        m_current = m_game_rows.iloc[0]
-        m_auto_style = str(m_current["Art_Style"])
+#         m_game_rows = df[df["Unique_ID"] == st.session_state.mario_active_id]
+#         m_current = m_game_rows.iloc[0]
+#         m_auto_style = str(m_current["Art_Style"])
 
-        st.subheader(f"{m_current['Game']} ({int(m_current['Year'])})")
+#         st.subheader(f"{m_current['Game']} ({int(m_current['Year'])})")
 
-        m_img_cols = st.columns(min(len(m_game_rows), 4))
-        for i, shot in enumerate(m_game_rows.head(4).itertuples()):
-            with m_img_cols[i]:
-                st.image(shot.Screenshot, width="stretch")
+#         m_img_cols = st.columns(min(len(m_game_rows), 4))
+#         for i, shot in enumerate(m_game_rows.head(4).itertuples()):
+#             with m_img_cols[i]:
+#                 st.image(shot.Screenshot, width="stretch")
 
-        m_col1, m_col2, m_col3 = st.columns([1, 2, 1])
+#         m_col1, m_col2, m_col3 = st.columns([1, 2, 1])
 
-        with m_col1:
-            if st.button(f"✅ Confirm: {m_auto_style}", key="m_confirm"):
-                with open(valid_ids_file, "a", encoding="utf-8") as f:
-                    f.write(f"{st.session_state.mario_active_id}\n")
-                del st.session_state.mario_active_id
-                st.rerun()
+#         with m_col1:
+#             if st.button(f"✅ Confirm: {m_auto_style}", key="m_confirm"):
+#                 with open(valid_ids_file, "a", encoding="utf-8") as f:
+#                     f.write(f"{st.session_state.mario_active_id}\n")
+#                 del st.session_state.mario_active_id
+#                 st.rerun()
 
-        with m_col2:
-            try:
-                m_d_idx = custom_style_order.index(m_auto_style)
-            except ValueError:
-                m_d_idx = 0
-            m_chosen_style = st.selectbox(
-                "Correct Style:", custom_style_order, index=m_d_idx, key="m_select"
-            )
-            st.write(f"{len(mario_available)} games left")
+#         with m_col2:
+#             try:
+#                 m_d_idx = custom_style_order.index(m_auto_style)
+#             except ValueError:
+#                 m_d_idx = 0
+#             m_chosen_style = st.selectbox(
+#                 "Correct Style:", custom_style_order, index=m_d_idx, key="m_select"
+#             )
+#             st.write(f"{len(mario_available)} games left")
 
-        with m_col3:
-            if st.button("💾 Save & Next", key="m_save"):
-                m_new_row = pd.DataFrame(
-                    {
-                        "Unique_ID": [st.session_state.mario_active_id],
-                        "Manual_Art_Style": [m_chosen_style],
-                    }
-                )
-                m_new_row.to_csv(manual_file, mode="a", header=False, index=False)
-                with open(valid_ids_file, "a", encoding="utf-8") as f:
-                    f.write(f"{st.session_state.mario_active_id}\n")
+#         with m_col3:
+#             if st.button("💾 Save & Next", key="m_save"):
+#                 m_new_row = pd.DataFrame(
+#                     {
+#                         "Unique_ID": [st.session_state.mario_active_id],
+#                         "Manual_Art_Style": [m_chosen_style],
+#                     }
+#                 )
+#                 m_new_row.to_csv(manual_file, mode="a", header=False, index=False)
+#                 with open(valid_ids_file, "a", encoding="utf-8") as f:
+#                     f.write(f"{st.session_state.mario_active_id}\n")
 
-                del st.session_state.mario_active_id
-                st.rerun()
+#                 del st.session_state.mario_active_id
+#                 st.rerun()
