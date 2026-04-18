@@ -40,7 +40,8 @@ st.markdown(
 # )
 # url = "https://drive.google.com/uc?export=download&id=1lO3ZSw-KWMC5Dw-QCknqjJE4Ug3WPI8U"
 
-url = "https://www.dropbox.com/scl/fi/etarsizhoelwtcabib2n2/final_processed_game_data.parquet?rlkey=1das5lwj8bg51bk4ezljr9r3b&st=wg6tcbc8&dl=1"
+# url = "https://www.dropbox.com/scl/fi/etarsizhoelwtcabib2n2/final_processed_game_data.parquet?rlkey=1das5lwj8bg51bk4ezljr9r3b&st=wg6tcbc8&dl=1"
+url = "https://www.dropbox.com/scl/fi/etarsizhoelwtcabib2n2/final_processed_game_data.parquet?rlkey=1das5lwj8bg51bk4ezljr9r3b&st=wg6tcbc8&raw=1"
 df, unique_devs_list, top_50_global = helper.load_data(url)
 df_safe = df[~df["is_nsfw"]].copy()
 decades = sorted(list(set(df["Decade"].unique())))

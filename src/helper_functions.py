@@ -6,7 +6,7 @@ import numpy as np
 @st.cache_data
 def load_data(url):
     # Load the pre-processed file
-    df = pd.read_parquet(url)
+    df = pd.read_parquet(url, engine='pyarrow')
     rename_map = {col.lower(): col for col in df.columns}
 
     if "game" in rename_map:

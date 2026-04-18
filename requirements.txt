@@ -10,7 +10,8 @@ streamlit
 pandas
 plotly
 numpy
+pyarrow
+Pillow
+Requests
 # csv
 # os
-# requests
-# PIL
