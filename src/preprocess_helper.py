@@ -178,3 +178,37 @@ def finalize_screenshot_urls(df):
     # Overwrite the Screenshot column with the web URL
     df["Screenshot"] = df["Screenshot"].apply(convert_to_url)
     return df
+
+def generate_timeline_summary(df, column):
+    summary_rows = []
+    
+    unique_items = df[column].str.split("|").explode().str.strip().unique()
+    unique_items = [i for i in unique_items if i and i != "unknown"]
+
+    for item in sorted(unique_items):
+        # Filter for games containing this specific genre/theme
+        item_df = df[df[column].str.contains(item, case=False, na=False)]
+        
+        for year, year_df in item_df.groupby("Year"):
+            # if year == 0: continue            
+            current_decade = year_df["Decade"].iloc[0]
+            
+            valid_styles = year_df[~year_df["Art_Style"].str.contains("Unclassified", na=False)]["Art_Style"]
+            if not valid_styles.empty:
+                top_style = valid_styles.mode()[0]
+            else:
+                top_style = year_df["Art_Style"].mode()[0] if not year_df["Art_Style"].empty else "Unknown"
+
+            palette = ph.get_ranked_colors(year_df.sample(min(500, len(year_df))), count=10)
+            palette_str = "|".join([f"#{int(c.R):02x}{int(c.G):02x}{int(c.B):02x}" for c in palette])
+            
+            summary_rows.append({
+                "Item": item,      # The Genre or Theme name
+                "Year": int(year),
+                "Decade": int(current_decade),
+                "Top_Style": top_style,
+                "Game_Count": len(year_df),
+                "Palette_Str": palette_str
+            })
+    
+    return pd.DataFrame(summary_rows)
