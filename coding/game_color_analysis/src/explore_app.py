@@ -1142,7 +1142,7 @@ elif page == "Style Categorizer":
     st.header("🍄 Named Priority Queue")
 
     mario_available = unique_games_df[
-        (unique_games_df["Game"].str.contains("pac-man", case=False, na=False))
+        (unique_games_df["Game"].str.contains("zelda", case=False, na=False))
         & (~unique_games_df["Unique_ID"].str.lower().str.strip().isin(done_ids))
     ].copy()
 
