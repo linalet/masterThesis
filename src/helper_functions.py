@@ -4,9 +4,9 @@ import numpy as np
 
 
 @st.cache_data
-def load_data(path):
+def load_data(url):
     # Load the pre-processed file
-    df = pd.read_parquet(path)
+    df = pd.read_parquet(url)
     rename_map = {col.lower(): col for col in df.columns}
 
     if "game" in rename_map:

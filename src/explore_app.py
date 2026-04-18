@@ -33,12 +33,13 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-path = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    # "data/final_processed_game_data.parquet",
-    "data/processed_game_data.parquet",
-)
-df, unique_devs_list, top_50_global = helper.load_data(path)
+# path = os.path.join(
+#     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+#     # "data/final_processed_game_data.parquet",
+#     "data/processed_game_data.parquet",
+# )
+url = "https://drive.google.com/file/d/1lO3ZSw-KWMC5Dw-QCknqjJE4Ug3WPI8U/view?usp=drive_link"
+df, unique_devs_list, top_50_global = helper.load_data(url)
 df_safe = df[~df["is_nsfw"]].copy()
 decades = sorted(list(set(df["Decade"].unique())))
 custom_style_order = [
