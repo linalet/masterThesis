@@ -1,5 +1,7 @@
 .env
-coding/game_color_analysis/data/
+data/
+notebooks/
+trash/
 __pycache__/
 *.pyc
 
