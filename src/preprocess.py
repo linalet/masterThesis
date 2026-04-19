@@ -111,7 +111,13 @@ def run_preprocessing(input_path="data/game_data.parquet"):
     studio_summary.to_parquet(
         os.path.join(base_dir, "data/studio_summaries.parquet"), engine="pyarrow", index=False
     )
+    print("📊 Pre-calculating Decade and Style Palettes...")
+    decade_style_summary = ph.generate_decade_style_summary(df)
+    decade_style_summary.to_parquet(
+        os.path.join(base_dir, "data/decade_style_summaries.parquet"), engine="pyarrow", index=False
+    )
 
+    print("✅ Preprocessing Complete.")
     print("✅ Preprocessing Complete.")
 
 

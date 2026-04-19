@@ -246,3 +246,55 @@ def generate_studio_summary(df):
         )
 
     return pd.DataFrame(results)
+
+
+def generate_decade_style_summary(df):
+    """Pre-calculates palettes for every decade and every art style within that decade."""
+    results = []
+    decades = sorted(df["Decade"].unique().tolist())
+    all_styles = ["All Styles"] + sorted(df["Art_Style"].unique().tolist())
+
+    for dec in decades:
+        dec_df = df[df["Decade"] == dec]
+        if dec_df.empty:
+            continue
+
+        for style in all_styles:
+            if style == "All Styles":
+                target_df = dec_df
+            else:
+                target_df = dec_df[dec_df["Art_Style"] == style]
+
+            if target_df.empty:
+                continue
+
+            # Thesis Scoring Logic
+            all_colors = []
+            # Note: We pull from the individual game palettes calculated earlier in preprocess
+            for palette in target_df["Color_palette"].dropna():
+                for entry in palette.split("|"):
+                    if "," in entry:
+                        h_code, weight = entry.split(",")
+                        h_code = h_code.strip().upper()
+                        rgb = tuple(int(h_code.lstrip("#")[i : i + 2], 16) for i in (0, 2, 4))
+                        sat = max(rgb) - min(rgb)
+                        all_colors.append({"hex": h_code, "w": float(weight), "s": sat})
+
+            if not all_colors:
+                continue
+
+            cdf = pd.DataFrame(all_colors)
+            agg = cdf.groupby("hex").agg({"w": "sum", "s": "max"}).reset_index()
+            agg["score"] = (agg["w"] * 10) * (agg["s"] + 5)
+            top_palette = agg.sort_values("score", ascending=False).head(10)["hex"].tolist()
+
+            results.append(
+                {
+                    "Decade": dec,
+                    "Art_Style": style,
+                    "Palette": "|".join(top_palette),
+                    "Game_Count": len(target_df),
+                }
+            )
+
+    return pd.DataFrame(results)

@@ -294,13 +294,21 @@ elif page == "Color through Decades":
         if not decade_data.empty:
             all_colors = []
             for palette in decade_data["Color_palette"].dropna():
-                colors_with_weights = palette.split("|")
-                clean_hexes = [c.split(",")[0].strip() for c in colors_with_weights if c]
-                all_colors.extend(clean_hexes)
+                for entry in palette.split("|"):
+                    if "," in entry:
+                        hex, weight = entry.split(",")
+                        hex = hex.strip().upper()
+                        rgb = tuple(int(hex.lstrip("#")[i : i + 2], 16) for i in (0, 2, 4))
+                        sat = max(rgb) - min(rgb)
+                        all_colors.append({"hex": hex, "w": float(weight), "s": sat})
 
             if not all_colors:
                 continue
-            dec_palette = pd.Series(all_colors).value_counts().head(10).index.tolist()
+            cdf = pd.DataFrame(all_colors)
+            agg = cdf.groupby("hex").agg({"w": "sum", "s": "max"}).reset_index()
+            agg["score"] = (agg["w"] * 10) * (agg["s"] + 5)
+            dec_palette = agg.sort_values("score", ascending=False).head(10)["hex"].tolist()
+
             game_count = len(decade_data)
 
             c1, c2 = st.columns([1, 7])
@@ -324,7 +332,6 @@ elif page == "Color through Decades":
     with col_decade:
         decade_sel = st.select_slider("Select Decade", decades)
     with col_style:
-        # df_decade = df[(df["Year"] >= decade_sel) & (df["Year"] < decade_sel + 10)]
         available_styles = sorted(df["Art_Style"].unique().tolist())
         style_choice = st.selectbox("Art Styles", ["All Styles"] + available_styles)
 
@@ -336,17 +343,22 @@ elif page == "Color through Decades":
         ].tolist()
 
     if target_ids:
-        color_data = helper.load_color_data(base_dir, ids=target_ids)
+        color_data = summary_df[summary_df["Unique_ID"].isin(target_ids)]
 
         all_style_hex = []
         for p_str in color_data["Color_palette"].dropna():
-            parts = p_str.split("|")
-            for p in parts:
-                h, w = p.split(",")
-            all_style_hex.extend(clean_hexes)
+            for entry in p_str.split("|"):
+                if "," in entry:
+                    h_c, w_v = entry.split(",")
+                    h_c = h_c.strip().upper()
+                    rgb = tuple(int(h_c.lstrip("#")[i : i + 2], 16) for i in (0, 2, 4))
+                    all_style_hex.append({"hex": h_c, "w": float(w_v), "s": max(rgb) - min(rgb)})
 
         if all_style_hex:
-            final_palette = pd.Series(all_style_hex).value_counts().head(10).index.tolist()
+            s_df = pd.DataFrame(all_style_hex)
+            s_agg = s_df.groupby("hex").agg({"w": "sum", "s": "max"}).reset_index()
+            s_agg["score"] = (s_agg["w"] * 10) * (s_agg["s"] + 5)
+            final_palette = s_agg.sort_values("score", ascending=False).head(10)["hex"].tolist()
 
             st.markdown(f"#### {style_choice} Palette in the {decade_sel}s")
 
