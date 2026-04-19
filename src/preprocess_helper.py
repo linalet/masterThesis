@@ -218,34 +218,34 @@ def generate_timeline_summary(df, column):
     return pd.DataFrame(summary_rows)
 
 
+import pandas as pd
+
+
 def generate_studio_summary(df):
-    all_devs = df["Developers"].str.split("|").explode().str.strip().unique()
-    all_devs = [d for d in all_devs if d and d != "unknown"]
+    exploded = df.assign(Developer=df["Developers"].str.split("|")).explode("Developer")
+    exploded["Developer"] = exploded["Developer"].str.strip()
+    mask = exploded["Developer"] != "unknown"
+    exploded = exploded[mask]
 
-    studio_rows = []
-
-    for studio in sorted(all_devs):
-        studio_df = df[df["Developers"].str.contains(studio, case=False, na=False, regex=False)]
-        if studio_df.empty:
-            continue
-
-        pal = helper.get_ranked_colors(studio_df, count=10)
+    results = []
+    for studio, group in exploded.groupby("Developer"):
+        pal = helper.get_ranked_colors(group, count=10)
         pal_str = "|".join([f"#{int(c.R):02x}{int(c.G):02x}{int(c.B):02x}" for c in pal])
 
-        classified = studio_df[studio_df["Is_classified"]]
-        unclassified_pct = ((len(studio_df) - len(classified)) / len(studio_df)) * 100
+        classified = group[group["Is_classified"]]
+        unclassified_pct = ((len(group) - len(classified)) / len(group)) * 100
 
         style_counts = classified["Art_Style"].value_counts()
         style_dist_str = "|".join([f"{style}:{count}" for style, count in style_counts.items()])
 
-        studio_rows.append(
+        results.append(
             {
                 "Studio": studio,
-                "Game_Count": len(studio_df),
+                "Game_Count": len(group),
                 "Palette": pal_str,
                 "Style_Dist": style_dist_str,
                 "Unclassified_Pct": round(unclassified_pct, 1),
             }
         )
 
-    return pd.DataFrame(studio_rows)
+    return pd.DataFrame(results)

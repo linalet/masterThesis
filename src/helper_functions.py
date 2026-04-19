@@ -23,12 +23,19 @@ def load_data(base_dir):
 
 
 @st.cache_data
-def load_color_data(base_dir, unique_id=None):
+def load_color_data(base_dir, ids=None):
+    """
+    Loads color analytics data.
+    Accepts a single Unique_ID (str) or a list of Unique_IDs.
+    """
     path = os.path.join(base_dir, "data/color_analytics.parquet")
-    # If a unique_id is provided, we use 'filters' to only load 5 rows instead of 1 million
-    if unique_id:
-        return pd.read_parquet(path, filters=[("Unique_ID", "==", unique_id)])
-    return pd.read_parquet(path)
+
+    if ids:
+        if isinstance(ids, str):
+            ids = [ids]
+
+        return pd.read_parquet(path, filters=[("Unique_ID", "in", ids)], engine="pyarrow")
+    return pd.read_parquet(path, engine="pyarrow")
 
 
 def get_ranked_colors(df_row_or_group, count=5, filter_similarity=True):

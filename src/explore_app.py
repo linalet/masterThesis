@@ -241,18 +241,10 @@ elif page == "Art Style Popularity":
     st.divider()
 
     st.subheader("📈 Dataset Classification Success")
-    all_games_decade = df.groupby("Decade")[
-        "Unique_ID"
-    ].nunique()  # .reset_index(name="Total_Games")
-    classified_decade = (
-        classified_df.groupby("Decade")[
-            "Unique_ID"
-        ].nunique()  # .reset_index(name="Classified_Games")
-    )
+    all_games_decade = df.groupby("Decade")["Unique_ID"].nunique()
+    classified_decade = classified_df.groupby("Decade")["Unique_ID"].nunique()
     progress_df = (classified_decade / all_games_decade * 100).reset_index(name="Successful")
     progress_df = progress_df.fillna(0)
-    # progress_df = pd.merge(all_games_decade, classified_decade, on="Decade", how="left").fillna(0)
-    # progress_df["Successful"] = (progress_df["Classified_Games"] / progress_df["Total_Games"]) * 100
 
     fig = px.bar(
         progress_df,
@@ -265,8 +257,8 @@ elif page == "Art Style Popularity":
     fig.update_layout(
         yaxis=dict(
             range=[0, 100],
-            title_font=dict(size=26),  # Y-axis title
-            tickfont=dict(size=22),  # Y-axis numbers (0, 20, 40...)
+            title_font=dict(size=26),
+            tickfont=dict(size=22),
         ),
         xaxis=dict(
             title_font=dict(size=26),
@@ -288,78 +280,100 @@ elif page == "Art Style Popularity":
 
     st.divider()
 
-# elif page == "Color through Decades":
-#     st.header("🎨 Color through Decades")
-#     st.subheader("Dominant colors of each decade")
+elif page == "Color through Decades":
+    st.header("🎨 Color through Decades")
+    st.subheader("Dominant colors of each decade")
 
-#     for dec_label in decades:
-#         decade_data = df[df["Decade"] == dec_label]
+    summary_path = os.path.join(base_dir, "data/genre_summaries.parquet")
+    summary_df = pd.read_parquet(summary_path)
 
-#         if not decade_data.empty:
-#             palette = helper.get_ranked_colors(decade_data, count=10)
-#             game_count = len(decade_data)
+    for dec_label in decades:
+        decade_data = summary_df[summary_df["Decade"] == dec_label]
 
-#             c1, c2 = st.columns([1, 7])
-#             formatted_count = f"{game_count:,}".replace(",", " ")
+        if not decade_data.empty:
+            all_colors = []
+            for p in decade_data["Palette"].dropna():
+                all_colors.extend(p.split("|"))
 
-#             c1.write(f"### {dec_label}s\n({formatted_count} games)")
+            if not all_colors:
+                break
+            dec_palette = pd.Series(all_colors).value_counts().head(10).index.tolist()
+            game_count = summary_df[summary_df["Decade"] == dec_label].shape[0]
 
-#             with c2:
-#                 html = '<div style="display: flex; height: 40px; border-radius: 8px; overflow: hidden; border: 3px solid #999; margin-bottom: 2px;">'
-#                 hex_labels = '<div style="display: flex; margin-bottom: 2px;">'
+            c1, c2 = st.columns([1, 7])
+            formatted_count = f"{game_count:,}".replace(",", " ")
 
-#                 for c in palette:
-#                     hex_code = "#%02x%02x%02x" % (int(c.R), int(c.G), int(c.B))
-#                     rgb_val = f"rgb({int(c.R)},{int(c.G)},{int(c.B)})"
-#                     html += f'<div style="background-color:{rgb_val}; flex:1;" title="{hex_code.upper()}"></div>'
-#                     hex_labels += f'<div style="flex:1; text-align:center; font-size:14px; color:gray; font-family:monospace;">{hex_code.upper()}</div>'
-#                 html += "</div>"
-#                 st.markdown(html + hex_labels, unsafe_allow_html=True)
+            c1.write(f"### {dec_label}s\n({formatted_count} games)")
 
-#     st.divider()
+            with c2:
+                html = '<div style="display: flex; height: 50px; border-radius: 8px; overflow: hidden; border: 3px solid #999;">'
+                hex_labels = '<div style="display: flex; margin-bottom: 2px;">'
+                for hex_code in dec_palette:
+                    html += f'<div style="background-color:{hex_code}; flex:1;" title="{hex_code.upper()}"></div>'
+                    hex_labels += f'<div style="flex:1; text-align:center; font-size:14px; color:gray; font-family:monospace;">{hex_code.upper()}</div>'
+                html += "</div>"
+                st.markdown(html + hex_labels, unsafe_allow_html=True)
 
-#     st.subheader("Dominant colors in a decade by art style")
-#     col_decade, col_style = st.columns(2)
-#     with col_decade:
-#         decade_sel = st.select_slider("Select Decade", decades)
-#     with col_style:
-#         df_decade = df[(df["Year"] >= decade_sel) & (df["Year"] < decade_sel + 10)]
-#         available_styles = sorted(df_decade["Art_Style"].unique().tolist())
-#         style_choice = st.selectbox("Art Styles", ["All Styles"] + available_styles)
+    st.divider()
 
-#     style_df = df_decade.copy()
-#     if style_choice != "All Styles":
-#         style_df = df_decade[df_decade["Art_Style"] == style_choice]
+    st.subheader("Dominant colors in a decade by art style")
+    col_decade, col_style = st.columns(2)
+    with col_decade:
+        decade_sel = st.select_slider("Select Decade", decades)
+    with col_style:
+        # df_decade = df[(df["Year"] >= decade_sel) & (df["Year"] < decade_sel + 10)]
+        available_styles = sorted(df["Art_Style"].unique().tolist())
+        style_choice = st.selectbox("Art Styles", ["All Styles"] + available_styles)
 
-#     if not style_df.empty:
-#         palette = helper.get_representative_palette(style_df, count=10)
-#         p_cols = st.columns(10)
-#         for i, color in enumerate(palette):
-#             p_cols[i].markdown(
-#                 f"<div style='background-color:{color}; height:60px; border-radius:5px; border: 3px solid #999;'></div>",
-#                 unsafe_allow_html=True,
-#             )
-#             p_cols[i].caption(color)
+    if style_choice == "All Styles":
+        target_ids = df[df["Decade"] == decade_sel]["Unique_ID"].tolist()
+    else:
+        target_ids = df[(df["Decade"] == decade_sel) & (df["Art_Style"] == style_choice)][
+            "Unique_ID"
+        ].tolist()
 
-#         st.subheader(f"Randomized examples from {style_choice} in the {decade_sel}s")
-#         st.write("Games may be categorized incorrectly, due to the use of user generated keywords")
-#         style_df_safe = style_df[~style_df["is_nsfw"]]
-#         if not style_df_safe.empty:
-#             samples = style_df_safe.sample(min(4, len(style_df_safe)))
-#             scols = st.columns(4)
-#             for i, row in enumerate(samples.itertuples()):
-#                 with scols[i % 4]:
-#                     st.image(row.Screenshot, width="stretch")
-#                     st.markdown(
-#                         f"<div style='font-size:14px; text-align:center; color:gray; line-height:1.2; margin-top:5px;'>"
-#                         f"<b>{row.Game.title()}</b><br>({row.Year})"
-#                         f"</div>",
-#                         unsafe_allow_html=True,
-#                     )
-#         else:
-#             st.info(
-#                 "🎨 Data is being used for palette calculation, but no 'Safe for Work' screenshots are available to display for this selection."
-#             )
+    if target_ids:
+        color_data = helper.load_color_data(base_dir, ids=target_ids)
+
+        all_style_hex = []
+        for p_str in color_data["Color_palette"].dropna():
+            parts = p_str.split("|")
+            clean_hexes = [p.split(",")[0].strip() for p in parts if p]
+            all_style_hex.extend(clean_hexes)
+
+        if all_style_hex:
+            final_palette = pd.Series(all_style_hex).value_counts().head(10).index.tolist()
+
+            st.markdown(f"#### {style_choice} Palette in the {decade_sel}s")
+
+            html = '<div style="display: flex; height: 50px; border-radius: 8px; overflow: hidden; border: 3px solid #999;">'
+            hex_labels = '<div style="display: flex; margin-bottom: 2px;">'
+            for hex_code in final_palette:
+                html += f'<div style="background-color:{hex_code}; flex:1;" title="{hex_code.upper()}"></div>'
+                hex_labels += f'<div style="flex:1; text-align:center; font-size:14px; color:gray; font-family:monospace;">{hex_code.upper()}</div>'
+            html += "</div>"
+            st.markdown(html + hex_labels, unsafe_allow_html=True)
+
+        st.subheader(f"Randomized examples from {style_choice} in the {decade_sel}s")
+        st.write("Games may be categorized incorrectly, due to the use of user generated keywords")
+        examples_data = df[df["Unique_ID"].isin(target_ids)]
+        examples_data = examples_data[~examples_data["Is_NSFW"]]
+        if not examples_data.empty:
+            samples = examples_data.sample(min(4, len(examples_data)))
+            scols = st.columns(4)
+            for i, row in enumerate(samples.itertuples()):
+                with scols[i]:
+                    st.image(row.Screenshot, width="stretch")
+                    st.markdown(
+                        f"<div style='font-size:14px; text-align:center; color:gray; line-height:1.2; margin-top:5px;'>"
+                        f"<b>{row.Game.title()}</b><br>({row.Year})"
+                        f"</div>",
+                        unsafe_allow_html=True,
+                    )
+        else:
+            st.info(
+                "🎨 Data is being used for palette calculation, but no 'Safe for Work' screenshots are available to display for this selection."
+            )
 
 
 # elif page == "Genre Timelines":

@@ -50,28 +50,28 @@ def run_preprocessing(input_path="data/game_data.parquet"):
     df["Art_Style"] = ph.classify_taxonomy(df)
     df["Is_classified"] = ~df["Art_Style"].str.startswith("Unclassified")
 
-    # print("🖼 Saving screenshot URLs...")
-    # df = ph.finalize_screenshot_urls(df)
+    print("🖼 Saving screenshot URLs...")
+    df = ph.finalize_screenshot_urls(df)
 
-    # search_cols = [
-    #     "Unique_ID",
-    #     "Game",
-    #     "Year",
-    #     "Decade",
-    #     "Developers",
-    #     "Screenshot",
-    #     "Genres",
-    #     "Themes",
-    #     "Art_Style",
-    #     "Is_classified",
-    #     "Is_NSFW",
-    #     "Saturation",
-    #     "Decade_Avg_Saturation",
-    # ]
-    # df_search = df[search_cols]
-    # df_search.to_parquet(
-    #     os.path.join(base_dir, "data/search_metadata.parquet"), engine="pyarrow", index=False
-    # )
+    search_cols = [
+        "Unique_ID",
+        "Game",
+        "Year",
+        "Decade",
+        "Developers",
+        "Screenshot",
+        "Genres",
+        "Themes",
+        "Art_Style",
+        "Is_classified",
+        "Is_NSFW",
+        "Saturation",
+        "Decade_Avg_Saturation",
+    ]
+    df_search = df[search_cols]
+    df_search.to_parquet(
+        os.path.join(base_dir, "data/search_metadata.parquet"), engine="pyarrow", index=False
+    )
 
     # print("🎨 Calculating Color Metrics and Palettes...")
     # if "Color_palette" in df.columns:
