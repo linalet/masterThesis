@@ -8,14 +8,15 @@ from PIL import Image
 from igdb_api import download_image, query_igdb
 
 
-START_YEAR = 2026
+START_YEAR = 1950
 END_YEAR = 2026
 SCREENSHOT_COUNT = 5  # possibly increase to 10
 COLOR_COUNT = 10
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(ROOT_DIR, "data")
-OUTPUT_CSV = os.path.join(DATA_DIR, "final_game_data.csv")
+# OUTPUT_CSV = os.path.join(DATA_DIR, "game_data.csv")
+OUTPUT_PARQUET = os.path.join(DATA_DIR, "game_data.parquet")
 
 # List of keywords to filter nsfw images
 NSFW_WORDS = [
@@ -85,86 +86,130 @@ def main():
         "Is_NSFW",
     ] + color_headers
 
-    if os.path.exists(OUTPUT_CSV):
+    if os.path.exists(OUTPUT_PARQUET):
         # Skip processed screenshots
-        processed = set(
-            pd.read_csv(OUTPUT_CSV, usecols=["Screenshot"])["Screenshot"].astype(str).tolist()
-        )
-        # current_csv = pd.read_csv(OUTPUT_CSV, low_memory=False)
+        processed = set(pd.read_csv(OUTPUT_PARQUET, columns=["Screenshot"])["Screenshot"].tolist())
+        append_mode = True
+        # current_csv = pd.read_csv(OUTPUT_PARQUET, low_memory=False)
         # processed = set(current_csv["Screenshot"].astype(str).tolist())
     else:
-        os.makedirs(DATA_DIR, exist_ok=True)
-        with open(OUTPUT_CSV, mode="w", newline="", encoding="utf-8") as file:
-            writer = csv.writer(file, quoting=csv.QUOTE_ALL)
-            writer.writerow(header)
-            # writer = csv.writer(file)
-            # writer.writerow(header)
+        # os.makedirs(DATA_DIR, exist_ok=True)
+        # with open(OUTPUT_PARQUET, mode="w", newline="", encoding="utf-8") as file:
+        #     writer = csv.writer(file, quoting=csv.QUOTE_ALL)
+        #     writer.writerow(header)
         processed = set()
+        append_mode = False
 
-    with open(OUTPUT_CSV, mode="a", newline="", encoding="utf-8") as file:
-        writer = csv.writer(file, quoting=csv.QUOTE_ALL)
+    # with open(OUTPUT_PARQUET, mode="a", newline="", encoding="utf-8") as file:
+    #     writer = csv.writer(file, quoting=csv.QUOTE_ALL)
+    buffer = []
+    counter = 0
+    for year in range(START_YEAR, END_YEAR + 1):
+        print(f"[INFO] Getting games from {year}...")
 
-        for year in range(START_YEAR, END_YEAR + 1):
-            print(f"[INFO] Getting games from {year}...")
-            offset = 0
-            while True:
-                games = query_igdb(year, offset=offset)
-                if not games:
-                    break  # no more games
-                # get data
-                for game in games:
-                    name = game.get("name", "Unknown")
-                    devs = "|".join(
-                        [
-                            c["company"]["name"]
-                            for c in game.get("involved_companies", [])
-                            if c.get("developer")
-                        ]
-                    )
-                    genres = "|".join(g["name"] for g in game.get("genres", []) if "name" in g)
-                    themes = "|".join(t["name"] for t in game.get("themes", []) if "name" in t)
-                    keywords = "|".join(k["name"] for k in game.get("keywords", []) if "name" in k)
-                    perspective = "|".join(
-                        p["name"] for p in game.get("player_perspectives", []) if "name" in p
-                    )
-                    combined_text = f"{genres} {themes} {keywords} {name}".lower()
-                    is_nsfw = 1 if any(word in combined_text for word in NSFW_WORDS) else 0
-                    # screenshots = game.get("screenshots", [])
+        offset = 0
+        while True:
+            games = query_igdb(year, offset=offset)
+            if not games:
+                break  # no more games
+            for game in games:
+                name = game.get("name", "Unknown")
+                devs = "|".join(
+                    [
+                        c["company"]["name"]
+                        for c in game.get("involved_companies", [])
+                        if c.get("developer")
+                    ]
+                )
+                genres = "|".join(g["name"] for g in game.get("genres", []) if "name" in g)
+                themes = "|".join(t["name"] for t in game.get("themes", []) if "name" in t)
+                keywords = "|".join(k["name"] for k in game.get("keywords", []) if "name" in k)
+                perspective = "|".join(
+                    p["name"] for p in game.get("player_perspectives", []) if "name" in p
+                )
+                combined_text = f"{genres} {themes} {keywords} {name}".lower()
+                is_nsfw = 1 if any(word in combined_text for word in NSFW_WORDS) else 0
+                # screenshots = game.get("screenshots", [])
 
-                    for screen in game.get("screenshots", [])[:SCREENSHOT_COUNT]:
-                        image_path = download_image(screen["url"])
-                        # Skip if download failed or already recorded
-                        if not image_path or image_path in processed:
-                            continue
+                for screen in game.get("screenshots", [])[:SCREENSHOT_COUNT]:
+                    image_path = download_image(screen["url"])
+                    # Skip if download failed or already recorded
+                    if not image_path or image_path in processed:
+                        continue
 
-                        palette = get_palette(image_path, n_clusters=COLOR_COUNT)
-                        color_data = []
-                        for i in range(COLOR_COUNT):
-                            if i < len(palette):
-                                color_data.extend(list(palette[i]))
-                            else:
-                                color_data.extend([None, None, None, 0.0])
-                        writer.writerow(
-                            [
-                                year,
-                                year // 10 * 10,
-                                name,
-                                image_path,
-                                genres,
-                                themes,
-                                keywords,
-                                perspective,
-                                devs,
-                                is_nsfw,
-                            ]
-                            + color_data
+                    palette = get_palette(image_path, n_clusters=COLOR_COUNT)
+                    row = {
+                        "Year": year,
+                        "Game": game.get("name", "Unknown"),
+                        "Screenshot": image_path,
+                        "Developers": devs,
+                        "Genres": genres,
+                        "Themes": themes,
+                        "Keywords": keywords,
+                        "Player_Perspective": perspective,
+                        "Is_NSFW": is_nsfw,
+                    }
+                    for i in range(COLOR_COUNT):
+                        r, g, b, w = palette[i] if i < len(palette) else (None, None, None, 0.0)
+                        row.update(
+                            {f"C{i + 1}_R": r, f"C{i + 1}_G": g, f"C{i + 1}_B": b, f"C{i + 1}_W": w}
                         )
-                        processed.add(image_path)
-                        print(f"[INFO] Saved {name} ({year})")
 
-                offset += len(games)
-            print(f"[INFO] Finished all games for {year}")
+                    buffer.append(row)
+                    processed.add(image_path)
+                    counter += 1
 
+                    if counter % 500 == 0:
+                        df_flush = pd.DataFrame(buffer)
+                        df_flush.to_parquet(
+                            OUTPUT_PARQUET, engine="fastparquet", append=append_mode, index=False
+                        )
+                        append_mode = True
+                        buffer = []
+                        print(f"💾 Milestone: {counter} games saved to disk. RAM cleared.")
+                    # color_data = []
+                    # for i in range(COLOR_COUNT):
+                    #     if i < len(palette):
+                    #         color_data.extend(list(palette[i]))
+                    #     else:
+                    #         color_data.extend([None, None, None, 0.0])
+                    # writer.writerow(
+                    #     [
+                    #         year,
+                    #         year // 10 * 10,
+                    #         name,
+                    #         image_path,
+                    #         genres,
+                    #         themes,
+                    #         keywords,
+                    #         perspective,
+                    #         devs,
+                    #         is_nsfw,
+                    #     ]
+                    #     + color_data
+                    # )
+                    # processed.add(image_path)
+                    print(f"[INFO] Saved {name} ({year})")
+
+            offset += len(games)
+        # if buffer:
+        #     df_year = pd.DataFrame(buffer)
+        #     df_year.to_parquet(
+        #         OUTPUT_PARQUET,
+        #         engine="fastparquet",
+        #         append=append_mode,
+        #         index=False
+        #     )
+        #     append_mode = True
+        #     print(f"✅ Saved all of {year}. Total games in buffer: {len(buffer)}")
+        print(f"[INFO] Finished all games for {year}")
+    if buffer:
+        pd.DataFrame(buffer).to_parquet(
+            OUTPUT_PARQUET, engine="fastparquet", append=append_mode, index=False
+        )
+        print("🏁 Final batch saved. Collection complete!")
+    df_final = pd.read_parquet(OUTPUT_PARQUET)
+    df_final.to_csv(os.path.join(DATA_DIR, "human_readable_backup.csv"), index=False)
     print("[INFO] Data collection complete!")
 
 

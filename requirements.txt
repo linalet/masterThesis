@@ -11,6 +11,7 @@ pandas
 plotly
 numpy
 pyarrow
+fastparquet
 Pillow
 Requests
 # csv

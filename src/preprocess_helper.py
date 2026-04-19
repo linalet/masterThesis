@@ -1,6 +1,8 @@
 import os
+
 # from os import path
 import pandas as pd
+import helper_functions as helper
 
 studio_map = {
     "nintendo": [],
@@ -84,8 +86,7 @@ def manual_classification(main_df, classified_path="data/manual_classification.c
         mask = df["Manual_Art_Style"].notna()
         df.loc[mask, "Art_Style"] = df.loc[mask, "Manual_Art_Style"]
 
-        # 3. Clean up the temp column and mark as classified
-        df.loc[mask, "is_classified"] = True
+        df.loc[mask, "Is_classified"] = True
         df = df.drop(columns=["Manual_Art_Style"])
 
         print(f"✅ Successfully applied {mask.sum()} manual overrides.")
@@ -100,7 +101,6 @@ def classify_taxonomy(df):
     text = (df["Keywords"] + " " + df["Themes"] + " " + df["Genres"]).str.lower()
     persp = df["Player_Perspective"].str.lower()
 
-    # Manual categorization to ensure some accurate data
     df = manual_classification(df)
     is_free = df["Art_Style"] == "Unclassified"
 
@@ -153,7 +153,7 @@ def classify_taxonomy(df):
     # is_free = df["Art_Style"] == "Unclassified"
     # df.loc[is_free & text.str.contains("2d|2-d", na=False), "Art_Style"] = "Unclassified 2D"
     is_free = df["Art_Style"] == "Unclassified"
-    df["is_classified"] = ~df["Art_Style"].str.startswith("Unclassified")
+    df["Is_classified"] = ~df["Art_Style"].str.startswith("Unclassified")
 
     return df["Art_Style"]
 
@@ -168,47 +168,84 @@ def finalize_screenshot_urls(df):
         if pd.isna(path) or path == "":
             return "https://via.placeholder.com/1280x720?text=No+Image"
 
-        # Extract the filename (e.g., 'co1r98.jpg') from the path
         filename = os.path.basename(str(path))
-        # Get the ID without the extension
         image_id = os.path.splitext(filename)[0]
 
         return f"https://images.igdb.com/igdb/image/upload/t_screenshot_huge/{image_id}.jpg"
 
-    # Overwrite the Screenshot column with the web URL
     df["Screenshot"] = df["Screenshot"].apply(convert_to_url)
     return df
 
+
 def generate_timeline_summary(df, column):
     summary_rows = []
-    
+
     unique_items = df[column].str.split("|").explode().str.strip().unique()
     unique_items = [i for i in unique_items if i and i != "unknown"]
 
     for item in sorted(unique_items):
-        # Filter for games containing this specific genre/theme
-        item_df = df[df[column].str.contains(item, case=False, na=False)]
-        
+        item_df = df[df[column].str.contains(item, case=False, na=False, regex=False)]
+
         for year, year_df in item_df.groupby("Year"):
-            # if year == 0: continue            
             current_decade = year_df["Decade"].iloc[0]
-            
-            valid_styles = year_df[~year_df["Art_Style"].str.contains("Unclassified", na=False)]["Art_Style"]
+
+            valid_styles = year_df[~year_df["Art_Style"].str.contains("Unclassified", na=False)][
+                "Art_Style"
+            ]
             if not valid_styles.empty:
                 top_style = valid_styles.mode()[0]
             else:
-                top_style = year_df["Art_Style"].mode()[0] if not year_df["Art_Style"].empty else "Unknown"
+                top_style = (
+                    year_df["Art_Style"].mode()[0] if not year_df["Art_Style"].empty else "Unknown"
+                )
 
-            palette = ph.get_ranked_colors(year_df.sample(min(500, len(year_df))), count=10)
-            palette_str = "|".join([f"#{int(c.R):02x}{int(c.G):02x}{int(c.B):02x}" for c in palette])
-            
-            summary_rows.append({
-                "Item": item,      # The Genre or Theme name
-                "Year": int(year),
-                "Decade": int(current_decade),
-                "Top_Style": top_style,
-                "Game_Count": len(year_df),
-                "Palette_Str": palette_str
-            })
-    
+            palette = helper.get_ranked_colors(year_df, count=10)
+            palette_str = "|".join(
+                [f"#{int(c.R):02x}{int(c.G):02x}{int(c.B):02x}" for c in palette]
+            )
+
+            summary_rows.append(
+                {
+                    "Item": item,  # The Genre or Theme name
+                    "Year": int(year),
+                    "Decade": int(current_decade),
+                    "Top_Style": top_style,
+                    "Game_Count": len(year_df),
+                    "Palette": palette_str,
+                }
+            )
+
     return pd.DataFrame(summary_rows)
+
+
+def generate_studio_summary(df):
+    all_devs = df["Developers"].str.split("|").explode().str.strip().unique()
+    all_devs = [d for d in all_devs if d and d != "unknown"]
+
+    studio_rows = []
+
+    for studio in sorted(all_devs):
+        studio_df = df[df["Developers"].str.contains(studio, case=False, na=False, regex=False)]
+        if studio_df.empty:
+            continue
+
+        pal = helper.get_ranked_colors(studio_df, count=10)
+        pal_str = "|".join([f"#{int(c.R):02x}{int(c.G):02x}{int(c.B):02x}" for c in pal])
+
+        classified = studio_df[studio_df["Is_classified"]]
+        unclassified_pct = ((len(studio_df) - len(classified)) / len(studio_df)) * 100
+
+        style_counts = classified["Art_Style"].value_counts()
+        style_dist_str = "|".join([f"{style}:{count}" for style, count in style_counts.items()])
+
+        studio_rows.append(
+            {
+                "Studio": studio,
+                "Game_Count": len(studio_df),
+                "Palette": pal_str,
+                "Style_Dist": style_dist_str,
+                "Unclassified_Pct": round(unclassified_pct, 1),
+            }
+        )
+
+    return pd.DataFrame(studio_rows)

@@ -1,5 +1,6 @@
 .env
-data/
+data/screenshots/
+data/unused/
 notebooks/
 trash/
 __pycache__/

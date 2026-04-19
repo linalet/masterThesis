@@ -1,46 +1,34 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import os
 
 
-@st.cache_data
-def load_data(url):
-    # Load the pre-processed file
-    df = pd.read_parquet(url, engine='pyarrow')
-    rename_map = {col.lower(): col for col in df.columns}
+def load_data(base_dir):
+    path = os.path.join(base_dir, "data/search_metadata.parquet")
+    df = pd.read_parquet(path, engine="pyarrow")
 
-    if "game" in rename_map:
-        df = df.rename(columns={rename_map["game"]: "Game"})
+    df["Year"] = pd.to_numeric(df["Year"], downcast="integer")
+    df["Decade"] = pd.to_numeric(df["Decade"], downcast="integer")
 
-    if "Game" not in df.columns:
-        # if "name" in rename_map:
-        #     df = df.rename(columns={rename_map["name"]: "Game"})
-        # else:
-        available = ", ".join(df.columns)
-        raise KeyError(f"Critical Column 'Game' missing from Parquet. Available: {available}")
-
-    standard_cols = ["Year", "Developers", "Themes", "Genres", "Art_Style", "Screenshot"]
-    for col in standard_cols:
-        lower_col = col.lower()
-        if lower_col in rename_map and col not in df.columns:
-            df = df.rename(columns={rename_map[lower_col]: col})
-
-    for col in df.select_dtypes(include=["int64"]).columns:
-        df[col] = pd.to_numeric(df[col], downcast="integer")
-    for col in df.select_dtypes(include=["float64"]).columns:
-        df[col] = pd.to_numeric(df[col], downcast="float")
-
-    df["Dev_Set"] = df["Developers"].apply(lambda x: set(x.split("|")))
-    df["Theme_Set"] = df["Themes"].apply(lambda x: set(x.split("|")))
-    df["Genre_Set"] = df["Genres"].apply(lambda x: set(x.split("|")))
+    df["Dev_List"] = df["Developers"].str.split("|")
+    df["Genre_List"] = df["Genres"].str.split("|")
+    df["Theme_List"] = df["Themes"].str.split("|")
 
     all_devs = df["Developers"].str.split("|").explode().str.strip()
     unique_devs = sorted(all_devs[all_devs != ""].unique().tolist())
     top_studios = all_devs[all_devs != "unknown"].value_counts().nlargest(50).index.tolist()
 
-    df_indexed = df.set_index("Game", drop=False)
+    return df, unique_devs, top_studios
 
-    return df_indexed, unique_devs, top_studios
+
+@st.cache_data
+def load_color_data(base_dir, unique_id=None):
+    path = os.path.join(base_dir, "data/color_analytics.parquet")
+    # If a unique_id is provided, we use 'filters' to only load 5 rows instead of 1 million
+    if unique_id:
+        return pd.read_parquet(path, filters=[("Unique_ID", "==", unique_id)])
+    return pd.read_parquet(path)
 
 
 def get_ranked_colors(df_row_or_group, count=5, filter_similarity=True):
@@ -103,7 +91,6 @@ def get_ranked_colors(df_row_or_group, count=5, filter_similarity=True):
 
 
 def get_representative_palette(yr_data, count=10):
-    """Now uses the weighted logic for the Era Vibe!"""
     top_colors = get_ranked_colors(yr_data, count=count)
     return [f"#{int(c.R):02x}{int(c.G):02x}{int(c.B):02x}" for c in top_colors]
 
@@ -126,3 +113,114 @@ def on_selectbox_change_dec():
 def on_text_change_dec():
     if st.session_state.dec_search.strip() != "":
         st.session_state.dec_box = "Select..."
+
+
+taxonomy_data = {
+    "1️⃣ Realism": {
+        "Photoreal": {
+            "description": "Visuals trying to look as realistic as possible. Can utilize physically based rendering (PBR) and high-resolution textures.",
+            "keywords": [
+                "ray-tracing",
+                "pbr",
+                "realistic",
+                "4k",
+            ],
+            "example_games": [
+                {"id": "cyberpunk 2077 (2020) [cd projekt red]", "shot_index": 9},
+                {"id": "the last of us part ii (2020) [naughty dog]", "shot_index": 0},
+                {"id": "forza horizon 5 (2021) [playground games]", "shot_index": 0},
+            ],
+        },
+        "Stylized": {
+            "description": "Retains realistic proportions and lighting but adds artistic flair. Often mimics the look of high-end film or fantasy illustration.",
+            "keywords": [
+                "cinematic",
+                "atmospheric",
+            ],
+            "example_games": [
+                {"id": "the sims 4 (2014) [maxis]", "shot_index": 4},
+                {"id": "portal 2 (2011) [valve]", "shot_index": 1},
+                {"id": "the witcher 3: wild hunt (2015) [cd projekt red]", "shot_index": 10},
+            ],
+        },
+    },
+    "2️⃣ Stylization": {
+        "Cartoon": {
+            "description": "Focuses on exaggerated proportions and vibrant colors. Often inspired by anime or cartoons.",
+            "keywords": ["anime", "manga", "chibi", "cartoon"],
+            "example_games": [
+                {"id": "team fortress 2 (2007) [valve]", "shot_index": 0},
+                {
+                    "id": "genshin impact (2020) [Cognosphere]",
+                    "shot_index": 10,
+                },
+                {"id": "super mario odyssey (2017) [nintendo]", "shot_index": 0},
+            ],
+        },
+        "Illustrative": {
+            "description": "Emphasizes the 'art'. Mimics physical media like watercolors or ink drawings.",
+            "keywords": [
+                "watercolor",
+                "hand-painted",
+                "hand-drawn",
+                "sketch",
+            ],
+            "example_games": [
+                {"id": "machinarium (2009) [amanita design]", "shot_index": 0},
+                {"id": "ōkami (2006) [clover studio]", "shot_index": 2},
+                {"id": "don't starve (2013) [klei entertainment]", "shot_index": 0},
+            ],
+        },
+        "Pixel Art": {
+            "description": "Art style limited or inspired by the technical constraints of early gaming hardware. Uses squares.",
+            "keywords": ["pixel art", "8-bit", "16-bit"],
+            "example_games": [
+                {"id": "stardew valley (2016) [concernedape]", "shot_index": 0},
+                {"id": "minecraft (2011) [mojang studios]", "shot_index": 3},
+                {"id": "undertale (2015) [tobyfox]", "shot_index": 3},
+            ],
+        },
+        "Material-Based": {
+            "description": "Games designed to look like they are constructed from physical materials. Often uses stop-motion.",
+            "keywords": [
+                "claymation",
+                "papercraft",
+                "stop-motion",
+                "felt",
+            ],
+            "example_games": [
+                {"id": "it takes two (2021) [hazelight studios]", "shot_index": 0},
+                {"id": "the neverhood (1996) [the neverhood, inc.]", "shot_index": 2},
+                {"id": "samorost 3 (2016) [amanita design]", "shot_index": 3},
+            ],
+        },
+    },
+    "3️⃣ Abstraction": {
+        "Minimalist": {
+            "description": "Reduces visuals to only essential elements. Uses clean lines, silhouettes, and simple shapes.",
+            "keywords": ["silhouette", "geometric", "minimalist"],
+            "example_games": [
+                {"id": "superhot (2016) [ea]", "shot_index": 0},
+                {"id": "voxel blast (2015) [ceiba software & arts]", "shot_index": 1},
+                {"id": "limbo (2010) [ea]", "shot_index": 4},
+            ],
+        },
+        "Symbolic": {
+            "description": "Color and shape represent ideas or mechanics. Also includestext-based and audio-based games with limited visual art.",
+            "keywords": [
+                "text-based",
+                "experimental",
+                "psychedelic",
+                "ascii",
+            ],
+            "example_games": [
+                {
+                    "id": "the hitchhiker's guide to the galaxy (1984) [infocom]",
+                    "shot_index": 0,
+                },
+                {"id": "thomas was alone (2012) [bithell games]", "shot_index": 2},
+                {"id": "dark echo (2015) [rac7 games]", "shot_index": 1},
+            ],
+        },
+    },
+}
