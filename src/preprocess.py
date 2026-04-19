@@ -73,39 +73,39 @@ def run_preprocessing(input_path="data/game_data.parquet"):
         os.path.join(base_dir, "data/search_metadata.parquet"), engine="pyarrow", index=False
     )
 
-    # print("🎨 Calculating Color Metrics and Palettes...")
-    # if "Color_palette" in df.columns:
-    #     df = df.drop(columns=["Color_palette"])
-    # color_palettes = df.groupby("Unique_ID").apply(ph.get_weighted_representative_palette)
-    # df["Color_palette"] = df["Unique_ID"].map(color_palettes)
-    # c_cols = [c for c in df.columns if c.startswith("C")]
+    print("🎨 Calculating Color Metrics and Palettes...")
+    if "Color_palette" in df.columns:
+        df = df.drop(columns=["Color_palette"])
+    color_palettes = df.groupby("Unique_ID").apply(ph.get_weighted_representative_palette)
+    df["Color_palette"] = df["Unique_ID"].map(color_palettes)
+    c_cols = [c for c in df.columns if c.startswith("C")]
 
-    # color_cols = [
-    #     "Unique_ID",
-    #     "Color_palette",
-    #     "Screenshot",
-    #     "Saturation",
-    # ] + c_cols
-    # df_colors = df[color_cols].copy()
-    # print(f"Detected columns: {df_colors.columns.tolist()}")
-    # df_colors = df_colors.loc[:, ~df_colors.columns.duplicated()]
-    # print(f"Detected columns: {df_colors.columns.tolist()}")
-    # df_colors.to_parquet(
-    #     os.path.join(base_dir, "data/color_analytics.parquet"), engine="pyarrow", index=False
-    # )
+    color_cols = [
+        "Unique_ID",
+        "Color_palette",
+        "Screenshot",
+        "Saturation",
+    ] + c_cols
+    df_colors = df[color_cols].copy()
+    print(f"Detected columns: {df_colors.columns.tolist()}")
+    df_colors = df_colors.loc[:, ~df_colors.columns.duplicated()]
+    print(f"Detected columns: {df_colors.columns.tolist()}")
+    df_colors.to_parquet(
+        os.path.join(base_dir, "data/color_analytics.parquet"), engine="pyarrow", index=False
+    )
 
-    # print("📊 Creating Aggregated Summaries...")
-    # genre_summary = ph.generate_timeline_summary(df, "Genres")
-    # genre_summary.to_parquet(
-    #     os.path.join(base_dir, "data/genre_summaries.parquet"), engine="pyarrow", index=False
-    # )
+    print("📊 Creating Aggregated Summaries...")
+    genre_summary = ph.generate_timeline_summary(df, "Genres")
+    genre_summary.to_parquet(
+        os.path.join(base_dir, "data/genre_summaries.parquet"), engine="pyarrow", index=False
+    )
 
-    # theme_summary = ph.generate_timeline_summary(df, "Themes")
-    # theme_summary.to_parquet(
-    #     os.path.join(base_dir, "data/theme_summaries.parquet"), engine="pyarrow", index=False
-    # )
+    theme_summary = ph.generate_timeline_summary(df, "Themes")
+    theme_summary.to_parquet(
+        os.path.join(base_dir, "data/theme_summaries.parquet"), engine="pyarrow", index=False
+    )
 
-    # print("✅ Timeline summaries saved to folder")
+    print("✅ Timeline summaries saved to folder")
     print("📊 Pre-calculating Studio Profiles...")
     studio_summary = ph.generate_studio_summary(df)
     studio_summary.to_parquet(

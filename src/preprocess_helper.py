@@ -195,9 +195,9 @@ def generate_timeline_summary(df, column):
             if not valid_styles.empty:
                 top_style = valid_styles.mode()[0]
             else:
-                top_style = (
-                    year_df["Art_Style"].mode()[0] if not year_df["Art_Style"].empty else "Unknown"
-                )
+                top_style = "Unknown"  # (
+                #     year_df["Art_Style"].mode()[0] if not year_df["Art_Style"].empty else "Unknown"
+                # )
 
             palette = helper.get_ranked_colors(year_df, count=10)
             palette_str = "|".join(
@@ -216,9 +216,6 @@ def generate_timeline_summary(df, column):
             )
 
     return pd.DataFrame(summary_rows)
-
-
-import pandas as pd
 
 
 def generate_studio_summary(df):

@@ -376,74 +376,71 @@ elif page == "Color through Decades":
             )
 
 
-# elif page == "Genre Timelines":
-#     st.header("🎨 Genre-Specific Color Evolution")
-#     st.info("**💡TOOL TIP**: Click the 🔍 tab to expand and see year-by-year breakdowns")
-#     st.info("💡Hover mouse over the colors in the breakdown to see their hex codes")
-#     all_genres = sorted(list(set(df["Genres"].str.split("|").explode().str.strip().unique())))
-#     selected_genre = st.selectbox(
-#         "Select Genre", [g for g in all_genres if g], key="genre_trace_box"
-#     )
+elif page == "Genre Timelines":
+    st.header("🎨 Genre-Specific Color Evolution")
+    st.info("**💡TOOL TIP**: Click the 🔍 tab to expand and see year-by-year breakdowns")
+    st.info("💡Hover mouse over the colors in the breakdown to see their hex codes")
 
-#     if selected_genre:
-#         genre_df = df[df["Genre_Set"].apply(lambda x: selected_genre.lower() in x)]
+    summary_df = pd.read_parquet(os.path.join(base_dir, "data/genre_summaries.parquet"))
+    all_genres = sorted(summary_df["Item"].unique().tolist())
+    selected_genre = st.selectbox("Select Genre", all_genres, key="genre_trace_box")
 
-#         for dec in decades:
-#             decade_data_g = genre_df[(genre_df["Year"] >= dec) & (genre_df["Year"] < dec + 10)]
-#             if not decade_data_g.empty:
-#                 valid_styles = decade_data_g[~decade_data_g["Art_Style"].isin(unclassified_labels)][
-#                     "Art_Style"
-#                 ]
-#                 top_style = valid_styles.mode()[0] if not valid_styles.empty else "Unknown"
+    if selected_genre:
+        # genre_df = df[df["Genre_Set"].apply(lambda x: selected_genre.lower() in x)]
+        genre_df = summary_df[summary_df["Item"] == selected_genre].sort_values("Year")
 
-#                 palette = helper.get_ranked_colors(decade_data_g, count=10)
-#                 st.markdown(
-#                     f"""
-#                     <div style='line-height: 1.5;'>
-#                         <span style='font-size: 25px; font-weight: bold;'>{dec}s </span>
-#                         <span style='font-size: 18px; color: white;'>Most common art style: {top_style}</span>
-#                     </div>
-#                     """,
-#                     unsafe_allow_html=True,
-#                 )
-#                 html = '<div style="display: flex; height: 35px; border-radius: 8px; overflow: hidden; border: 3px solid #999; margin-bottom: 3px;">'
-#                 hex_labels = '<div style="display: flex; margin-bottom: 3px;">'
+        for dec in decades:
+            dec_data_g = genre_df[genre_df["Decade"] == dec]
+            if not dec_data_g.empty:
+                all_dec_colors = []
+                for p_str in dec_data_g["Palette"].dropna():
+                    all_dec_colors.extend(p_str.split("|"))
 
-#                 for col in palette:
-#                     hex_code = "#%02x%02x%02x" % (int(col.R), int(col.G), int(col.B))
-#                     rgb_val = f"rgb({int(col.R)},{int(col.G)},{int(col.B)})"
-#                     html += f'<div style="background-color:{rgb_val}; flex:1;" title="{hex_code.upper()}"></div>'
-#                     hex_labels += f'<div style="flex:1; text-align:center; font-size:14px; color:gray; font-family:monospace;">{hex_code.upper()}</div>'
+                dec_palette = pd.Series(all_dec_colors).value_counts().head(10).index.tolist()
 
-#                 html += "</div>"
-#                 hex_labels += "</div>"
-#                 st.markdown(html + hex_labels, unsafe_allow_html=True)
+                top_style_dec = dec_data_g["Top_Style"].mode()[0]
+                if top_style_dec == "Unclassified":
+                    top_style_dec = "Unknown"
+                total_games_dec = dec_data_g["Game_Count"].sum()
 
-#                 # Expandable Year Detail
-#                 with st.expander(f"🔍 View breakdown for the {dec}s"):
-#                     year_list = sorted(decade_data_g["Year"].unique())  # , reverse=True)
-#                     for year in year_list:
-#                         year_data = decade_data_g[decade_data_g["Year"] == year]
-#                         year_palette = helper.get_ranked_colors(year_data, count=10)
+                st.markdown(
+                    f"""
+                    <div style='line-height: 1.5;'>
+                        <span style='font-size: 25px; font-weight: bold;'>{dec}s </span>
+                        <span style='font-size: 18px; color: white;'>Most common art style: {top_style_dec}</span>
+                        <span style='font-size: 14px; color: gray;'> ({total_games_dec:,} games)</span>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+                html = '<div style="display: flex; height: 35px; border-radius: 8px; overflow: hidden; border: 3px solid #999; margin-bottom: 3px;">'
+                hex_labels = '<div style="display: flex; margin-bottom: 3px;">'
 
-#                         col_label, col_strip = st.columns([1, 7])
-#                         year_count = len(year_data)
-#                         formatted_year_count = f"{year_count:,}".replace(",", " ")
-#                         col_label.write(f"**{year}** ({formatted_year_count} games)")
-#                         with col_strip:
-#                             y_html = '<div style="display: flex; height: 30px; border-radius: 4px; overflow: hidden; border: 3px solid #666; margin-bottom: 5px;">'
-#                             for col in year_palette:
-#                                 y_hex = "#%02x%02x%02x" % (
-#                                     int(col.R),
-#                                     int(col.G),
-#                                     int(col.B),
-#                                 )
-#                                 y_html += f'<div style="background-color:{y_hex}; flex:1;" title="{y_hex.upper()}"></div>'
-#                             y_html += "</div>"
-#                             st.markdown(y_html, unsafe_allow_html=True)
-#     st.info(
-#         """ ☝NOTE: If no games were classified for a specific genre in a decade, the art style will be marked as "Unknown"."""
-#     )
+                for col in dec_palette:
+                    html += (
+                        f'<div style="background-color:{col}; flex:1;" title="{col.upper()}"></div>'
+                    )
+                    hex_labels += f'<div style="flex:1; text-align:center; font-size:14px; color:gray; font-family:monospace;">{col.upper()}</div>'
+                html += "</div>"
+                hex_labels += "</div>"
+                st.markdown(html + hex_labels, unsafe_allow_html=True)
+
+                with st.expander(f"🔍 View breakdown for the {dec}s"):
+                    for _, row in dec_data_g.iterrows():
+                        col_label, col_strip = st.columns([1, 7])
+                        formatted_year_count = f"{row['Game_Count']:,}".replace(",", " ")
+                        col_label.write(f"**{int(row['Year'])}** ({formatted_year_count} games)")
+
+                        year_palette = row["Palette"].split("|")
+                        with col_strip:
+                            y_html = '<div style="display: flex; height: 30px; border-radius: 4px; overflow: hidden; border: 3px solid #666; margin-bottom: 5px;">'
+                            for col in year_palette:
+                                y_html += f'<div style="background-color:{col}; flex:1;" title="{col.upper()}"></div>'
+                            y_html += "</div>"
+                            st.markdown(y_html, unsafe_allow_html=True)
+    st.info(
+        """ ☝NOTE: If no games were classified for a specific genre in a decade, the art style will be marked as "Unknown"."""
+    )
 
 # elif page == "Theme Timelines":
 #     st.header("🎨 Theme-Specific Color Evolution")
