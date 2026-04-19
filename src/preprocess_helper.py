@@ -200,8 +200,12 @@ def generate_timeline_summary(df, column):
                 # )
 
             palette = helper.get_ranked_colors(year_df, count=10)
+            total_w = sum(c.total_w for c in palette) if palette else 1
             palette_str = "|".join(
-                [f"#{int(c.R):02x}{int(c.G):02x}{int(c.B):02x}" for c in palette]
+                [
+                    f"#{int(c.R):02x}{int(c.G):02x}{int(c.B):02x},{c.total_w / total_w:.3f}"
+                    for c in palette
+                ]
             )
 
             summary_rows.append(
