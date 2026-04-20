@@ -224,14 +224,14 @@ elif page == "Art Style Popularity":
         category_orders={"Art_Style": custom_style_order},
         barmode="stack",
     )
-    fig.update_yaxes(range=[0, 100])
-    fig.update_xaxes(type="linear", range=[1950, 2026])
     fig.update_layout(
         yaxis=dict(
+            range=[0, 100],
             title_font=dict(size=22),
             tickfont=dict(size=20),
         ),
         xaxis=dict(
+            range=[1950, 2026],
             title_font=dict(size=22),
             tickfont=dict(size=20),
         ),

@@ -237,3 +237,21 @@ taxonomy_data = {
         },
     },
 }
+
+
+def draw_color_strip(palette_str, height="50px"):
+    if not palette_str:
+        st.info("No color data available.")
+        return
+
+    html = f'<div style="display: flex; height: {height}; border-radius: 8px; overflow: hidden; border: 2px solid #999; margin-bottom: 2px;">'
+    hex_labels = '<div style="display: flex; margin-bottom: 10px;">'
+
+    colors = palette_str.split("|")
+    for c in colors:
+        html += f'<div style="background-color:{c}; flex:1;" title="{c.upper()}"></div>'
+        hex_labels += f'<div style="flex:1; text-align:center; font-size:14px; color:gray; font-family:monospace;">{c.upper()}</div>'
+
+    html += "</div>"
+    hex_labels += "</div>"
+    st.markdown(html + hex_labels, unsafe_allow_html=True)

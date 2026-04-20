@@ -183,7 +183,8 @@ def get_weighted_representative_palette(group):
 def generate_style_stats(df):
     """Generates percentages for Art Style Popularity charts."""
     # Annual % of each style
-    yearly_counts = df.groupby(["Year", "Art_Style"]).size().unstack(fill_value=0)
+    classified_df = df[df["Is_classified"] == True].copy()
+    yearly_counts = classified_df.groupby(["Year", "Art_Style"]).size().unstack(fill_value=0)
     yearly_perc = yearly_counts.div(yearly_counts.sum(axis=1), axis=0) * 100
     yearly_df = yearly_perc.reset_index().melt(id_vars="Year", value_name="Percentage")
 
@@ -197,6 +198,18 @@ def generate_decade_style_summary(df):
     results = []
     # Calculate global decade saturation averages for Section 6 comparison
     decade_avgs = df.groupby("Decade")["saturation"].mean().to_dict()
+
+    for dec, dec_group in df.groupby("Decade"):
+        global_palette = helper.get_representative_palette(dec_group, count=10)
+        results.append(
+            {
+                "Decade": dec,
+                "Art_Style": "Global",
+                "Palette": "|".join(global_palette),
+                "Count": len(dec_group),
+                "Decade_Avg_Sat": decade_avgs.get(dec, 0),
+            }
+        )
 
     for (dec, style), group in df.groupby(["Decade", "Art_Style"]):
         palette = helper.get_representative_palette(group, count=10)
