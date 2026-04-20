@@ -44,7 +44,7 @@ def get_palette(image_path, n_clusters=10):
         with Image.open(image_path) as image:
             image = image.convert("RGB")
             # quantized_image = image.quantize(colors=n_clusters, method=Image.Quantize.MEDIANCUT)
-            quantized_image = image.quantize(colors=20, method=Image.Quantize.FASTOCTREE)
+            quantized_image = image.quantize(colors=n_clusters, method=Image.Quantize.FASTOCTREE)
 
             # get palettes
             raw_palette = quantized_image.getpalette()[: n_clusters * 3]
@@ -88,25 +88,18 @@ def main():
 
     if os.path.exists(OUTPUT_PARQUET):
         # Skip processed screenshots
-        processed = set(pd.read_csv(OUTPUT_PARQUET, columns=["Screenshot"])["Screenshot"].tolist())
+        processed = set(
+            pd.read_parquet(OUTPUT_PARQUET, columns=["Screenshot"])["Screenshot"].tolist()
+        )
         append_mode = True
-        # current_csv = pd.read_csv(OUTPUT_PARQUET, low_memory=False)
-        # processed = set(current_csv["Screenshot"].astype(str).tolist())
     else:
-        # os.makedirs(DATA_DIR, exist_ok=True)
-        # with open(OUTPUT_PARQUET, mode="w", newline="", encoding="utf-8") as file:
-        #     writer = csv.writer(file, quoting=csv.QUOTE_ALL)
-        #     writer.writerow(header)
         processed = set()
         append_mode = False
-
-    # with open(OUTPUT_PARQUET, mode="a", newline="", encoding="utf-8") as file:
-    #     writer = csv.writer(file, quoting=csv.QUOTE_ALL)
     buffer = []
     counter = 0
     for year in range(START_YEAR, END_YEAR + 1):
         print(f"[INFO] Getting games from {year}...")
-
+        decade = (year // 10) * 10
         offset = 0
         while True:
             games = query_igdb(year, offset=offset)
@@ -132,16 +125,20 @@ def main():
                 # screenshots = game.get("screenshots", [])
 
                 for screen in game.get("screenshots", [])[:SCREENSHOT_COUNT]:
-                    image_path = download_image(screen["url"])
+                    url = screen["url"]
+                    if url in processed:
+                        continue
+                    image_path = download_image(url)
                     # Skip if download failed or already recorded
-                    if not image_path or image_path in processed:
+                    if not image_path:
                         continue
 
                     palette = get_palette(image_path, n_clusters=COLOR_COUNT)
                     row = {
                         "Year": year,
+                        "Decade": decade,
                         "Game": game.get("name", "Unknown"),
-                        "Screenshot": image_path,
+                        "Screenshot": url,
                         "Developers": devs,
                         "Genres": genres,
                         "Themes": themes,

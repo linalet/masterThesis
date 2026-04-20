@@ -25,6 +25,8 @@ def run_preprocessing(input_path="data/game_data.parquet"):
         df[col] = df[col].fillna("").astype(str).str.lower()
 
     df["Year"] = pd.to_numeric(df["Year"], errors="coerce").fillna(0).astype("int16")
+    # new main can use:
+    # df["Decade"] = pd.to_numeric(df["Decade"], errors="coerce").fillna(0).astype("int16")
     df["Decade"] = (df["Year"] // 10 * 10).astype("int16")
 
     print("🧹 Normalizing Studios & Generating IDs...")
@@ -99,9 +101,22 @@ def run_preprocessing(input_path="data/game_data.parquet"):
         "Color_palette",
         "Screenshot",
     ]
+    print("💾 Saving Metadata file...")
     df.drop_duplicates("Unique_ID")[search_cols].to_parquet(
         os.path.join(base_dir, "data/search_metadata.parquet")
     )
+
+    color_headers = []
+    for i in range(1, 11):
+        color_headers.extend([f"C{i}_R", f"C{i}_G", f"C{i}_B", f"C{i}_W"])
+    keepers = [
+        "Unique_ID",
+        "Screenshot",
+    ] + color_headers
+    df_optimized = df[keepers]
+    print("💾 Saving Screenshot palette file...")
+    df_optimized.to_parquet(os.path.join(base_dir, "data/screenshot_colors.parquet"))
+
     keep_cols = [
         "Unique_ID",
         "Game",

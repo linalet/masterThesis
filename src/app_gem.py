@@ -420,7 +420,9 @@ elif page == "Game Developer Profile":
     )
     studio_summary = get_summary("summary_studios.parquet")
 
-    all_time, decade_spec, h_to_h = st.tabs(["Top 50 All-Time", "Decade Specific", "Head to Head"])
+    all_time, decade_spec, h_to_h = st.tabs(
+        ["Top 50 All-Time", "Decade Specific Analysis", "Head to Head"]
+    )
 
     with all_time:
         top_50_global = sorted(
@@ -468,7 +470,7 @@ elif page == "Game Developer Profile":
                 else:
                     st.error(f"❌ Studio '{final_all}' not found. Please check the spelling.")
             else:
-                st.info("Select a studio to view")
+                st.info("Select a major studio or search by name to begin")
     with decade_spec:
         st.subheader("📆 Decade-Specific Leaders")
         all_years = sorted([y for y in studio_summary["Decade"].unique() if y != "All-Time"])
@@ -497,7 +499,7 @@ elif page == "Game Developer Profile":
             current_choice = st.session_state["final_studio_choice"]
 
             if not current_choice:
-                st.info("Select a major studio or search by name to begin.")
+                st.info("Select a major studio or search by name to begin")
             else:
                 row = studio_summary[
                     (studio_summary["Studio"] == current_choice)
@@ -529,45 +531,76 @@ elif page == "Game Developer Profile":
         st.subheader("⚔️ Studio Head-to-Head Comparison")
         st.write("Directly compare the artistic evolution of two studios within the same decade.")
         st.info(
-            "💡TOOL TIP: You can write in the selectbox fields to quickly find studios by name instead of scrolling through the list."
+            "💡TOOL TIP: You can write in the selectbox fields to quickly find studios by name instead of scrolling through the list. If you need ideas what studios to compare in each decade, check the *Decade Specific Analysis* section"
         )
         c1, c2 = st.columns([1, 6])
         with c1:
-            use_all_time = st.checkbox("View All-Time Data", value=False)
+            use_all_time = st.checkbox("View All-Time Data", value=False, key="h2h_all_time")
         with c2:
             selected_decade = st.select_slider(
                 "Select Decade for Comparison",
                 options=all_years,
                 disabled=use_all_time,
                 label_visibility="collapsed" if use_all_time else "visible",
+                key="h2h_slider",
             )
         search_decade = "All-Time" if use_all_time else str(selected_decade)
-        active_studios = sorted(
-            studio_summary[studio_summary["Decade"] == search_decade]["Studio"].unique()
-        )
+        all_studios_global = sorted(studio_summary["Studio"].unique())
+        if "h2h_a" not in st.session_state:
+            st.session_state["h2h_a"] = all_studios_global[0]
+        if "h2h_b" not in st.session_state:
+            st.session_state["h2h_b"] = all_studios_global[min(1, len(all_studios_global) - 1)]
+
         col_a, col_b = st.columns(2)
         with col_a:
-            studio_a = st.selectbox("Studio A", active_studios, key="studio_a")
+            options_a = [s for s in all_studios_global if s != st.session_state["h2h_b"]]
+            studio_a = st.selectbox(
+                "Studio A",
+                options_a,
+                index=options_a.index(st.session_state["h2h_a"])
+                if st.session_state["h2h_a"] in options_a
+                else 0,
+                key="select_a",
+            )
+            st.session_state["h2h_a"] = studio_a
             row_a = studio_summary[
                 (studio_summary["Studio"] == studio_a) & (studio_summary["Decade"] == search_decade)
             ]
             if not row_a.empty:
-                helper.display_studio_stats(row_a.iloc[0])
+                helper.display_studio_stats(row_a.iloc[0], suffix="h2h_left")
             else:
                 st.warning(f"No data for {studio_a} in the {search_decade}s.")
+                other_decs = studio_summary[
+                    (studio_summary["Studio"] == studio_a)
+                    & (studio_summary["Decade"] != "All-Time")
+                ]["Decade"].unique()
+                if len(other_decs) > 0:
+                    st.caption(f"Active in: {', '.join(sorted(other_decs))}")
 
         with col_b:
-            default_idx = min(1, len(active_studios) - 1) if len(active_studios) > 1 else 0
+            options_b = [s for s in all_studios_global if s != st.session_state["h2h_a"]]
             studio_b = st.selectbox(
-                "Studio B", active_studios, key="studio_b", index=min(1, len(active_studios) - 1)
+                "Studio B",
+                options_b,
+                index=options_b.index(st.session_state["h2h_b"])
+                if st.session_state["h2h_b"] in options_b
+                else 0,
+                key="select_b",
             )
+            st.session_state["h2h_b"] = studio_b
             row_b = studio_summary[
                 (studio_summary["Studio"] == studio_b) & (studio_summary["Decade"] == search_decade)
             ]
             if not row_b.empty:
-                helper.display_studio_stats(row_b.iloc[0])
+                helper.display_studio_stats(row_b.iloc[0], suffix="h2h_right")
             else:
                 st.warning(f"No data for {studio_b} in the {search_decade}s.")
+                other_decs = studio_summary[
+                    (studio_summary["Studio"] == studio_b)
+                    & (studio_summary["Decade"] != "All-Time")
+                ]["Decade"].unique()
+                if len(other_decs) > 0:
+                    st.caption(f"Active in: {', '.join(sorted(other_decs))}")
 
 
 elif page == "Individual Game Analysis":
@@ -624,10 +657,8 @@ elif page == "Individual Game Analysis":
         with col2:
             st.subheader("🎨 Weighted Representative Palette")
             color_profile_str = main_info["Color_palette"]
-            helper.draw_color_strip(color_profile_str, 50)
 
             html_color_strip = '<div style="display: flex; height: 100px; border-radius: 8px; overflow: hidden; border: 3px solid #999;">'
-            st.info(color_profile_str)
             for entry in color_profile_str.split("|"):
                 # st.info(entry)
                 if "," in entry:
@@ -671,11 +702,11 @@ elif page == "Individual Game Analysis":
         st.divider()
 
         st.subheader("🖼️ Source Screenshots & Local Palettes")
+        screen_data = get_summary("screenshot_colors.parquet")
 
-        n_screens = len(game_rows)
         cols = st.columns(3)
-
-        for i, row in enumerate(game_rows.itertuples()):
+        screens = screen_data[screen_data["Unique_ID"] == selected_game_id]
+        for i, row in enumerate(screens.itertuples()):
             with cols[i % 3]:
                 st.image(row.Screenshot, width="stretch")
 
