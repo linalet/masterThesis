@@ -13,21 +13,24 @@ baseFontSize = "23px"
 st.markdown(
     """
     <style>
-    /* 1. Make the Label (the title above the slider/selectbox) bigger */
+    /* Target the checkbox label text */
+    [data-baseweb="checkbox"] [data-testid="stWidgetLabel"] p {
+        font-size: 18px !important;
+        font-weight: bold;
+    }
+    /* Make the slider values/steps bigger */
+    [data-testid="stTickBarMinMax"], [data-testid="stTickBar"] {
+        font-size: 20px !important;
+    }
+    /* Make the Label (the title above the slider/selectbox) bigger */
     [data-testid="stWidgetLabel"] p {
         font-size: 22px !important;
         font-weight: 600 !important;
         color: ##bec4eb;
-    }
-
-    /* 2. Make the text INSIDE the Selectbox bigger */
+    }    
+    /* Make the text INSIDE the Selectbox bigger */
     [data-testid="stSelectbox"] div[data-baseweb="select"] > div {
         font-size: 18px !important;
-    }
-
-    /* 3. Make the slider values/steps bigger */
-    [data-testid="stTickBarMinMax"], [data-testid="stTickBar"] {
-        font-size: 16px !important;
     }
     </style>
 """,
@@ -264,7 +267,7 @@ elif page == "Art Style Popularity":
     )
     # Make lines thicker for better visibility in a thesis
     fig_line.update_traces(line=dict(width=5))
-    st.plotly_chart(fig_line, use_container_width=True)
+    st.plotly_chart(fig_line, width="stretch")
 
     st.divider()
 
@@ -416,14 +419,15 @@ elif page == "Game Developer Profile":
     )
     studio_summary = get_summary("summary_studios.parquet")
 
-    tab1, tab2, tab3 = st.tabs(["Top 50 All-Time", "Decade Specific", "Head to Head"])
+    all_time, decade_spec, h_to_h = st.tabs(["Top 50 All-Time", "Decade Specific", "Head to Head"])
 
-    with tab1:
+    with all_time:
         top_50_global = sorted(
-            studio_summary[
-                (studio_summary["Decade"] == "All-Time") & (studio_summary["Is_Major"] == True)
-            ]["Studio"].unique()
+            studio_summary[(studio_summary["Decade"] == "All-Time") & (studio_summary["Is_Major"])][
+                "Studio"
+            ].unique()
         )
+        frst = top_50_global[0]
         c1, c2 = st.columns([1, 3])
         with c1:
             sel_all = st.selectbox(
@@ -434,7 +438,7 @@ elif page == "Game Developer Profile":
             )
             search_all = st.text_input(
                 "Or search ANY studio by name:",
-                "",
+                # value=frst,
                 key="all_search",
                 on_change=helper.on_text_change,
             )
@@ -445,33 +449,33 @@ elif page == "Game Developer Profile":
             )
         studio_name = ""
         dev_row = None
-        if final_all:
-            studio_match = studio_summary[
-                (studio_summary["Studio"].str.lower() == final_all)
-                & (studio_summary["Decade"] == "All-Time")
-            ]
-            if studio_match.empty:
+
+        with c2:
+            if final_all:
                 studio_match = studio_summary[
-                    (studio_summary["Studio"].str.contains(final_all, case=False))
+                    (studio_summary["Studio"].str.lower() == final_all)
                     & (studio_summary["Decade"] == "All-Time")
-                ].head(1)
-            if not studio_match.empty:
-                dev_row = studio_match.iloc[0]
-                helper.display_studio_stats(dev_row, c2)
-        else:
-            st.error(f"❌ Studio '{final_all}' not found. Please try again.")
-    with tab2:
+                ]
+                if studio_match.empty:
+                    studio_match = studio_summary[
+                        (studio_summary["Studio"].str.contains(final_all, case=False))
+                        & (studio_summary["Decade"] == "All-Time")
+                    ].head(1)
+                if not studio_match.empty:
+                    dev_row = studio_match.iloc[0]
+                    helper.display_studio_stats(dev_row, c2)
+                else:
+                    st.error(f"❌ Studio '{final_all}' not found. Please check the spelling.")
+            else:
+                st.info("Select a studio to view")
+    with decade_spec:
         st.subheader("📆 Decade-Specific Leaders")
+        all_years = sorted([y for y in studio_summary["Decade"].unique() if y != "All-Time"])
+        sel_dec = st.select_slider("Select Decade", options=all_years)
         c1, c2 = st.columns([1, 3])
         with c1:
-            all_years = sorted(
-                [y for y in studio_summary["Decade"].unique() if y != "All-Time"], reverse=True
-            )
-            sel_dec = st.select_slider("Select Decade", options=all_years)
-            # sel_dec = st.selectbox("Select Decade", all_years)
-
             major_in_dec = studio_summary[
-                (studio_summary["Decade"] == sel_dec) & (studio_summary["Is_Major"] == True)
+                (studio_summary["Decade"] == sel_dec) & (studio_summary["Is_Major"])
             ]["Studio"].tolist()
 
             sel_studio = st.selectbox(
@@ -480,9 +484,10 @@ elif page == "Game Developer Profile":
                 key="dec_box",
                 on_change=helper.on_selectbox_change_dec,
             )
+            frst = major_in_dec[0]
             search_dec = st.text_input(
                 "Or search ANY studio by name:",
-                "",
+                # value=frst,
                 key="dec_search",
                 on_change=helper.on_text_change_dec,
             )
@@ -491,44 +496,65 @@ elif page == "Game Developer Profile":
                 if sel_studio != "Select..."
                 else (search_dec if search_dec.strip() != "" else None)
             )
+
             # sel_studio = st.selectbox(f"Major Studios in {sel_dec}s", major_in_dec)
 
-        row = studio_summary[
-            (studio_summary["Studio"] == final_studio) & (studio_summary["Decade"] == sel_dec)
-        ]
-        if not row.empty:
-            helper.display_studio_stats(row.iloc[0], c2)
+        with c2:
+            if not final_studio:
+                st.info("Select a studio to view")
+            else:
+                row = studio_summary[
+                    (studio_summary["Studio"] == final_studio)
+                    & (studio_summary["Decade"] == sel_dec)
+                ]
+                if not row.empty:
+                    helper.display_studio_stats(row.iloc[0], c2)
+                else:
+                    st.error(f"❌ Studio '{final_studio}' not found. Please check the spelling.")
 
-    with tab3:
+    with h_to_h:
         st.subheader("⚔️ Studio Head-to-Head Comparison")
         st.write("Directly compare the artistic evolution of two studios within the same decade.")
         st.info(
             "💡TOOL TIP: You can write in the selectbox fields to quickly find studios by name instead of scrolling through the list."
         )
-        col_a, col_b = st.columns(2)
-
-        with col_a:
-            s_a = st.selectbox("Studio A", studio_summary["Studio"].unique(), key="s_a")
-            d_a = st.select_slider(
-                "Decade A",
-                ["All-Time"] + all_years,
-                key="d_a",
+        c1, c2 = st.columns([1, 6])
+        with c1:
+            use_all_time = st.checkbox("View All-Time Data", value=False)
+        with c2:
+            selected_decade = st.select_slider(
+                "Select Decade for Comparison",
+                options=all_years,
+                disabled=use_all_time,
+                label_visibility="collapsed" if use_all_time else "visible",
             )
-            # d_a = st.selectbox("Decade A", ["All-Time"] + all_years, key="d_a")
+        search_decade = "All-Time" if use_all_time else str(selected_decade)
+        active_studios = sorted(
+            studio_summary[studio_summary["Decade"] == search_decade]["Studio"].unique()
+        )
+        col_a, col_b = st.columns(2)
+        with col_a:
+            studio_a = st.selectbox("Studio A", active_studios, key="studio_a")
             row_a = studio_summary[
-                (studio_summary["Studio"] == s_a) & (studio_summary["Decade"] == d_a)
+                (studio_summary["Studio"] == studio_a) & (studio_summary["Decade"] == search_decade)
             ]
             if not row_a.empty:
                 helper.display_studio_stats(row_a.iloc[0], col_a)
+            else:
+                st.warning(f"No data for {studio_a} in the {search_decade}s.")
 
         with col_b:
-            s_b = st.selectbox("Studio B", studio_summary["Studio"].unique(), key="s_b")
-            d_b = st.selectbox("Decade B", ["All-Time"] + all_years, key="d_b")
+            default_idx = min(1, len(active_studios) - 1) if len(active_studios) > 1 else 0
+            studio_b = st.selectbox(
+                "Studio B", active_studios, key="studio_b", index=min(1, len(active_studios) - 1)
+            )
             row_b = studio_summary[
-                (studio_summary["Studio"] == s_b) & (studio_summary["Decade"] == d_b)
+                (studio_summary["Studio"] == studio_b) & (studio_summary["Decade"] == search_decade)
             ]
             if not row_b.empty:
                 helper.display_studio_stats(row_b.iloc[0], col_b)
+            else:
+                st.warning(f"No data for {studio_b} in the {search_decade}s.")
 
 
 elif page == "Individual Game Analysis":
@@ -650,7 +676,7 @@ elif page == "Individual Game Analysis":
 
         for i, row in enumerate(game_rows.itertuples()):
             with cols[i % 3]:
-                st.image(row.Screenshot, use_container_width=True)
+                st.image(row.Screenshot, width="stretch")
 
                 mini_html = (
                     '<div style="display: flex; height: 30px; border-radius: 6px; '

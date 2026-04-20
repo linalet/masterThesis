@@ -283,7 +283,13 @@ def draw_color_strip(palette_str, height=50):
 def draw_style_distribution(dist_dict):
     """Draws a custom CSS horizontal bar chart color-coded by style."""
     # Sort by percentage descending
-    sorted_dist = dict(sorted(dist_dict.items(), key=lambda item: item[1], reverse=True))
+    if not dist_dict:
+        st.info("No color data available.")
+        return
+    clean_dist = {
+        style: (percent if percent is not None else 0.0) for style, percent in dist_dict.items()
+    }
+    sorted_dist = dict(sorted(clean_dist.items(), key=lambda item: item[1], reverse=True))
 
     for style, percentage in sorted_dist.items():
         pct_val = percentage * 100
@@ -308,11 +314,9 @@ def draw_style_distribution(dist_dict):
 
 
 def display_studio_stats(row, col_for_chart):
-    st.write(f"## {row['Studio'].title()}")
-    st.caption(f"🧬 **Studio DNA Summary** | {row['Game_Count']} Games")
-
-    st.write("### Primary Color Signature")
-    draw_color_strip(row["Palette"], height="70px")
+    st.write(f"### {row['Studio'].title()}'s Color Signature")
+    st.caption(f"Collected from {row['Game_Count']} games")
+    draw_color_strip(row["Palette"], height=60)
 
     st.write("### Art Style Breakdown")
     draw_style_distribution(row["Style_Distribution"])
