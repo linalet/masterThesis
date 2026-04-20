@@ -24,8 +24,8 @@ def run_preprocessing(input_path="data/game_data.parquet"):
     for col in ["Genres", "Themes", "Keywords", "Developers", "Game", "Player_Perspective"]:
         df[col] = df[col].fillna("").astype(str).str.lower()
 
-    df["Year"] = pd.to_numeric(df["Year"], errors="coerce").fillna(0).astype(int)
-    df["Decade"] = (df["Year"] // 10 * 10).astype(int)
+    df["Year"] = pd.to_numeric(df["Year"], errors="coerce").fillna(0).astype("int16")
+    df["Decade"] = (df["Year"] // 10 * 10).astype("int16")
 
     print("🧹 Normalizing Studios & Generating IDs...")
     df["Developers"] = df["Developers"].apply(ph.normalize_studio_name)
@@ -102,9 +102,26 @@ def run_preprocessing(input_path="data/game_data.parquet"):
     df.drop_duplicates("Unique_ID")[search_cols].to_parquet(
         os.path.join(base_dir, "data/search_metadata.parquet")
     )
-
+    keep_cols = [
+        "Unique_ID",
+        "Game",
+        "Year",
+        "Decade",
+        "Developers",
+        "Art_Style",
+        "Genres",
+        "Themes",
+        "Color_palette",
+        "Screenshot",
+        "saturation",
+        "Is_classified",
+        "Is_NSFW",
+    ]
+    df_optimized = df[keep_cols]
     print("💾 Saving Master Color Analytics file...")
-    df.to_parquet(os.path.join(base_dir, "data/color_analytics.parquet"))
+    df_optimized.to_parquet(os.path.join(base_dir, "data/color_analytics.parquet"))
+    # compression="brotli"?
+    # df.to_parquet(os.path.join(base_dir, "data/color_analytics.parquet"))
 
     print("✅ Preprocessing Complete. The app is now ready to run at high speed.")
 
