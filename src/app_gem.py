@@ -9,7 +9,6 @@ st.set_page_config(
     layout="wide", page_title="Evolution of Color and Art Styles in Video Game Design"
 )
 
-baseFontSize = "23px"
 st.markdown(
     """
     <style>
@@ -48,6 +47,7 @@ def get_summary(filename):
 
 
 search_metadata = get_summary("search_metadata.parquet")
+all_analytics = get_summary("color_analytics.parquet")
 decades_list = sorted(search_metadata["Decade"].unique().tolist())
 unclassified_labels = ["Unclassified", "Unclassified 2D", "Unclassified 3D"]
 if st.session_state.get("trigger_nav"):
@@ -127,76 +127,77 @@ if page == "Project Overview":
             """
     )
 
-    # for branch, styles in helper.taxonomy_data.items():
-    #     st.subheader(f"{branch}")
+    for branch, styles in helper.taxonomy_data.items():
+        st.subheader(f"{branch}")
 
-    #     for style_name, info in styles.items():
-    #         st.markdown(
-    #             f"#### {style_name}",
-    #             unsafe_allow_html=True,
-    #         )
-    #         st.markdown(f"**Aesthetic Intent:** {info['description']}")
-    #         kw_html = " ".join([f"`{k}`" for k in info["keywords"]])
-    #         st.markdown(f"**Keywords:** {kw_html}")
+        for style_name, info in styles.items():
+            st.markdown(
+                f"#### {style_name}",
+                unsafe_allow_html=True,
+            )
+            st.markdown(f"**Aesthetic Intent:** {info['description']}")
+            kw_html = " ".join([f"`{k}`" for k in info["keywords"]])
+            st.markdown(f"**Keywords:** {kw_html}")
 
-    #         cols = st.columns(3)
-    #         for i, game_ref in enumerate(info["example_games"]):
-    #             if i >= 3:
-    #                 break
-    #             with cols[i]:
-    #                 # match = df[df["Unique_ID"] == game_ref["id"]]
-    #                 match = search_metadata[
-    #                     search_metadata["Unique_ID"].str.lower() == game_ref["id"].lower()
-    #                 ]
-    #                 if not match.empty:
-    #                     idx = game_ref["shot_index"]
-    #                     if idx >= len(match):
-    #                         idx = 0
+            cols = st.columns(3)
+            for i, game_ref in enumerate(info["example_games"]):
+                if i >= 3:
+                    break
+                with cols[i]:
+                    # match = df[df["Unique_ID"] == game_ref["id"]]
+                    match = all_analytics[
+                        all_analytics["Unique_ID"].str.lower() == game_ref["id"].lower()
+                    ]
+                    if not match.empty:
+                        idx = game_ref["shot_index"]
+                        if idx >= len(match):
+                            idx = 0
 
-    #                     target_row = match.iloc[idx]
-    #                     st.image(target_row["Screenshot"], width="stretch")
-    #                     st.caption(f"🎮 **{target_row['Game']}** ({int(target_row['Year'])})")
-    #                 else:
-    #                     st.info(f"Image for {game_ref['id']} not found.")
-    # st.divider()
+                        target_row = match.iloc[idx]
+                        st.image(target_row["Screenshot"], width="stretch")
+                        st.caption(f"🎮 **{target_row['Game']}** ({int(target_row['Year'])})")
+                    else:
+                        st.info(f"Image for {game_ref['id']} not found.")
+    st.divider()
 
-    # st.subheader("⚠️ Disclaimer on Classification Accuracy")
-    # st.write("""Since the keywords used to classify games are added to IGDB by the users, they are not always accurate or consistent.
-    #         The automated assignment is often incorrect, but it is the only viable option available with my current resources.
-    #         I have manually classified around 300 games to ensure some level of accuracy, however, it is only a fraction (0.1%) of the total dataset.
-    #         Art is subjective and complex, so my opinion may not always be correct.
-    #         Some games can fit into multiple categories, such as *Worse Than Death (2019)*, which could be both **Stylization: Pixel Art** and **Stylization: Illustrative**.""")
-    # col1, col2 = st.columns(2)
-    # with col1:
-    #     st.image(
-    #         df[df["Unique_ID"] == "worse than death (2019) [benjamin rivers]"].iloc[0][
-    #             "Screenshot"
-    #         ],
-    #         width="stretch",
-    #     )
-    # with col2:
-    #     st.image(
-    #         df[df["Unique_ID"] == "worse than death (2019) [benjamin rivers]"].iloc[4][
-    #             "Screenshot"
-    #         ],
-    #         width="stretch",
-    #     )
-    # st.divider()
+    st.subheader("⚠️ Disclaimer on Classification Accuracy")
+    st.write("""Since the keywords used to classify games are added to IGDB by the users, they are not always accurate or consistent.
+            The automated assignment is often incorrect, but it is the only viable option available with my current resources.
+            I have manually classified around 800 games to ensure some level of accuracy, however, it is only a fraction (0.01%) of the total dataset.
+            Art is subjective and complex, so my opinion may not always be correct.
+            Some games can fit into multiple categories, such as *Worse Than Death (2019)*, which could be both **Stylization: Pixel Art** and **Stylization: Illustrative**.""")
+    # total games: 966 446
+    col1, col2 = st.columns(2)
+    with col1:
+        st.image(
+            search_metadata[
+                search_metadata["Unique_ID"] == "worse than death (2019) [benjamin rivers]"
+            ].iloc[0]["Screenshot"],
+            width="stretch",
+        )
+    with col2:
+        st.image(
+            all_analytics[
+                all_analytics["Unique_ID"] == "worse than death (2019) [benjamin rivers]"
+            ].iloc[4]["Screenshot"],
+            width="stretch",
+        )
+    st.divider()
 
-    # st.subheader("📖 What do I do now?")
-    # st.write("""
-    #     If you cannot see the side menu and the tabs inside, press the arrows ⏩ in the top left corner.
-    #     Navigate through the various tabs to explore the data and discover insights into the evolution of color and art styles in video games.
-    # """)
-    # st.write("""##### 🤔What do the tabs mean?""")
-    # st.markdown("""
-    # 1. **Art Style Popularity:** View the popularitty of specific styles over time.
-    # 2. **Color through Decades:** See how the industry's average palette has shifted.
-    # 3. **Genre Timelines:** Explore how color trends differ across genres.
-    # 4. **Theme Timelines:** Explore how color trends differ across themes.
-    # 3. **Game Developer Profile:** Explore game studio's most common art styles and colors.
-    # 4. **Individual Game Palette:** Deep-dive into a specific game and look at its screenshots.
-    # """)
+    st.subheader("📖 What do I do now?")
+    st.write("""
+        If you cannot see the side menu and the tabs inside, press the arrows ⏩ in the top left corner.
+        Navigate through the various tabs to explore the data and discover insights into the evolution of color and art styles in video games.
+    """)
+    st.write("""##### 🤔What do the tabs mean?""")
+    st.markdown("""
+    1. **Art Style Popularity:** View the popularitty of specific styles over time.
+    2. **Color through Decades:** See how the industry's average palette has shifted.
+    3. **Genre Timelines:** Explore how color trends differ across genres.
+    4. **Theme Timelines:** Explore how color trends differ across themes.
+    3. **Game Developer Profile:** Explore game studio's most common art styles and colors.
+    4. **Individual Game Palette:** Deep-dive into a specific game and look at its screenshots.
+    """)
 
 elif page == "Art Style Popularity":
     st.header("📈 Art Style Popularity through Time")
@@ -572,21 +573,16 @@ elif page == "Game Developer Profile":
 elif page == "Individual Game Analysis":
     st.header("🔍 Individual Game Analysis")
 
-    # 1. Setup Search Data
-    # We use search_metadata for the dropdown to keep the app responsive
     search_metadata = get_summary("search_metadata.parquet")
     unique_games = sorted(search_metadata["Unique_ID"].unique())
 
-    # Handle cross-page navigation from other parts of the app
     if "search_query" in st.session_state:
         st.session_state["game_selector"] = st.session_state["search_query"]
         del st.session_state["search_query"]
 
-    # 2. Search UI
     search_query = st.text_input("Search by name:", "mario")
 
     if search_query:
-        # Filter based on game name (text before the first bracket)
         filtered_list = [
             g for g in unique_games if search_query.lower() in g.split("[")[0].strip().lower()
         ]
@@ -600,16 +596,12 @@ elif page == "Individual Game Analysis":
     selected_game_id = st.selectbox("Select a game:", filtered_list, key="game_selector")
 
     if selected_game_id:
-        # 3. Load Detail Data
-        # Pull only the required rows from the large analytics file to save memory
-        all_analytics = get_summary("color_analytics.parquet")
         game_rows = all_analytics[all_analytics["Unique_ID"] == selected_game_id]
 
         if game_rows.empty:
             st.error("Data for this game could not be found.")
             st.stop()
 
-        # Check for NSFW content
         if game_rows["Is_NSFW"].any():
             st.error("⚠️ Content Restricted")
             st.warning(
@@ -618,10 +610,6 @@ elif page == "Individual Game Analysis":
             st.stop()
 
         main_info = game_rows.iloc[0]
-
-        st.divider()
-
-        # 4. Main Profile Section
         col1, col2 = st.columns([1.5, 2])
 
         with col1:
@@ -631,7 +619,7 @@ elif page == "Individual Game Analysis":
             st.markdown(f"**🎨 Art Style:** {main_info['Art_Style']}")
             st.markdown(f"**🕹️ Genres:** {main_info['Genres'].replace('|', ', ').title()}")
             st.markdown(f"**🎭 Themes:** {main_info['Themes'].replace('|', ', ').title()}")
-            st.markdown(f"**🖼️ Screenshots:** {len(game_rows)} images analyzed")
+            st.markdown(f"**🖼️ Screenshots:** {len(game_rows)} image(s) analyzed")
 
         with col2:
             st.subheader("🎨 Weighted Representative Palette")
@@ -639,6 +627,7 @@ elif page == "Individual Game Analysis":
             helper.draw_color_strip(color_profile_str, 50)
 
             html_color_strip = '<div style="display: flex; height: 100px; border-radius: 8px; overflow: hidden; border: 3px solid #999;">'
+            st.info(color_profile_str)
             for entry in color_profile_str.split("|"):
                 # st.info(entry)
                 if "," in entry:

@@ -310,9 +310,7 @@ def draw_style_distribution(dist_dict, unclassified_pct, studio_name="default"):
     )
     chart_id = f"pie_{studio_name.replace(' ', '_').lower()}"
     st.plotly_chart(fig, use_container_width=True, key=chart_id)
-    st.caption(
-        f"Note: {unclassified_pct * 100:.1f}% of games from this selection are unclassified."
-    )
+    st.caption(f"{unclassified_pct * 100:.1f}% of games from this selection are unclassified.")
 
 
 def display_studio_stats(row):

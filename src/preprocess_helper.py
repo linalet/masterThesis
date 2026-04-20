@@ -172,12 +172,9 @@ def get_weighted_representative_palette(group):
         return ""
 
     total_w = sum(c.total_w for c in top_colors)
-    return "|".join(
-        [
-            f"#{int(c.R):02x}{int(c.G):02x}{int(c.B):02x},{c.total_w / total_w:.3f}"
-            for c in top_colors
-        ]
-    )
+    return [
+        f"#{int(c.R):02x}{int(c.G):02x}{int(c.B):02x},{c.total_w / total_w:.3f}" for c in top_colors
+    ]
 
 
 def generate_style_stats(df):
