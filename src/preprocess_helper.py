@@ -255,9 +255,15 @@ def generate_timeline_summary(df, column):
 def generate_studio_summary(df):
     """Generates DNA and Style distributions for ALL developers with Top 50 ranking flags."""
 
-    temp_df = df[
-        ["Unique_ID", "Developers", "Art_Style", "Decade", "C1_R", "C1_G", "C1_B", "saturation"]
-    ].copy()
+    # color_cols = [f"C{i}_{channel}" for i in range(1, 9) for channel in ["R", "G", "B"]]
+    color_cols = []
+    for i in range(1, 9):
+        for channel in ["R", "G", "B", "W"]:
+            color_cols.append(f"C{i}_{channel}")
+    required_cols = ["Unique_ID", "Developers", "Art_Style", "Decade", "saturation"] + color_cols
+    available_cols = [c for c in required_cols if c in df.columns]
+    temp_df = df[available_cols].copy()
+
     temp_df["Dev_List"] = temp_df["Developers"].str.split("|")
     exploded = temp_df.explode("Dev_List")
     exploded["Dev_List"] = exploded["Dev_List"].str.strip()

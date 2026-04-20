@@ -2,6 +2,139 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
+STYLE_ORDER = [
+    "Global",
+    "Realism: Photoreal",
+    "Realism: Stylized",
+    "Stylization: Cartoon",
+    "Stylization: Illustrative",
+    "Stylization: Pixel Art",
+    "Stylization: Material-Based",
+    "Abstraction: Minimalist",
+    "Abstraction: Symbolic",
+]
+STYLE_COLORS = {
+    "Abstraction: Symbolic": "#0067B0",
+    "Abstraction: Minimalist": "#00D4FF",
+    "Realism: Photoreal": "#76CE8A",
+    "Realism: Stylized": "#319364",
+    "Stylization: Cartoon": "#AA4499",
+    "Stylization: Pixel Art": "#CC6677",
+    "Stylization: Material-Based": "#F1DE7E",
+    "Stylization: Illustrative": "#882255",
+    # "Unknown": "#808080",  # Gray
+    # "Unclassified": "#444444",  # Dark Gray
+}
+taxonomy_data = {
+    "1️⃣ Realism": {
+        "Photoreal": {
+            "description": "Visuals trying to look as realistic as possible. Can utilize physically based rendering (PBR) and high-resolution textures.",
+            "keywords": [
+                "ray-tracing",
+                "pbr",
+                "realistic",
+                "4k",
+            ],
+            "example_games": [
+                {"id": "cyberpunk 2077 (2020) [cd projekt red]", "shot_index": 9},
+                {"id": "the last of us part ii (2020) [naughty dog]", "shot_index": 0},
+                {"id": "forza horizon 5 (2021) [playground games]", "shot_index": 0},
+            ],
+        },
+        "Stylized": {
+            "description": "Retains realistic proportions and lighting but adds artistic flair. Often mimics the look of high-end film or fantasy illustration.",
+            "keywords": [
+                "cinematic",
+                "atmospheric",
+            ],
+            "example_games": [
+                {"id": "the sims 4 (2014) [maxis]", "shot_index": 4},
+                {"id": "portal 2 (2011) [valve]", "shot_index": 1},
+                {"id": "the witcher 3: wild hunt (2015) [cd projekt red]", "shot_index": 10},
+            ],
+        },
+    },
+    "2️⃣ Stylization": {
+        "Cartoon": {
+            "description": "Focuses on exaggerated proportions and vibrant colors. Often inspired by anime or cartoons.",
+            "keywords": ["anime", "manga", "chibi", "cartoon"],
+            "example_games": [
+                {"id": "team fortress 2 (2007) [valve]", "shot_index": 0},
+                {
+                    "id": "genshin impact (2020) [Cognosphere]",
+                    "shot_index": 10,
+                },
+                {"id": "super mario odyssey (2017) [nintendo]", "shot_index": 0},
+            ],
+        },
+        "Illustrative": {
+            "description": "Emphasizes the 'art'. Mimics physical media like watercolors or ink drawings.",
+            "keywords": [
+                "watercolor",
+                "hand-painted",
+                "hand-drawn",
+                "sketch",
+            ],
+            "example_games": [
+                {"id": "machinarium (2009) [amanita design]", "shot_index": 0},
+                {"id": "ōkami (2006) [clover studio]", "shot_index": 2},
+                {"id": "don't starve (2013) [klei entertainment]", "shot_index": 0},
+            ],
+        },
+        "Pixel Art": {
+            "description": "Art style limited or inspired by the technical constraints of early gaming hardware. Uses squares.",
+            "keywords": ["pixel art", "8-bit", "16-bit"],
+            "example_games": [
+                {"id": "stardew valley (2016) [concernedape]", "shot_index": 0},
+                {"id": "minecraft (2011) [mojang studios]", "shot_index": 3},
+                {"id": "undertale (2015) [tobyfox]", "shot_index": 3},
+            ],
+        },
+        "Material-Based": {
+            "description": "Games designed to look like they are constructed from physical materials. Often uses stop-motion.",
+            "keywords": [
+                "claymation",
+                "papercraft",
+                "stop-motion",
+                "felt",
+            ],
+            "example_games": [
+                {"id": "it takes two (2021) [hazelight studios]", "shot_index": 0},
+                {"id": "the neverhood (1996) [the neverhood, inc.]", "shot_index": 2},
+                {"id": "samorost 3 (2016) [amanita design]", "shot_index": 3},
+            ],
+        },
+    },
+    "3️⃣ Abstraction": {
+        "Minimalist": {
+            "description": "Reduces visuals to only essential elements. Uses clean lines, silhouettes, and simple shapes.",
+            "keywords": ["silhouette", "geometric", "minimalist"],
+            "example_games": [
+                {"id": "superhot (2016) [ea]", "shot_index": 0},
+                {"id": "voxel blast (2015) [ceiba software & arts]", "shot_index": 1},
+                {"id": "limbo (2010) [ea]", "shot_index": 4},
+            ],
+        },
+        "Symbolic": {
+            "description": "Color and shape represent ideas or mechanics. Also includestext-based and audio-based games with limited visual art.",
+            "keywords": [
+                "text-based",
+                "experimental",
+                "psychedelic",
+                "ascii",
+            ],
+            "example_games": [
+                {
+                    "id": "the hitchhiker's guide to the galaxy (1984) [infocom]",
+                    "shot_index": 0,
+                },
+                {"id": "thomas was alone (2012) [bithell games]", "shot_index": 2},
+                {"id": "dark echo (2015) [rac7 games]", "shot_index": 1},
+            ],
+        },
+    },
+}
+
 
 @st.cache_data
 def load_data(url):
@@ -126,129 +259,6 @@ def on_selectbox_change_dec():
 def on_text_change_dec():
     if st.session_state.dec_search.strip() != "":
         st.session_state.dec_box = "Select..."
-
-
-taxonomy_data = {
-    "1️⃣ Realism": {
-        "Photoreal": {
-            "description": "Visuals trying to look as realistic as possible. Can utilize physically based rendering (PBR) and high-resolution textures.",
-            "keywords": [
-                "ray-tracing",
-                "pbr",
-                "realistic",
-                "4k",
-            ],
-            "example_games": [
-                {"id": "cyberpunk 2077 (2020) [cd projekt red]", "shot_index": 9},
-                {"id": "the last of us part ii (2020) [naughty dog]", "shot_index": 0},
-                {"id": "forza horizon 5 (2021) [playground games]", "shot_index": 0},
-            ],
-        },
-        "Stylized": {
-            "description": "Retains realistic proportions and lighting but adds artistic flair. Often mimics the look of high-end film or fantasy illustration.",
-            "keywords": [
-                "cinematic",
-                "atmospheric",
-            ],
-            "example_games": [
-                {"id": "the sims 4 (2014) [maxis]", "shot_index": 4},
-                {"id": "portal 2 (2011) [valve]", "shot_index": 1},
-                {"id": "the witcher 3: wild hunt (2015) [cd projekt red]", "shot_index": 10},
-            ],
-        },
-    },
-    "2️⃣ Stylization": {
-        "Cartoon": {
-            "description": "Focuses on exaggerated proportions and vibrant colors. Often inspired by anime or cartoons.",
-            "keywords": ["anime", "manga", "chibi", "cartoon"],
-            "example_games": [
-                {"id": "team fortress 2 (2007) [valve]", "shot_index": 0},
-                {
-                    "id": "genshin impact (2020) [Cognosphere]",
-                    "shot_index": 10,
-                },
-                {"id": "super mario odyssey (2017) [nintendo]", "shot_index": 0},
-            ],
-        },
-        "Illustrative": {
-            "description": "Emphasizes the 'art'. Mimics physical media like watercolors or ink drawings.",
-            "keywords": [
-                "watercolor",
-                "hand-painted",
-                "hand-drawn",
-                "sketch",
-            ],
-            "example_games": [
-                {"id": "machinarium (2009) [amanita design]", "shot_index": 0},
-                {"id": "ōkami (2006) [clover studio]", "shot_index": 2},
-                {"id": "don't starve (2013) [klei entertainment]", "shot_index": 0},
-            ],
-        },
-        "Pixel Art": {
-            "description": "Art style limited or inspired by the technical constraints of early gaming hardware. Uses squares.",
-            "keywords": ["pixel art", "8-bit", "16-bit"],
-            "example_games": [
-                {"id": "stardew valley (2016) [concernedape]", "shot_index": 0},
-                {"id": "minecraft (2011) [mojang studios]", "shot_index": 3},
-                {"id": "undertale (2015) [tobyfox]", "shot_index": 3},
-            ],
-        },
-        "Material-Based": {
-            "description": "Games designed to look like they are constructed from physical materials. Often uses stop-motion.",
-            "keywords": [
-                "claymation",
-                "papercraft",
-                "stop-motion",
-                "felt",
-            ],
-            "example_games": [
-                {"id": "it takes two (2021) [hazelight studios]", "shot_index": 0},
-                {"id": "the neverhood (1996) [the neverhood, inc.]", "shot_index": 2},
-                {"id": "samorost 3 (2016) [amanita design]", "shot_index": 3},
-            ],
-        },
-    },
-    "3️⃣ Abstraction": {
-        "Minimalist": {
-            "description": "Reduces visuals to only essential elements. Uses clean lines, silhouettes, and simple shapes.",
-            "keywords": ["silhouette", "geometric", "minimalist"],
-            "example_games": [
-                {"id": "superhot (2016) [ea]", "shot_index": 0},
-                {"id": "voxel blast (2015) [ceiba software & arts]", "shot_index": 1},
-                {"id": "limbo (2010) [ea]", "shot_index": 4},
-            ],
-        },
-        "Symbolic": {
-            "description": "Color and shape represent ideas or mechanics. Also includestext-based and audio-based games with limited visual art.",
-            "keywords": [
-                "text-based",
-                "experimental",
-                "psychedelic",
-                "ascii",
-            ],
-            "example_games": [
-                {
-                    "id": "the hitchhiker's guide to the galaxy (1984) [infocom]",
-                    "shot_index": 0,
-                },
-                {"id": "thomas was alone (2012) [bithell games]", "shot_index": 2},
-                {"id": "dark echo (2015) [rac7 games]", "shot_index": 1},
-            ],
-        },
-    },
-}
-STYLE_COLORS = {
-    "Abstraction: Symbolic": "#0083B0",
-    "Abstraction: Minimalist": "#00D4FF",
-    "Realism: Photoreal": "#6CFF47",
-    "Realism: Stylized": "#FFD500",
-    "Stylization: Cartoon": "#EC5757",
-    "Stylization: Pixel Art": "#FF6F00",
-    "Stylization: Material-Based": "#862FC0",
-    "Stylization: Illustrative": "#FF32E4",
-    # "Unknown": "#808080",  # Gray
-    # "Unclassified": "#444444",  # Dark Gray
-}
 
 
 def draw_color_strip(palette_str, height=50):

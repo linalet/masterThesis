@@ -2,6 +2,7 @@ import os
 import streamlit as st
 import pandas as pd
 import helper_functions as helper
+import plotly.express as px
 
 # --- CONFIG & STYLING ---
 st.set_page_config(
@@ -45,17 +46,6 @@ def get_summary(filename):
 
 search_metadata = get_summary("search_metadata.parquet")
 decades_list = sorted(search_metadata["Decade"].unique().tolist())
-custom_style_order = [
-    "Global",
-    "Realism: Photoreal",
-    "Realism: Stylized",
-    "Stylization: Cartoon",
-    "Stylization: Illustrative",
-    "Stylization: Pixel Art",
-    "Stylization: Material-Based",
-    "Abstraction: Minimalist",
-    "Abstraction: Symbolic",
-]
 unclassified_labels = ["Unclassified", "Unclassified 2D", "Unclassified 3D"]
 if st.session_state.get("trigger_nav"):
     st.session_state["page_selection"] = "Individual Game Palette"
@@ -72,7 +62,7 @@ page = st.sidebar.radio(
         "Genre Timelines",
         "Theme Timelines",
         "Game Developer Profile",
-        "Individual Game Palette",
+        "Individual Game Analysis",
     ],
     key="page_selection",
 )
@@ -215,13 +205,14 @@ elif page == "Art Style Popularity":
 
     st.subheader("Style Distribution by Year")
     pop_df = get_summary("summary_style_popularity.parquet")
-    fig = st.bar_chart(
+    fig = px.bar(
         pop_df,
         x="Year",
         y="Percentage",
         color="Art_Style",
         height=600,
-        category_orders={"Art_Style": custom_style_order},
+        color_discrete_map=helper.STYLE_COLORS,
+        category_orders={"Art_Style": helper.STYLE_ORDER},
         barmode="stack",
     )
     fig.update_layout(
@@ -244,16 +235,42 @@ elif page == "Art Style Popularity":
         legend_title_side="top center",
     )
     st.plotly_chart(fig, width="stretch")
+
     st.info(
         """ 💡TOOL TIP: Hover over the graph to see exact percentages for each style in a given year. 
         You can zoom in and out, and pan over the graph using the icons above the legend.
         You can select which styles to show by clicking on the legend items. Use autoscale to reset the zoom sfter picking the styles."""
     )
     st.divider()
+    st.subheader("Individual Style Trends (Line Chart)")
+    fig_line = px.line(
+        pop_df,
+        x="Year",
+        y="Percentage",
+        color="Art_Style",
+        height=500,
+        color_discrete_map=helper.STYLE_COLORS,
+        category_orders={"Art_Style": helper.STYLE_ORDER},
+    )
+    fig_line.update_layout(
+        yaxis=dict(
+            range=[0, 100],
+            title="Percentage of games",
+            title_font=dict(size=22),
+            tickfont=dict(size=20),
+        ),
+        xaxis=dict(range=[1950, 2026], title_font=dict(size=22), tickfont=dict(size=20)),
+        legend=dict(title="Art Styles", font=dict(size=20), title_font=dict(size=24)),
+    )
+    # Make lines thicker for better visibility in a thesis
+    fig_line.update_traces(line=dict(width=5))
+    st.plotly_chart(fig_line, use_container_width=True)
+
+    st.divider()
 
     st.subheader("📈% of Games Categorized by Decade")
     success_df = get_summary("summary_success_rate.parquet")
-    fig2 = st.bar_chart(success_df, x="Decade", y="Rate")
+    fig2 = px.bar(success_df, x="Decade", y="Rate")
     fig2.update_layout(
         yaxis=dict(
             range=[0, 100],
@@ -413,13 +430,13 @@ elif page == "Game Developer Profile":
                 "Major Studios (Top 50 All-Time)",
                 ["Select..."] + top_50_global,
                 key="all_time_box",
-                on_change=helper.on_selectbox_change_dec,
+                on_change=helper.on_selectbox_change,
             )
             search_all = st.text_input(
                 "Or search ANY studio by name:",
                 "",
                 key="all_search",
-                on_change=helper.on_text_change_dec,
+                on_change=helper.on_text_change,
             )
             final_all = (
                 sel_all
@@ -450,16 +467,34 @@ elif page == "Game Developer Profile":
             all_years = sorted(
                 [y for y in studio_summary["Decade"].unique() if y != "All-Time"], reverse=True
             )
-            sel_dec = st.selectbox("Select Decade", all_years)
+            sel_dec = st.select_slider("Select Decade", options=all_years)
+            # sel_dec = st.selectbox("Select Decade", all_years)
 
             major_in_dec = studio_summary[
                 (studio_summary["Decade"] == sel_dec) & (studio_summary["Is_Major"] == True)
             ]["Studio"].tolist()
 
-            sel_studio = st.selectbox(f"Major Studios in {sel_dec}s", major_in_dec)
+            sel_studio = st.selectbox(
+                f"Major Studios in {sel_dec}s",
+                ["Select..."] + major_in_dec,
+                key="dec_box",
+                on_change=helper.on_selectbox_change_dec,
+            )
+            search_dec = st.text_input(
+                "Or search ANY studio by name:",
+                "",
+                key="dec_search",
+                on_change=helper.on_text_change_dec,
+            )
+            final_studio = (
+                sel_studio
+                if sel_studio != "Select..."
+                else (search_dec if search_dec.strip() != "" else None)
+            )
+            # sel_studio = st.selectbox(f"Major Studios in {sel_dec}s", major_in_dec)
 
         row = studio_summary[
-            (studio_summary["Studio"] == sel_studio) & (studio_summary["Decade"] == sel_dec)
+            (studio_summary["Studio"] == final_studio) & (studio_summary["Decade"] == sel_dec)
         ]
         if not row.empty:
             helper.display_studio_stats(row.iloc[0], c2)
@@ -474,7 +509,12 @@ elif page == "Game Developer Profile":
 
         with col_a:
             s_a = st.selectbox("Studio A", studio_summary["Studio"].unique(), key="s_a")
-            d_a = st.selectbox("Decade A", ["All-Time"] + all_years, key="d_a")
+            d_a = st.select_slider(
+                "Decade A",
+                ["All-Time"] + all_years,
+                key="d_a",
+            )
+            # d_a = st.selectbox("Decade A", ["All-Time"] + all_years, key="d_a")
             row_a = studio_summary[
                 (studio_summary["Studio"] == s_a) & (studio_summary["Decade"] == d_a)
             ]
@@ -491,41 +531,144 @@ elif page == "Game Developer Profile":
                 helper.display_studio_stats(row_b.iloc[0], col_b)
 
 
-elif page == "Individual Game Palette":
-    st.header("🎮 Individual Game Palette")
+elif page == "Individual Game Analysis":
+    st.header("🔍 Individual Game Analysis")
 
-    game_final_all = st.selectbox("Search for a game...", search_metadata["Unique_ID"].tolist())
+    # 1. Setup Search Data
+    # We use search_metadata for the dropdown to keep the app responsive
+    search_metadata = get_summary("search_metadata.parquet")
+    unique_games = sorted(search_metadata["Unique_ID"].unique())
 
-    if game_final_all:
-        game_data = search_metadata[search_metadata["Unique_ID"] == game_final_all].iloc[0]
+    # Handle cross-page navigation from other parts of the app
+    if "search_query" in st.session_state:
+        st.session_state["game_selector"] = st.session_state["search_query"]
+        del st.session_state["search_query"]
 
-        st.subheader(f"Weighted Palette: {game_data['Game']}")
-        p_cols = st.columns(8)
-        game_pal = game_data["Color_palette"].split("|")
-        for i, c in enumerate(game_pal[:8]):
-            p_cols[i].markdown(
-                f'<div class="color-box" style="background-color:{c};"></div>',
-                unsafe_allow_html=True,
+    # 2. Search UI
+    search_query = st.text_input("Search by name:", "mario")
+
+    if search_query:
+        # Filter based on game name (text before the first bracket)
+        filtered_list = [
+            g for g in unique_games if search_query.lower() in g.split("[")[0].strip().lower()
+        ]
+        if not filtered_list:
+            st.warning(f"🔍 No games found matching '**{search_query}**'.")
+            st.info("💡TOOL TIP: Try a broader term (e.g., 'Zelda' instead of the full title).")
+            st.stop()
+    else:
+        filtered_list = unique_games
+
+    selected_game_id = st.selectbox("Select a game:", filtered_list, key="game_selector")
+
+    if selected_game_id:
+        # 3. Load Detail Data
+        # Pull only the required rows from the large analytics file to save memory
+        all_analytics = get_summary("color_analytics.parquet")
+        game_rows = all_analytics[all_analytics["Unique_ID"] == selected_game_id]
+
+        if game_rows.empty:
+            st.error("Data for this game could not be found.")
+            st.stop()
+
+        # Check for NSFW content
+        if game_rows["Is_NSFW"].any():
+            st.error("⚠️ Content Restricted")
+            st.warning(
+                "This title has been filtered from visual display due to inappropriate content."
             )
-        decade_avg = get_summary("summary_decades.parquet")
-        st.info(
-            f"This game's saturation is being compared to the {game_data['Decade']}s average..."
-        )
+            st.stop()
+
+        main_info = game_rows.iloc[0]
 
         st.divider()
-        st.subheader("Screenshot Breakdown")
-        all_shots = get_summary("color_analytics.parquet")
-        game_shots = all_shots[all_shots["Unique_ID"] == game_final_all]
 
-        shot_cols = st.columns(len(game_shots))
-        for i, (_, shot) in enumerate(game_shots.iterrows()):
-            with shot_cols[i]:
-                st.image(shot["Screenshot"])
-                mini_cols = st.columns(5)
+        # 4. Main Profile Section
+        col1, col2 = st.columns([1.5, 2])
+
+        with col1:
+            st.title(main_info["Game"].title())
+            st.markdown(f"**📅 Year:** {main_info['Year']}")
+            st.markdown(f"**🏢 Studio:** {main_info['Developers'].replace('|', ', ').title()}")
+            st.markdown(f"**🎨 Art Style:** {main_info['Art_Style']}")
+            st.markdown(f"**🕹️ Genres:** {main_info['Genres'].replace('|', ', ').title()}")
+            st.markdown(f"**🎭 Themes:** {main_info['Themes'].replace('|', ', ').title()}")
+            st.markdown(f"**🖼️ Screenshots:** {len(game_rows)} images analyzed")
+
+        with col2:
+            st.subheader("🎨 Weighted Representative Palette")
+            color_profile_str = main_info["Color_palette"]
+            helper.draw_color_strip(color_profile_str, 50)
+
+            html_color_strip = '<div style="display: flex; height: 100px; border-radius: 8px; overflow: hidden; border: 3px solid #999;">'
+            for entry in color_profile_str.split("|"):
+                # st.info(entry)
+                if "," in entry:
+                    color, weight = entry.split(",")
+                    html_color_strip += f'''
+                        <div title="{color.upper()}" 
+                             style="background-color:{color}; flex:{weight};">
+                        </div>'''
+            html_color_strip += "</div>"
+
+            st.markdown(html_color_strip, unsafe_allow_html=True)
+            st.caption("Proportionally weighted palette (DNA) for this specific title.")
+
+            decade_summary = get_summary("summary_decades.parquet")
+            dec_avg_row = decade_summary[
+                (decade_summary["Decade"] == main_info["Decade"])
+                & (decade_summary["Art_Style"] == "Global")
+            ]
+
+            if not dec_avg_row.empty:
+                decade_avg_sat = dec_avg_row.iloc[0]["Decade_Avg_Sat"]
+                denom = decade_avg_sat if decade_avg_sat > 0 else 1.0
+                factor = main_info["saturation"] / denom
+
+                if factor > 1.5:
+                    comparison_text = "**exceptionally more vibrant than**"
+                elif factor > 1.1:
+                    comparison_text = f"**{factor:.1f}x more colorful than**"
+                elif factor < 0.5:
+                    comparison_text = "**highly desaturated compared to**"
+                elif factor < 0.9:
+                    comparison_text = f"**{1 / factor:.1f}x more muted than**"
+                else:
+                    comparison_text = "visually consistent with"
+
+                st.write(
+                    f"{main_info['Game'].title()} is {comparison_text} "
+                    f"the average game from the {main_info['Decade']}s."
+                )
+
+        st.divider()
+
+        st.subheader("🖼️ Source Screenshots & Local Palettes")
+
+        n_screens = len(game_rows)
+        cols = st.columns(3)
+
+        for i, row in enumerate(game_rows.itertuples()):
+            with cols[i % 3]:
+                st.image(row.Screenshot, use_container_width=True)
+
+                mini_html = (
+                    '<div style="display: flex; height: 30px; border-radius: 6px; '
+                    'overflow: hidden; border: 2px solid #555; margin-bottom: 30px; margin-top: -5px;">'
+                )
+
                 for j in range(1, 6):
-                    r, g, b = shot[f"C{j}_R"], shot[f"C{j}_G"], shot[f"C{j}_B"]
-                    hex_c = f"#{int(r):02x}{int(g):02x}{int(b):02x}"
-                    mini_cols[j - 1].markdown(
-                        f'<div class="mini-color" style="background-color:{hex_c};"></div>',
-                        unsafe_allow_html=True,
+                    r = getattr(row, f"C{j}_R")
+                    g = getattr(row, f"C{j}_G")
+                    b = getattr(row, f"C{j}_B")
+                    hex_code = f"#{int(r):02x}{int(g):02x}{int(b):02x}".upper()
+
+                    mini_html += (
+                        f'<div title="{hex_code}" '
+                        f'style="background-color:{hex_code}; flex:1; cursor: pointer;"></div>'
                     )
+
+                mini_html += "</div>"
+                st.markdown(mini_html, unsafe_allow_html=True)
+
+        st.info("💡 TOOL TIP: Hover over any color block to see the specific Hex Code.")

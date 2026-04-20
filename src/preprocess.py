@@ -16,7 +16,6 @@ def run_preprocessing(input_path="data/game_data.parquet"):
     print("📖 Loading raw data...")
     df = pd.read_parquet(path)
 
-    # 1. Clean and Standardize
     if "Is_NSFW" not in df.columns:
         df["Is_NSFW"] = False
     else:
@@ -31,7 +30,6 @@ def run_preprocessing(input_path="data/game_data.parquet"):
     print("🧹 Normalizing Studios & Generating IDs...")
     df["Developers"] = df["Developers"].apply(ph.normalize_studio_name)
 
-    # Generate the Unique_ID: Game (Year) [First Developer]
     df["Unique_ID"] = (
         df["Game"]
         + " ("
@@ -54,35 +52,29 @@ def run_preprocessing(input_path="data/game_data.parquet"):
     df["Is_classified"] = ~df["Art_Style"].str.startswith("Unclassified")
 
     print("🎨 Calculating Saturation (Thesis Metric)...")
-    # Using C1 (Primary color) to determine the saturation metric for the whole screenshot
     df["saturation"] = df[["C1_R", "C1_G", "C1_B"]].max(axis=1) - df[["C1_R", "C1_G", "C1_B"]].min(
         axis=1
     )
 
     print("🧬 Generating Game DNA (Top 8 Colors per Game)...")
-    # This groups 1M rows into 400k games. This is the most time-consuming part.
     game_palettes = df.groupby("Unique_ID").apply(
-        lambda x: "|".join(helper.get_representative_palette(x, count=8))
+        lambda x: "|".join(ph.get_weighted_representative_palette(x)), include_groups=False
     )
     df["Color_palette"] = df["Unique_ID"].map(game_palettes)
 
     print("🖼 Formatting Screenshot URLs...")
     df = ph.finalize_screenshot_urls(df)
 
-    # --- SAVE SUMMARY FILES ---
     print("📊 Exporting Aggregated Summaries...")
 
-    # Style Popularity & Classification Rates
     style_p, class_s = ph.generate_style_stats(df)
     style_p.to_parquet(os.path.join(base_dir, "data/summary_style_popularity.parquet"))
     class_s.to_parquet(os.path.join(base_dir, "data/summary_success_rate.parquet"))
 
-    # Era Vibe Palettes
     ph.generate_decade_style_summary(df).to_parquet(
         os.path.join(base_dir, "data/summary_decades.parquet")
     )
 
-    # Genre & Theme Timelines
     ph.generate_timeline_summary(df, "Genres").to_parquet(
         os.path.join(base_dir, "data/summary_genres.parquet")
     )
@@ -90,7 +82,6 @@ def run_preprocessing(input_path="data/game_data.parquet"):
         os.path.join(base_dir, "data/summary_themes.parquet")
     )
 
-    # Studio Profiles
     ph.generate_studio_summary(df).to_parquet(
         os.path.join(base_dir, "data/summary_studios.parquet")
     )
