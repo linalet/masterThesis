@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import plotly.express as px
 
 STYLE_ORDER = [
     "Global",
@@ -280,43 +281,48 @@ def draw_color_strip(palette_str, height=50):
     st.markdown(html + hex_labels, unsafe_allow_html=True)
 
 
-def draw_style_distribution(dist_dict):
-    """Draws a custom CSS horizontal bar chart color-coded by style."""
-    # Sort by percentage descending
+def draw_style_distribution(dist_dict, unclassified_pct, studio_name="default"):
+    """Draws a  Pie Chart color-coded by style"""
     if not dist_dict:
-        st.info("No color data available.")
+        st.info("No art style distribution data available.")
         return
-    clean_dist = {
-        style: (percent if percent is not None else 0.0) for style, percent in dist_dict.items()
-    }
-    sorted_dist = dict(sorted(clean_dist.items(), key=lambda item: item[1], reverse=True))
 
-    for style, percentage in sorted_dist.items():
-        pct_val = percentage * 100
-        pct_label = f"{pct_val:.1f}%"
-        # Get color from map, fallback to gray if not found
-        bar_color = STYLE_COLORS.get(style, "#808080")
+    df_pie = pd.DataFrame({"Style": list(dist_dict.keys()), "Percentage": list(dist_dict.values())})
 
-        st.markdown(
-            f"""
-            <div style="margin-bottom: 12px;">
-                <div style="display: flex; justify-content: space-between; font-size: 15px; margin-bottom: 3px;">
-                    <span style="font-weight: 500;">{style}</span>
-                    <span style="font-family: monospace; color: #AAA;">{pct_label}</span>
-                </div>
-                <div style="background-color: #262730; border-radius: 10px; width: 100%; height: 12px; border: 1px solid #444;">
-                    <div style="background-color: {bar_color}; width: {pct_val}%; height: 10px; border-radius: 10px; transition: width 0.5s;"></div>
-                </div>
-            </div>
-        """,
-            unsafe_allow_html=True,
-        )
+    fig = px.pie(
+        df_pie,
+        values="Percentage",
+        names="Style",
+        color="Style",
+        color_discrete_map=STYLE_COLORS,
+        hole=0.35,
+    )
+    fig.update_layout(
+        showlegend=True,
+        height=400,
+        margin=dict(t=0, b=0, l=0, r=0),
+        legend=dict(font=dict(size=24)),
+    )
+    fig.update_traces(
+        textposition="inside",
+        textinfo="percent",
+        insidetextfont=dict(size=22, color="white", family="Arial Black"),
+    )
+    chart_id = f"pie_{studio_name.replace(' ', '_').lower()}"
+    st.plotly_chart(fig, use_container_width=True, key=chart_id)
+    st.caption(
+        f"Note: {unclassified_pct * 100:.1f}% of games from this selection are unclassified."
+    )
 
 
-def display_studio_stats(row, col_for_chart):
+def display_studio_stats(row):
     st.write(f"### {row['Studio'].title()}'s Color Signature")
     st.caption(f"Collected from {row['Game_Count']} games")
     draw_color_strip(row["Palette"], height=60)
 
     st.write("### Art Style Breakdown")
-    draw_style_distribution(row["Style_Distribution"])
+    draw_style_distribution(
+        row["Style_Distribution"],
+        unclassified_pct=row["Unclassified_Pct"],
+        studio_name=row["Studio"],
+    )

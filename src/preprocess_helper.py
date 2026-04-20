@@ -183,7 +183,7 @@ def get_weighted_representative_palette(group):
 def generate_style_stats(df):
     """Generates percentages for Art Style Popularity charts."""
     # Annual % of each style
-    classified_df = df[df["Is_classified"] == True].copy()
+    classified_df = df[df["Is_classified"]].copy()
     yearly_counts = classified_df.groupby(["Year", "Art_Style"]).size().unstack(fill_value=0)
     yearly_perc = yearly_counts.div(yearly_counts.sum(axis=1), axis=0) * 100
     yearly_df = yearly_perc.reset_index().melt(id_vars="Year", value_name="Percentage")
@@ -279,6 +279,8 @@ def generate_studio_summary(df):
 
     for studio, s_df in exploded.groupby("Dev_List"):
         palette = helper.get_representative_palette(s_df, count=10)
+        unclassified_count = s_df["Art_Style"].str.contains("Unclassified", na=False).sum()
+        unclassified_pct = unclassified_count / len(s_df) if len(s_df) > 0 else 0
         classified = s_df[~s_df["Art_Style"].str.contains("Unclassified", na=False)]
         style_dist = (
             classified["Art_Style"].value_counts(normalize=True).to_dict()
@@ -292,11 +294,16 @@ def generate_studio_summary(df):
                 "Decade": "All-Time",
                 "Palette": "|".join(palette),
                 "Style_Distribution": style_dist,
+                "Unclassified_Pct": unclassified_pct,
                 "Game_Count": s_df["Unique_ID"].nunique(),
                 "Is_Major": studio in top_50_global,
             }
         )
         for dec, dec_group in s_df.groupby("Decade"):
+            dec_total = len(dec_group)
+            dec_unclassified = dec_group["Art_Style"].str.contains("Unclassified", na=False).sum()
+            dec_un_pct = dec_unclassified / dec_total if dec_total > 0 else 0
+
             dec_palette = helper.get_representative_palette(dec_group, count=10)
             dec_classified = dec_group[
                 ~dec_group["Art_Style"].str.contains("Unclassified", na=False)
@@ -314,6 +321,7 @@ def generate_studio_summary(df):
                     "Decade": str(int(dec)),
                     "Palette": "|".join(dec_palette),
                     "Style_Distribution": dec_style_dist,
+                    "Unclassified_Pct": dec_un_pct,
                     "Game_Count": dec_group["Unique_ID"].nunique(),
                     "Is_Major": is_major_this_decade,
                 }

@@ -463,7 +463,7 @@ elif page == "Game Developer Profile":
                     ].head(1)
                 if not studio_match.empty:
                     dev_row = studio_match.iloc[0]
-                    helper.display_studio_stats(dev_row, c2)
+                    helper.display_studio_stats(dev_row)
                 else:
                     st.error(f"❌ Studio '{final_all}' not found. Please check the spelling.")
             else:
@@ -472,46 +472,58 @@ elif page == "Game Developer Profile":
         st.subheader("📆 Decade-Specific Leaders")
         all_years = sorted([y for y in studio_summary["Decade"].unique() if y != "All-Time"])
         sel_dec = st.select_slider("Select Decade", options=all_years)
+
+        if "final_studio_choice" not in st.session_state:
+            st.session_state["final_studio_choice"] = None
+        current_choice = None
         c1, c2 = st.columns([1, 3])
+
         with c1:
             major_in_dec = studio_summary[
-                (studio_summary["Decade"] == sel_dec) & (studio_summary["Is_Major"])
+                (studio_summary["Decade"] == str(sel_dec)) & (studio_summary["Is_Major"])
             ]["Studio"].tolist()
+            major_options = ["Select..."] + sorted(major_in_dec)
 
-            sel_studio = st.selectbox(
-                f"Major Studios in {sel_dec}s",
-                ["Select..."] + major_in_dec,
-                key="dec_box",
-                on_change=helper.on_selectbox_change_dec,
-            )
-            frst = major_in_dec[0]
-            search_dec = st.text_input(
-                "Or search ANY studio by name:",
-                # value=frst,
-                key="dec_search",
-                on_change=helper.on_text_change_dec,
-            )
-            final_studio = (
-                sel_studio
-                if sel_studio != "Select..."
-                else (search_dec if search_dec.strip() != "" else None)
-            )
+            sel_studio = st.selectbox(f"Major Studios in {sel_dec}s", major_options, index=0)
+            search_dec = st.text_input("Or search ANY studio name:", key="dec_search_input")
 
-            # sel_studio = st.selectbox(f"Major Studios in {sel_dec}s", major_in_dec)
+            if sel_studio != "Select...":
+                st.session_state["final_studio_choice"] = sel_studio
+            elif search_dec.strip() != "":
+                st.session_state["final_studio_choice"] = search_dec.strip().lower()
 
         with c2:
-            if not final_studio:
-                st.info("Select a studio to view")
+            current_choice = st.session_state["final_studio_choice"]
+
+            if not current_choice:
+                st.info("Select a major studio or search by name to begin.")
             else:
                 row = studio_summary[
-                    (studio_summary["Studio"] == final_studio)
-                    & (studio_summary["Decade"] == sel_dec)
+                    (studio_summary["Studio"] == current_choice)
+                    & (studio_summary["Decade"] == str(sel_dec))
                 ]
-                if not row.empty:
-                    helper.display_studio_stats(row.iloc[0], c2)
-                else:
-                    st.error(f"❌ Studio '{final_studio}' not found. Please check the spelling.")
 
+                if not row.empty:
+                    helper.display_studio_stats(row.iloc[0])
+                else:
+                    st.warning(
+                        f"⚠️ **{current_choice.title()}** has no recorded releases in the **{sel_dec}s**."
+                    )
+                    all_entries = studio_summary[studio_summary["Studio"] == current_choice]
+
+                    if not all_entries.empty:
+                        active_years = sorted(
+                            [d for d in all_entries["Decade"].unique() if d != "All-Time"]
+                        )
+                        st.info(
+                            f"💡 Try moving the slider. {current_choice.title()} is active in: {', '.join(active_years)}"
+                        )
+                    else:
+                        st.error(f"❌ Studio '{current_choice}' not found in the master database.")
+
+        if st.button("Clear Selection"):
+            st.session_state["final_studio_choice"] = None
+            st.rerun()
     with h_to_h:
         st.subheader("⚔️ Studio Head-to-Head Comparison")
         st.write("Directly compare the artistic evolution of two studios within the same decade.")
@@ -539,7 +551,7 @@ elif page == "Game Developer Profile":
                 (studio_summary["Studio"] == studio_a) & (studio_summary["Decade"] == search_decade)
             ]
             if not row_a.empty:
-                helper.display_studio_stats(row_a.iloc[0], col_a)
+                helper.display_studio_stats(row_a.iloc[0])
             else:
                 st.warning(f"No data for {studio_a} in the {search_decade}s.")
 
@@ -552,7 +564,7 @@ elif page == "Game Developer Profile":
                 (studio_summary["Studio"] == studio_b) & (studio_summary["Decade"] == search_decade)
             ]
             if not row_b.empty:
-                helper.display_studio_stats(row_b.iloc[0], col_b)
+                helper.display_studio_stats(row_b.iloc[0])
             else:
                 st.warning(f"No data for {studio_b} in the {search_decade}s.")
 
