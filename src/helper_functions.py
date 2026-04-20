@@ -237,9 +237,22 @@ taxonomy_data = {
         },
     },
 }
+STYLE_COLORS = {
+    "Abstraction: Symbolic": "#0083B0",
+    "Abstraction: Minimalist": "#00D4FF",
+    "Realism: Photoreal": "#6CFF47",
+    "Realism: Stylized": "#FFD500",
+    "Stylization: Cartoon": "#EC5757",
+    "Stylization: Pixel Art": "#FF6F00",
+    "Stylization: Material-Based": "#862FC0",
+    "Stylization: Illustrative": "#FF32E4",
+    # "Unknown": "#808080",  # Gray
+    # "Unclassified": "#444444",  # Dark Gray
+}
 
 
-def draw_color_strip(palette_str, height="50px"):
+def draw_color_strip(palette_str, height=50):
+    height = f"{height}px"
     if not palette_str:
         st.info("No color data available.")
         return
@@ -255,3 +268,41 @@ def draw_color_strip(palette_str, height="50px"):
     html += "</div>"
     hex_labels += "</div>"
     st.markdown(html + hex_labels, unsafe_allow_html=True)
+
+
+def draw_style_distribution(dist_dict):
+    """Draws a custom CSS horizontal bar chart color-coded by style."""
+    # Sort by percentage descending
+    sorted_dist = dict(sorted(dist_dict.items(), key=lambda item: item[1], reverse=True))
+
+    for style, percentage in sorted_dist.items():
+        pct_val = percentage * 100
+        pct_label = f"{pct_val:.1f}%"
+        # Get color from map, fallback to gray if not found
+        bar_color = STYLE_COLORS.get(style, "#808080")
+
+        st.markdown(
+            f"""
+            <div style="margin-bottom: 12px;">
+                <div style="display: flex; justify-content: space-between; font-size: 15px; margin-bottom: 3px;">
+                    <span style="font-weight: 500;">{style}</span>
+                    <span style="font-family: monospace; color: #AAA;">{pct_label}</span>
+                </div>
+                <div style="background-color: #262730; border-radius: 10px; width: 100%; height: 12px; border: 1px solid #444;">
+                    <div style="background-color: {bar_color}; width: {pct_val}%; height: 10px; border-radius: 10px; transition: width 0.5s;"></div>
+                </div>
+            </div>
+        """,
+            unsafe_allow_html=True,
+        )
+
+
+def display_studio_stats(row, col_for_chart):
+    st.write(f"## {row['Studio'].title()}")
+    st.caption(f"🧬 **Studio DNA Summary** | {row['Game_Count']} Games")
+
+    st.write("### Primary Color Signature")
+    draw_color_strip(row["Palette"], height="70px")
+
+    st.write("### Art Style Breakdown")
+    draw_style_distribution(row["Style_Distribution"])

@@ -236,35 +236,81 @@ def generate_timeline_summary(df, column):
         for time_unit in ["Year", "Decade"]:
             for time_val, g in item_df.groupby(time_unit):
                 palette = helper.get_representative_palette(g, count=10)
+                classified_styles = g[~g["Art_Style"].str.contains("Unclassified", na=False)]
                 summary.append(
                     {
                         "Item": item,
                         "Type": time_unit,
                         "Time": time_val,
                         "Palette": "|".join(palette),
-                        "Top_Style": g["Art_Style"].mode()[0] if not g.empty else "Unknown",
+                        "Top_Style": classified_styles["Art_Style"].mode()[0]
+                        if not classified_styles.empty
+                        else "Unknown",
+                        "Count": len(g),
                     }
                 )
     return pd.DataFrame(summary)
 
 
 def generate_studio_summary(df):
-    """Generates DNA and Style distributions for top developers."""
-    all_devs = df["Developers"].str.split("|").explode().str.strip()
-    top_50 = all_devs[all_devs != "unknown"].value_counts().nlargest(50).index.tolist()
+    """Generates DNA and Style distributions for ALL developers with Top 50 ranking flags."""
+
+    temp_df = df[
+        ["Unique_ID", "Developers", "Art_Style", "Decade", "C1_R", "C1_G", "C1_B", "saturation"]
+    ].copy()
+    temp_df["Dev_List"] = temp_df["Developers"].str.split("|")
+    exploded = temp_df.explode("Dev_List")
+    exploded["Dev_List"] = exploded["Dev_List"].str.strip()
+    exploded = exploded[exploded["Dev_List"] != "unknown"]
+
+    top_50_global = exploded["Dev_List"].value_counts().nlargest(50).index.tolist()
+
+    top_50_by_decade = {}
+    for dec, d_group in exploded.groupby("Decade"):
+        top_50_by_decade[int(dec)] = d_group["Dev_List"].value_counts().nlargest(50).index.tolist()
 
     rows = []
-    for studio in top_50:
-        s_df = df[df["Developers"].str.contains(studio, case=False, na=False, regex=False)]
+
+    for studio, s_df in exploded.groupby("Dev_List"):
         palette = helper.get_representative_palette(s_df, count=10)
-        style_dist = s_df["Art_Style"].value_counts(normalize=True).to_dict()
+        classified = s_df[~s_df["Art_Style"].str.contains("Unclassified", na=False)]
+        style_dist = (
+            classified["Art_Style"].value_counts(normalize=True).to_dict()
+            if not classified.empty
+            else {"Unknown": 1.0}
+        )
 
         rows.append(
             {
                 "Studio": studio,
+                "Decade": "All-Time",
                 "Palette": "|".join(palette),
                 "Style_Distribution": style_dist,
                 "Game_Count": s_df["Unique_ID"].nunique(),
+                "Is_Major": studio in top_50_global,
             }
         )
+        for dec, dec_group in s_df.groupby("Decade"):
+            dec_palette = helper.get_representative_palette(dec_group, count=10)
+            dec_classified = dec_group[
+                ~dec_group["Art_Style"].str.contains("Unclassified", na=False)
+            ]
+            dec_style_dist = (
+                dec_classified["Art_Style"].value_counts(normalize=True).to_dict()
+                if not dec_classified.empty
+                else {"Unknown": 1.0}
+            )
+            is_major_this_decade = studio in top_50_by_decade.get(int(dec), [])
+
+            rows.append(
+                {
+                    "Studio": studio,
+                    "Decade": str(int(dec)),
+                    "Palette": "|".join(dec_palette),
+                    "Style_Distribution": dec_style_dist,
+                    "Game_Count": dec_group["Unique_ID"].nunique(),
+                    "Is_Major": is_major_this_decade,
+                }
+            )
+
     return pd.DataFrame(rows)
