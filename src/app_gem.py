@@ -468,7 +468,7 @@ elif page == "Game Developer Profile":
                     ].head(1)
                 if not studio_match.empty:
                     dev_row = studio_match.iloc[0]
-                    helper.display_studio_stats(dev_row)
+                    helper.display_studio_stats(dev_row, "all_time")
                 else:
                     st.error(f"❌ Studio '{final_all}' not found. Please check the spelling.")
             else:
@@ -509,7 +509,7 @@ elif page == "Game Developer Profile":
                 ]
 
                 if not row.empty:
-                    helper.display_studio_stats(row.iloc[0])
+                    helper.display_studio_stats(row.iloc[0], "decade_spec")
                 else:
                     st.warning(
                         f"⚠️ **{current_choice.title()}** has no recorded releases in the **{sel_dec}s**."
@@ -569,7 +569,7 @@ elif page == "Game Developer Profile":
                 (studio_summary["Studio"] == studio_a) & (studio_summary["Decade"] == search_decade)
             ]
             if not row_a.empty:
-                helper.display_studio_stats(row_a.iloc[0], suffix="h2h_left")
+                helper.display_studio_stats(row_a.iloc[0], "h_to_h", suffix="h2h_left")
             else:
                 st.warning(f"No data for {studio_a} in the {search_decade}s.")
                 other_decs = studio_summary[
@@ -594,7 +594,7 @@ elif page == "Game Developer Profile":
                 (studio_summary["Studio"] == studio_b) & (studio_summary["Decade"] == search_decade)
             ]
             if not row_b.empty:
-                helper.display_studio_stats(row_b.iloc[0], suffix="h2h_right")
+                helper.display_studio_stats(row_b.iloc[0], "h_to_h", suffix="h2h_right")
             else:
                 st.warning(f"No data for {studio_b} in the {search_decade}s.")
                 other_decs = studio_summary[

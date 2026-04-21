@@ -281,9 +281,7 @@ def draw_color_strip(palette_str, height=50):
     st.markdown(html + hex_labels, unsafe_allow_html=True)
 
 
-def draw_style_distribution(
-    dist_dict, unclassified_pct, studio_name="default", decade="1950", suffix=""
-):
+def draw_style_distribution(dist_dict, unclassified_pct, tab, studio_name="default", suffix=""):
     """Draws a  Pie Chart color-coded by style"""
     if not dist_dict:
         st.info("No art style distribution data available.")
@@ -312,11 +310,11 @@ def draw_style_distribution(
     chart_id = f"pie_{studio_name.replace(' ', '_').lower()}"
     st.plotly_chart(fig, width="stretch", key=chart_id)
     clean_name = studio_name.replace(" ", "_").lower()
-    chart_id = f"pie_{clean_name}_{suffix}"  # _{decade}"
+    chart_id = f"pie_{clean_name}_{tab}_{suffix}"
     st.caption(f"{unclassified_pct * 100:.1f}% of games from this selection are unclassified.")
 
 
-def display_studio_stats(row, suffix=""):
+def display_studio_stats(row, tab, suffix=""):
     st.write(f"### {row['Studio'].title()}'s Color Signature")
     st.caption(f"Collected from {row['Game_Count']} games")
     draw_color_strip(row["Palette"], height=60)
@@ -326,6 +324,6 @@ def display_studio_stats(row, suffix=""):
         row["Style_Distribution"],
         unclassified_pct=row["Unclassified_Pct"],
         studio_name=row["Studio"],
-        decade=row["Decade"],
+        tab=tab,
         suffix=suffix,
     )
