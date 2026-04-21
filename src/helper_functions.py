@@ -308,9 +308,9 @@ def draw_style_distribution(dist_dict, unclassified_pct, tab, studio_name="defau
         insidetextfont=dict(size=22, color="white", family="Arial Black"),
     )
     chart_id = f"pie_{studio_name.replace(' ', '_').lower()}"
-    st.plotly_chart(fig, width="stretch", key=chart_id)
     clean_name = studio_name.replace(" ", "_").lower()
     chart_id = f"pie_{clean_name}_{tab}_{suffix}"
+    st.plotly_chart(fig, width="stretch", key=chart_id)
     st.caption(f"{unclassified_pct * 100:.1f}% of games from this selection are unclassified.")
 
 
