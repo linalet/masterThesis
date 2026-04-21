@@ -48,6 +48,10 @@ def get_summary(filename):
 
 search_metadata = get_summary("search_metadata.parquet")
 all_analytics = get_summary("color_analytics.parquet")
+decade_summary = get_summary("summary_decades.parquet")
+screen_data = get_summary("screenshot_colors.parquet")
+
+
 decades_list = sorted(search_metadata["Decade"].unique().tolist())
 unclassified_labels = ["Unclassified", "Unclassified 2D", "Unclassified 3D"]
 if st.session_state.get("trigger_nav"):
@@ -294,8 +298,6 @@ elif page == "Color through Decades":
     st.header("🎨 Color through Decades")
     st.subheader("Dominant colors of each decade (Global)")
 
-    decade_summary = get_summary("summary_decades.parquet")
-
     for dec in decades_list:
         row = decade_summary[
             (decade_summary["Decade"] == dec) & (decade_summary["Art_Style"] == "Global")
@@ -526,9 +528,9 @@ elif page == "Game Developer Profile":
                     else:
                         st.error(f"❌ Studio '{current_choice}' not found in the master database.")
 
-        if st.button("Clear Selection"):
-            st.session_state["final_studio_choice"] = None
-            st.rerun()
+        # if st.button("Clear Selection"):
+        #     st.session_state["final_studio_choice"] = None
+        #     st.rerun()
     with h_to_h:
         st.subheader("⚔️ Studio Head-to-Head Comparison")
         st.write("Directly compare the artistic evolution of two studios within the same decade.")
@@ -608,7 +610,6 @@ elif page == "Game Developer Profile":
 elif page == "Individual Game Analysis":
     st.header("🔍 Individual Game Analysis")
 
-    search_metadata = get_summary("search_metadata.parquet")
     unique_games = sorted(search_metadata["Unique_ID"].unique())
 
     search_input = st.text_input("Search by name:", key="text_search_box")
@@ -674,7 +675,6 @@ elif page == "Individual Game Analysis":
             st.markdown(html_color_strip, unsafe_allow_html=True)
             st.caption("Proportionally weighted palette (DNA) for this specific title.")
 
-            decade_summary = get_summary("summary_decades.parquet")
             dec_avg_row = decade_summary[
                 (decade_summary["Decade"] == main_info["Decade"])
                 & (decade_summary["Art_Style"] == "Global")
@@ -704,177 +704,177 @@ elif page == "Individual Game Analysis":
         st.divider()
 
         st.subheader("🖼️ Source Screenshots & Local Palettes")
-        screen_data = get_summary("screenshot_colors.parquet")
+        # screen_data = get_summary("screenshot_colors.parquet")
 
-        cols = st.columns(3)
-        screens = screen_data[screen_data["Unique_ID"] == selected_game_id]
-        for i, row in enumerate(screens.itertuples()):
-            with cols[i % 3]:
-                st.image(row.Screenshot, width="stretch")
+        # cols = st.columns(3)
+        # screens = screen_data[screen_data["Unique_ID"] == selected_game_id]
+        # for i, row in enumerate(screens.itertuples()):
+        #     with cols[i % 3]:
+        #         st.image(row.Screenshot, width="stretch")
 
-                mini_html = (
-                    '<div style="display: flex; height: 30px; border-radius: 6px; '
-                    'overflow: hidden; border: 2px solid #555; margin-bottom: 30px; margin-top: -5px;">'
-                )
+        #         mini_html = (
+        #             '<div style="display: flex; height: 30px; border-radius: 6px; '
+        #             'overflow: hidden; border: 2px solid #555; margin-bottom: 30px; margin-top: -5px;">'
+        #         )
 
-                for j in range(1, 10):
-                    r = getattr(row, f"C{j}_R")
-                    g = getattr(row, f"C{j}_G")
-                    b = getattr(row, f"C{j}_B")
-                    if pd.isna(r) or pd.isna(g) or pd.isna(b):
-                        continue
-                    hex_code = f"#{int(r):02x}{int(g):02x}{int(b):02x}".upper()
+        #         for j in range(1, 10):
+        #             r = getattr(row, f"C{j}_R")
+        #             g = getattr(row, f"C{j}_G")
+        #             b = getattr(row, f"C{j}_B")
+        #             if pd.isna(r) or pd.isna(g) or pd.isna(b):
+        #                 continue
+        #             hex_code = f"#{int(r):02x}{int(g):02x}{int(b):02x}".upper()
 
-                    mini_html += (
-                        f'<div title="{hex_code}" '
-                        f'style="background-color:{hex_code}; flex:1; cursor: pointer;"></div>'
-                    )
+        #             mini_html += (
+        #                 f'<div title="{hex_code}" '
+        #                 f'style="background-color:{hex_code}; flex:1; cursor: pointer;"></div>'
+        #             )
 
-                mini_html += "</div>"
-                st.markdown(mini_html, unsafe_allow_html=True)
+        #         mini_html += "</div>"
+        #         st.markdown(mini_html, unsafe_allow_html=True)
 
-        st.info("💡 TOOL TIP: Hover over any color block to see the specific Hex Code.")
+        # st.info("💡 TOOL TIP: Hover over any color block to see the specific Hex Code.")
 
-elif page == "Style Categorizer":
-    st.header("🏷️ Research Validation & Categorizer")
+# elif page == "Style Categorizer":
+#     st.header("🏷️ Research Validation & Categorizer")
 
-    # --- 1. File Paths & Initialization ---
-    data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
-    manual_file = os.path.join(data_dir, "manual_classification.csv")
-    valid_ids_file = os.path.join(data_dir, "validated_log.txt")
+#     # --- 1. File Paths & Initialization ---
+#     data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
+#     manual_file = os.path.join(data_dir, "manual_classification.csv")
+#     valid_ids_file = os.path.join(data_dir, "validated_log.txt")
 
-    # Ensure files exist
-    if not os.path.exists(manual_file):
-        pd.DataFrame(columns=["Unique_ID", "Manual_Art_Style"]).to_csv(manual_file, index=False)
+#     # Ensure files exist
+#     if not os.path.exists(manual_file):
+#         pd.DataFrame(columns=["Unique_ID", "Manual_Art_Style"]).to_csv(manual_file, index=False)
 
-    if not os.path.exists(valid_ids_file):
-        with open(valid_ids_file, "w", encoding="utf-8") as f:
-            f.write("unique_id\n")
+#     if not os.path.exists(valid_ids_file):
+#         with open(valid_ids_file, "w", encoding="utf-8") as f:
+#             f.write("unique_id\n")
 
-    # --- 2. Load Progress ---
-    manual_df = pd.read_csv(manual_file)
-    with open(valid_ids_file, "r", encoding="utf-8") as f:
-        confirmed_ids = set(line.strip().lower() for line in f.readlines()[1:] if line.strip())
+#     # --- 2. Load Progress ---
+#     manual_df = pd.read_csv(manual_file)
+#     with open(valid_ids_file, "r", encoding="utf-8") as f:
+#         confirmed_ids = set(line.strip().lower() for line in f.readlines()[1:] if line.strip())
 
-    csv_ids = set(manual_df["Unique_ID"].astype(str).str.lower().str.strip().unique())
-    done_ids = csv_ids.union(confirmed_ids)
+#     csv_ids = set(manual_df["Unique_ID"].astype(str).str.lower().str.strip().unique())
+#     done_ids = csv_ids.union(confirmed_ids)
 
-    # Use the master color analytics file for classification work
-    master_df = get_summary("color_analytics.parquet")
-    # Use the screenshot file for the visual gallery
-    screen_df = get_summary("screenshot_colors.parquet")
+#     # Use the master color analytics file for classification work
+#     master_df = get_summary("color_analytics.parquet")
+#     # Use the screenshot file for the visual gallery
+#     screen_df = get_summary("screenshot_colors.parquet")
 
-    # Filter out games already processed
-    available_data = master_df[
-        ~master_df["Unique_ID"].str.lower().str.strip().isin(done_ids)
-    ].copy()
+#     # Filter out games already processed
+#     available_data = master_df[
+#         ~master_df["Unique_ID"].str.lower().str.strip().isin(done_ids)
+#     ].copy()
 
-    # --- 3. SECTION 1: CHRONOLOGICAL VALIDATION (Top) ---
-    st.subheader("⏳ Chronological Validation")
-    st.caption("Validating games that already have a classified Art Style from the taxonomy.")
+#     # --- 3. SECTION 1: CHRONOLOGICAL VALIDATION (Top) ---
+#     st.subheader("⏳ Chronological Validation")
+#     st.caption("Validating games that already have a classified Art Style from the taxonomy.")
 
-    # Filter for games that ARE classified but NOT validated
-    chrono_pool = available_data[available_data["Is_classified"]].sort_values("Year")
+#     # Filter for games that ARE classified but NOT validated
+#     chrono_pool = available_data[available_data["Is_classified"]].sort_values("Year")
 
-    if chrono_pool.empty:
-        st.success("🎉 All automatically classified games have been validated!")
-    else:
-        # Lock in current game
-        if "chrono_id" not in st.session_state or st.session_state.chrono_id in done_ids:
-            st.session_state.chrono_id = chrono_pool.iloc[0]["Unique_ID"]
+#     if chrono_pool.empty:
+#         st.success("🎉 All automatically classified games have been validated!")
+#     else:
+#         # Lock in current game
+#         if "chrono_id" not in st.session_state or st.session_state.chrono_id in done_ids:
+#             st.session_state.chrono_id = chrono_pool.iloc[0]["Unique_ID"]
 
-        current_game = chrono_pool[chrono_pool["Unique_ID"] == st.session_state.chrono_id].iloc[0]
-        game_screens = screen_df[screen_df["Unique_ID"] == st.session_state.chrono_id]
+#         current_game = chrono_pool[chrono_pool["Unique_ID"] == st.session_state.chrono_id].iloc[0]
+#         game_screens = screen_df[screen_df["Unique_ID"] == st.session_state.chrono_id]
 
-        c1, c2 = st.columns([3, 1])
-        with c1:
-            st.markdown(f"### {current_game['Game']} ({current_game['Year']})")
-            st.write(
-                f"Studio: `{current_game['Developers']}` | System Suggestion: **{current_game['Art_Style']}**"
-            )
-        with c2:
-            st.metric("Pending Validation", len(chrono_pool))
+#         c1, c2 = st.columns([3, 1])
+#         with c1:
+#             st.markdown(f"### {current_game['Game']} ({current_game['Year']})")
+#             st.write(
+#                 f"Studio: `{current_game['Developers']}` | System Suggestion: **{current_game['Art_Style']}**"
+#             )
+#         with c2:
+#             st.metric("Pending Validation", len(chrono_pool))
 
-        # Show Screenshots
-        img_cols = st.columns(len(game_screens) if len(game_screens) > 0 else 1)
-        for i, shot in enumerate(game_screens.itertuples()):
-            with img_cols[i % len(img_cols)]:
-                st.image(shot.Screenshot, width="stretch")
+#         # Show Screenshots
+#         img_cols = st.columns(len(game_screens) if len(game_screens) > 0 else 1)
+#         for i, shot in enumerate(game_screens.itertuples()):
+#             with img_cols[i % len(img_cols)]:
+#                 st.image(shot.Screenshot, width="stretch")
 
-        v_col1, v_col2, v_col3 = st.columns([1, 2, 1])
-        with v_col1:
-            if st.button(f"✅ Correct: {current_game['Art_Style']}", key="v_auto", type="primary"):
-                with open(valid_ids_file, "a", encoding="utf-8") as f:
-                    f.write(f"{st.session_state.chrono_id}\n")
-                st.rerun()
+#         v_col1, v_col2, v_col3 = st.columns([1, 2, 1])
+#         with v_col1:
+#             if st.button(f"✅ Correct: {current_game['Art_Style']}", key="v_auto", type="primary"):
+#                 with open(valid_ids_file, "a", encoding="utf-8") as f:
+#                     f.write(f"{st.session_state.chrono_id}\n")
+#                 st.rerun()
 
-        with v_col2:
-            # Assumes custom_style_order is defined in your constants
-            new_style = st.selectbox("Actually, it is:", helper.STYLE_ORDER, key="v_select")
+#         with v_col2:
+#             # Assumes custom_style_order is defined in your constants
+#             new_style = st.selectbox("Actually, it is:", helper.STYLE_ORDER, key="v_select")
 
-        with v_col3:
-            if st.button("💾 Overwrite & Save", key="v_save"):
-                new_row = pd.DataFrame(
-                    {"Unique_ID": [st.session_state.chrono_id], "Manual_Art_Style": [new_style]}
-                )
-                new_row.to_csv(manual_file, mode="a", header=False, index=False)
-                with open(valid_ids_file, "a", encoding="utf-8") as f:
-                    f.write(f"{st.session_state.chrono_id}\n")
-                st.rerun()
+#         with v_col3:
+#             if st.button("💾 Overwrite & Save", key="v_save"):
+#                 new_row = pd.DataFrame(
+#                     {"Unique_ID": [st.session_state.chrono_id], "Manual_Art_Style": [new_style]}
+#                 )
+#                 new_row.to_csv(manual_file, mode="a", header=False, index=False)
+#                 with open(valid_ids_file, "a", encoding="utf-8") as f:
+#                     f.write(f"{st.session_state.chrono_id}\n")
+#                 st.rerun()
 
-    st.divider()
+#     st.divider()
 
-    # --- 4. SECTION 2: NAMED PRIORITY QUEUE (Bottom) ---
-    st.subheader("🔍 Search & Categorize Specific Titles")
-    search_term = st.text_input(
-        "Enter game title keywords (e.g., 'mario', 'zelda', 'final fantasy'):", "mario"
-    ).lower()
+#     # --- 4. SECTION 2: NAMED PRIORITY QUEUE (Bottom) ---
+#     st.subheader("🔍 Search & Categorize Specific Titles")
+#     search_term = st.text_input(
+#         "Enter game title keywords (e.g., 'mario', 'zelda', 'final fantasy'):", "mario"
+#     ).lower()
 
-    named_available = available_data[
-        available_data["Game"].str.contains(search_term, case=False, na=False)
-    ].sort_values("Year")
+#     named_available = available_data[
+#         available_data["Game"].str.contains(search_term, case=False, na=False)
+#     ].sort_values("Year")
 
-    if named_available.empty:
-        st.info(f"No unclassified games found matching '{search_term}'.")
-    else:
-        if (
-            "search_active_id" not in st.session_state
-            or st.session_state.search_active_id in done_ids
-        ):
-            st.session_state.search_active_id = named_available.iloc[0]["Unique_ID"]
+#     if named_available.empty:
+#         st.info(f"No unclassified games found matching '{search_term}'.")
+#     else:
+#         if (
+#             "search_active_id" not in st.session_state
+#             or st.session_state.search_active_id in done_ids
+#         ):
+#             st.session_state.search_active_id = named_available.iloc[0]["Unique_ID"]
 
-        s_game = named_available[
-            named_available["Unique_ID"] == st.session_state.search_active_id
-        ].iloc[0]
-        s_screens = screen_df[screen_df["Unique_ID"] == st.session_state.search_active_id]
+#         s_game = named_available[
+#             named_available["Unique_ID"] == st.session_state.search_active_id
+#         ].iloc[0]
+#         s_screens = screen_df[screen_df["Unique_ID"] == st.session_state.search_active_id]
 
-        st.markdown(f"#### {s_game['Game']} ({s_game['Year']})")
-        st.caption(f"Currently: {s_game['Art_Style']} | {len(named_available)} results left")
+#         st.markdown(f"#### {s_game['Game']} ({s_game['Year']})")
+#         st.caption(f"Currently: {s_game['Art_Style']} | {len(named_available)} results left")
 
-        s_img_cols = st.columns(len(s_screens) if len(s_screens) > 0 else 1)
-        for i, shot in enumerate(s_screens.itertuples()):
-            with s_img_cols[i % len(s_img_cols)]:
-                st.image(shot.Screenshot, width="stretch")
+#         s_img_cols = st.columns(len(s_screens) if len(s_screens) > 0 else 1)
+#         for i, shot in enumerate(s_screens.itertuples()):
+#             with s_img_cols[i % len(s_img_cols)]:
+#                 st.image(shot.Screenshot, width="stretch")
 
-        s_col1, s_col2, s_col3 = st.columns([1, 2, 1])
-        with s_col1:
-            if st.button(f"✅ Keep: {s_game['Art_Style']}", key="s_keep"):
-                with open(valid_ids_file, "a", encoding="utf-8") as f:
-                    f.write(f"{st.session_state.search_active_id}\n")
-                st.rerun()
+#         s_col1, s_col2, s_col3 = st.columns([1, 2, 1])
+#         with s_col1:
+#             if st.button(f"✅ Keep: {s_game['Art_Style']}", key="s_keep"):
+#                 with open(valid_ids_file, "a", encoding="utf-8") as f:
+#                     f.write(f"{st.session_state.search_active_id}\n")
+#                 st.rerun()
 
-        with s_col2:
-            s_chosen = st.selectbox("Assign New Style:", helper.STYLE_ORDER, key="s_select")
+#         with s_col2:
+#             s_chosen = st.selectbox("Assign New Style:", helper.STYLE_ORDER, key="s_select")
 
-        with s_col3:
-            if st.button("💾 Save Manual Entry", key="s_save"):
-                new_row = pd.DataFrame(
-                    {
-                        "Unique_ID": [st.session_state.search_active_id],
-                        "Manual_Art_Style": [s_chosen],
-                    }
-                )
-                new_row.to_csv(manual_file, mode="a", header=False, index=False)
-                with open(valid_ids_file, "a", encoding="utf-8") as f:
-                    f.write(f"{st.session_state.search_active_id}\n")
-                st.rerun()
+#         with s_col3:
+#             if st.button("💾 Save Manual Entry", key="s_save"):
+#                 new_row = pd.DataFrame(
+#                     {
+#                         "Unique_ID": [st.session_state.search_active_id],
+#                         "Manual_Art_Style": [s_chosen],
+#                     }
+#                 )
+#                 new_row.to_csv(manual_file, mode="a", header=False, index=False)
+#                 with open(valid_ids_file, "a", encoding="utf-8") as f:
+#                     f.write(f"{st.session_state.search_active_id}\n")
+#                 st.rerun()
