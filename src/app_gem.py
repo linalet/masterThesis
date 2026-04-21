@@ -110,16 +110,19 @@ if page == "Project Overview":
                  vizualizing the data and allowing for exploration of the collected data.
         """)
         url = "https://www.igdb.com"
-        st.write("""
+        st.write(
+            """
                  I have collected all my data from [IGDB.com](%s), which is currently the largest video game database in the world.
-        """)
+        """
+            % url
+        )
     with col2:
         st.header("⚙️ Research Questions")
         st.info("""        
         **Research Questions:**
         * **Q1:** How have the distributions of art styles and dominant color palettes evolved from 1950 to 2026
         * **Q2:** How effectively do aggregated "Decade Palettes" communicate the aesthetic identity of different eras?
-        * **Q3:** How do genre-specific color identities evolve over decades?
+        * **Q3:** ?
                 """)
 
     st.divider()
@@ -210,156 +213,162 @@ elif page == "Art Style Popularity":
     st.write("""
         This graph shows the division of art styles over time. 
         It shows how many percent of the successfully classified games each style represents in a given year.
-        Another graph showing the classification success rate is shown below.
         """)
+    stacked, trends, success = st.tabs(
+        ["Art style distribution", "Art style trends", "Classification Success"]
+    )
 
-    st.subheader("Style Distribution by Year")
-    pop_df = get_summary("summary_style_popularity.parquet")
-    fig = px.bar(
-        pop_df,
-        x="Year",
-        y="Percentage",
-        color="Art_Style",
-        height=600,
-        color_discrete_map=helper.STYLE_COLORS,
-        category_orders={"Art_Style": helper.STYLE_ORDER},
-        barmode="stack",
-    )
-    fig.update_layout(
-        yaxis=dict(
-            range=[0, 100],
-            title_font=dict(size=22),
-            tickfont=dict(size=20),
-        ),
-        xaxis=dict(
-            range=[1950, 2026],
-            title_font=dict(size=22),
-            tickfont=dict(size=20),
-        ),
-        legend=dict(
-            title="Art Styles",
-            font=dict(size=20),
-            title_font=dict(size=24),
-            itemsizing="constant",
-        ),
-        legend_title_side="top center",
-    )
-    st.plotly_chart(fig, width="stretch")
+    with stacked:
+        st.subheader("Style Distribution by Year")
+        pop_df = get_summary("summary_style_popularity.parquet")
+        fig = px.bar(
+            pop_df,
+            x="Year",
+            y="Percentage",
+            color="Art_Style",
+            height=600,
+            color_discrete_map=helper.STYLE_COLORS,
+            category_orders={"Art_Style": helper.STYLE_ORDER},
+            barmode="stack",
+        )
+        fig.update_layout(
+            yaxis=dict(
+                range=[0, 100],
+                title_font=dict(size=22),
+                tickfont=dict(size=20),
+            ),
+            xaxis=dict(
+                range=[1950, 2026],
+                title_font=dict(size=22),
+                tickfont=dict(size=20),
+            ),
+            legend=dict(
+                title="Art Styles",
+                font=dict(size=20),
+                title_font=dict(size=24),
+                itemsizing="constant",
+            ),
+            legend_title_side="top center",
+        )
+        st.plotly_chart(fig, width="stretch")
 
-    st.info(
-        """ 💡TOOL TIP: Hover over the graph to see exact percentages for each style in a given year. 
-        You can zoom in and out, and pan over the graph using the icons above the legend.
-        You can select which styles to show by clicking on the legend items. Use autoscale to reset the zoom sfter picking the styles."""
-    )
-    st.divider()
-    st.subheader("Individual Style Trends (Line Chart)")
-    fig_line = px.line(
-        pop_df,
-        x="Year",
-        y="Percentage",
-        color="Art_Style",
-        height=500,
-        color_discrete_map=helper.STYLE_COLORS,
-        category_orders={"Art_Style": helper.STYLE_ORDER},
-    )
-    fig_line.update_layout(
-        yaxis=dict(
-            range=[0, 100],
-            title="Percentage of games",
-            title_font=dict(size=22),
-            tickfont=dict(size=20),
-        ),
-        xaxis=dict(range=[1950, 2026], title_font=dict(size=22), tickfont=dict(size=20)),
-        legend=dict(title="Art Styles", font=dict(size=20), title_font=dict(size=24)),
-    )
-    # Make lines thicker for better visibility in a thesis
-    fig_line.update_traces(line=dict(width=5))
-    st.plotly_chart(fig_line, width="stretch")
+        st.info(
+            """ 💡TOOL TIP: Hover over the graph to see exact percentages for each style in a given year. 
+            You can zoom in and out, and pan over the graph using the icons above the legend.
+            You can select which styles to show by clicking on the legend items. Use autoscale to reset the zoom sfter picking the styles."""
+        )
+    with trends:
+        st.subheader("Individual Style Trends (Line Chart)")
+        fig_line = px.line(
+            pop_df,
+            x="Year",
+            y="Percentage",
+            color="Art_Style",
+            height=500,
+            color_discrete_map=helper.STYLE_COLORS,
+            category_orders={"Art_Style": helper.STYLE_ORDER},
+        )
+        fig_line.update_layout(
+            yaxis=dict(
+                range=[0, 100],
+                title="Percentage of games",
+                title_font=dict(size=22),
+                tickfont=dict(size=20),
+            ),
+            xaxis=dict(range=[1950, 2026], title_font=dict(size=22), tickfont=dict(size=20)),
+            legend=dict(title="Art Styles", font=dict(size=20), title_font=dict(size=24)),
+        )
+        # Make lines thicker for better visibility in a thesis
+        fig_line.update_traces(line=dict(width=5))
+        st.plotly_chart(fig_line, width="stretch")
 
-    st.divider()
-
-    st.subheader("📈% of Games Categorized by Decade")
-    success_df = get_summary("summary_success_rate.parquet")
-    fig2 = px.bar(success_df, x="Decade", y="Rate")
-    fig2.update_layout(
-        yaxis=dict(
-            range=[0, 100],
-            title_font=dict(size=26),
-            tickfont=dict(size=22),
-        ),
-        xaxis=dict(
-            title_font=dict(size=26),
-            tickfont=dict(size=22),
-        ),
-    )
-    st.plotly_chart(fig2, width="stretch")
+    with success:
+        st.subheader("📈% of Games Categorized by Decade")
+        success_df = get_summary("summary_success_rate.parquet")
+        fig2 = px.bar(success_df, x="Decade", y="Rate")
+        fig2.update_layout(
+            yaxis=dict(
+                range=[0, 100],
+                title_font=dict(size=26),
+                tickfont=dict(size=22),
+            ),
+            xaxis=dict(
+                title_font=dict(size=26),
+                tickfont=dict(size=22),
+            ),
+        )
+        st.plotly_chart(fig2, width="stretch")
 
 elif page == "Color through Decades":
     st.header("🎨 Color through Decades")
     st.subheader("Dominant colors of each decade (Global)")
 
-    for dec in decades_list:
-        row = decade_summary[
-            (decade_summary["Decade"] == dec) & (decade_summary["Art_Style"] == "Global")
+    colors, style_pals = st.tabs(["Decade color palettes", "Palettes per artstyle"])
+
+    with colors:
+        for dec in decades_list:
+            row = decade_summary[
+                (decade_summary["Decade"] == dec) & (decade_summary["Art_Style"] == "Global")
+            ]
+
+            if not row.empty:
+                palette_str = row.iloc[0]["Palette"]
+                game_count = row.iloc[0]["Count"]
+                label, col_strip = st.columns([1, 7])
+                formatted_count = f"{game_count:,}".replace(",", " ")
+                label.write(f"### {dec}s\n({formatted_count} games)")
+                with col_strip:
+                    helper.draw_color_strip(palette_str)
+            else:
+                # debugging
+                st.write(f"*(No data for {dec}s)*")
+
+    with style_pals:
+        st.subheader("Dominant colors in a decade by art style")
+        col_decade, col_style = st.columns([3, 1])
+        sel_dec = col_decade.select_slider("Select Decade", options=decades_list)
+
+        available_styles = sorted(
+            decade_summary[decade_summary["Decade"] == sel_dec]["Art_Style"].unique().tolist()
+        )
+
+        sel_style = col_style.selectbox(
+            "Select Art Style",
+            available_styles,
+        )
+
+        combo_data = decade_summary[
+            (decade_summary["Decade"] == sel_dec) & (decade_summary["Art_Style"] == sel_style)
         ]
 
-        if not row.empty:
-            palette_str = row.iloc[0]["Palette"]
-            game_count = row.iloc[0]["Count"]
-            label, col_strip = st.columns([1, 7])
-            formatted_count = f"{game_count:,}".replace(",", " ")
-            label.write(f"### {dec}s\n({formatted_count} games)")
-            with col_strip:
-                helper.draw_color_strip(palette_str)
-        else:
-            # debugging
-            st.write(f"*(No data for {dec}s)*")
+        if not combo_data.empty:
+            helper.draw_color_strip(combo_data.iloc[0]["Palette"], height=50)
 
-    st.divider()
-
-    st.subheader("Dominant colors in a decade by art style")
-    col_decade, col_style = st.columns([3, 1])
-    sel_dec = col_decade.select_slider("Select Decade", options=decades_list)
-
-    available_styles = sorted(
-        decade_summary[decade_summary["Decade"] == sel_dec]["Art_Style"].unique().tolist()
-    )
-
-    sel_style = col_style.selectbox(
-        "Select Art Style",
-        available_styles,
-    )
-
-    combo_data = decade_summary[
-        (decade_summary["Decade"] == sel_dec) & (decade_summary["Art_Style"] == sel_style)
-    ]
-
-    if not combo_data.empty:
-        helper.draw_color_strip(combo_data.iloc[0]["Palette"], height=50)
-
-        st.subheader(f"Randomized examples from {sel_style} in the {sel_dec}s")
-        st.write("Games may be categorized incorrectly, due to the use of user generated keywords")
-        samples = search_metadata[
-            (search_metadata["Decade"] == sel_dec) & (search_metadata["Art_Style"] == sel_style)
-        ]
-        if not samples.empty:
-            img_cols = st.columns(4)
-            sample_hits = samples.sample(min(4, len(samples)))
-            for i, (idx, s_row) in enumerate(sample_hits.iterrows()):
-                with img_cols[i % 4]:
-                    st.image(s_row["Screenshot"], width="stretch")
-                    st.markdown(
-                        f"<div style='font-size:14px; text-align:center; color:gray; line-height:1.2; margin-top:5px;'>"
-                        f"<b>{s_row['Game'].title()}</b><br>({s_row['Year']})"
-                        f"</div>",
-                        unsafe_allow_html=True,
-                    )
-        else:
-            st.info(
-                "🎨 Data is being used for palette calculation, but no 'Safe for Work' screenshots are available to display for this selection."
+            st.subheader(f"Randomized examples from {sel_style} in the {sel_dec}s")
+            st.write(
+                "Games may be categorized incorrectly, due to the use of user generated keywords"
             )
-    else:
-        st.info("🎨 no screenshots are available to display for this selection.")
+            samples = search_metadata[
+                (search_metadata["Decade"] == sel_dec) & (search_metadata["Art_Style"] == sel_style)
+            ]
+            if not samples.empty:
+                img_cols = st.columns(4)
+                sample_hits = samples.sample(min(4, len(samples)))
+                for i, (idx, s_row) in enumerate(sample_hits.iterrows()):
+                    with img_cols[i % 4]:
+                        st.image(s_row["Screenshot"], width="stretch")
+                        st.markdown(
+                            f"<div style='font-size:14px; text-align:center; color:gray; line-height:1.2; margin-top:5px;'>"
+                            f"<b>{s_row['Game'].title()}</b><br>({s_row['Year']})"
+                            f"</div>",
+                            unsafe_allow_html=True,
+                        )
+            else:
+                st.info(
+                    "🎨 Data is being used for palette calculation, but no 'Safe for Work' screenshots are available to display for this selection."
+                )
+        else:
+            st.info("🎨 no screenshots are available to display for this selection.")
 
 elif page in ["Genre Timelines", "Theme Timelines"]:
     mode = "Genre" if "Genre" in page else "Theme"
