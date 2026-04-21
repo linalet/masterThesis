@@ -614,14 +614,18 @@ elif page == "Individual Game Analysis":
 
     search_input = st.text_input("Search by name:", key="text_search_box")
 
-    # 2. Filtering
     if search_input:
-        filtered_list = [g for g in unique_games if search_input.lower() in g.lower()]
+        search_term = search_input.lower()
+        filtered_list = []
+        for g in unique_games:
+            # Extract just the game name: Everything before " ("
+            game_name_part = g.split(" (")[0].lower()
+
+            if search_term in game_name_part:
+                filtered_list.append(g)
     else:
         filtered_list = unique_games
 
-    # 3. Handle the Random Button override
-    # If 'search_query' exists (from the sidebar), we force it to the front of the list
     if "search_query" in st.session_state:
         target_game = st.session_state["search_query"]
         if target_game in unique_games:
