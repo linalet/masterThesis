@@ -48,6 +48,11 @@ def run_preprocessing(input_path="data/game_data.parquet"):
         )
         + "]"
     )
+    for i in range(1, 11):
+        for chan in ["R", "G", "B"]:
+            col = f"C{i}_{chan}"
+            df[col] = df[col].fillna(0).astype("uint8")
+        df[f"C{i}_W"] = df[f"C{i}_W"].astype("float32")
 
     print("🏷️ Applying Vectorized Taxonomy...")
     df["Art_Style"] = ph.classify_taxonomy(df)

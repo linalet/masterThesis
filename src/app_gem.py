@@ -3,6 +3,7 @@ import streamlit as st
 import pandas as pd
 import helper_functions as helper
 import plotly.express as px
+import pyarrow.parquet as pq
 
 # --- CONFIG & STYLING ---
 st.set_page_config(
@@ -49,7 +50,6 @@ def get_summary(filename):
 search_metadata = get_summary("search_metadata.parquet")
 all_analytics = get_summary("color_analytics.parquet")
 decade_summary = get_summary("summary_decades.parquet")
-screen_data = get_summary("screenshot_colors.parquet")
 
 
 decades_list = sorted(search_metadata["Decade"].unique().tolist())
@@ -704,36 +704,43 @@ elif page == "Individual Game Analysis":
         st.divider()
 
         st.subheader("🖼️ Source Screenshots & Local Palettes")
+
         # screen_data = get_summary("screenshot_colors.parquet")
+        def get_specific_game_screenshots(game_id):
+            path = os.path.join(BASE_DIR, "data", "screenshot_colors.parquet")
 
-        # cols = st.columns(3)
+            table = pq.read_table(path, filters=[("Unique_ID", "=", game_id)])
+            return table.to_pandas()
+
+        cols = st.columns(3)
         # screens = screen_data[screen_data["Unique_ID"] == selected_game_id]
-        # for i, row in enumerate(screens.itertuples()):
-        #     with cols[i % 3]:
-        #         st.image(row.Screenshot, width="stretch")
+        screens = get_specific_game_screenshots(selected_game_id)
+        for i, row in enumerate(screens.itertuples()):
+            with cols[i % 3]:
+                st.image(row.Screenshot, width="stretch")
 
-        #         mini_html = (
-        #             '<div style="display: flex; height: 30px; border-radius: 6px; '
-        #             'overflow: hidden; border: 2px solid #555; margin-bottom: 30px; margin-top: -5px;">'
-        #         )
+                mini_html = (
+                    '<div style="display: flex; height: 30px; border-radius: 6px; '
+                    'overflow: hidden; border: 2px solid #555; margin-bottom: 30px; margin-top: -5px;">'
+                )
 
-        #         for j in range(1, 10):
-        #             r = getattr(row, f"C{j}_R")
-        #             g = getattr(row, f"C{j}_G")
-        #             b = getattr(row, f"C{j}_B")
-        #             if pd.isna(r) or pd.isna(g) or pd.isna(b):
-        #                 continue
-        #             hex_code = f"#{int(r):02x}{int(g):02x}{int(b):02x}".upper()
+                for j in range(1, 10):
+                    r = getattr(row, f"C{j}_R")
+                    g = getattr(row, f"C{j}_G")
+                    b = getattr(row, f"C{j}_B")
+                    if pd.isna(r) or pd.isna(g) or pd.isna(b):
+                        continue
+                    hex_code = f"#{int(r):02x}{int(g):02x}{int(b):02x}".upper()
 
-        #             mini_html += (
-        #                 f'<div title="{hex_code}" '
-        #                 f'style="background-color:{hex_code}; flex:1; cursor: pointer;"></div>'
-        #             )
+                    mini_html += (
+                        f'<div title="{hex_code}" '
+                        f'style="background-color:{hex_code}; flex:1; cursor: pointer;"></div>'
+                    )
 
-        #         mini_html += "</div>"
-        #         st.markdown(mini_html, unsafe_allow_html=True)
+                mini_html += "</div>"
+                st.markdown(mini_html, unsafe_allow_html=True)
 
-        # st.info("💡 TOOL TIP: Hover over any color block to see the specific Hex Code.")
+        st.info("💡 TOOL TIP: Hover over any color block to see the specific Hex Code.")
 
 # elif page == "Style Categorizer":
 #     st.header("🏷️ Research Validation & Categorizer")
