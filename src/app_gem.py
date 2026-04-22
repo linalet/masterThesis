@@ -75,7 +75,7 @@ page = st.sidebar.radio(
         "Theme Timelines",
         "Game Developer Profile",
         "Individual Game Analysis",
-        "Style Categorizer",
+        # "Style Categorizer",
     ],
     key="page_selection",
 )
@@ -454,7 +454,7 @@ elif page == "Game Developer Profile":
     studio_summary = get_summary("summary_studios.parquet")
 
     all_time, decade_spec, h_to_h = st.tabs(
-        ["Top 50 All-Time", "Decade Specific Analysis", "Head to Head"]
+        ["|Top 50 All-Time", "|Decade Specific Analysis", "|Head to Head"]
     )
 
     with all_time:
@@ -642,6 +642,9 @@ elif page == "Game Developer Profile":
 
 elif page == "Individual Game Analysis":
     st.header("🔍 Individual Game Analysis")
+    st.info(
+        """💡TOOL TIP: Start writing a game title, then pick the specific game from the selctbox. E.g., "mario kart" -> "mario kart wii (2008) [nintendo]" """
+    )
 
     unique_games = sorted(search_metadata["Unique_ID"].unique())
 
@@ -742,7 +745,6 @@ elif page == "Individual Game Analysis":
 
         st.subheader("🖼️ Source Screenshots & Local Palettes")
 
-        # screen_data = get_summary("screenshot_colors.parquet")
         def get_specific_game_screenshots(game_id):
             path = os.path.join(BASE_DIR, "data", "screenshot_colors.parquet")
 
@@ -750,7 +752,6 @@ elif page == "Individual Game Analysis":
             return table.to_pandas()
 
         cols = st.columns(3)
-        # screens = screen_data[screen_data["Unique_ID"] == selected_game_id]
         screens = get_specific_game_screenshots(selected_game_id)
         for i, row in enumerate(screens.itertuples()):
             with cols[i % 3]:
@@ -870,7 +871,6 @@ elif page == "Style Categorizer":
 
     # --- 4. SECTION 2: NAMED PRIORITY QUEUE (Bottom) ---
     st.subheader("🔍 Search & Categorize Specific Titles")
-    animals = ["cat", "dog", "bird"]
 
     search_term = st.text_input(
         "Enter game title keywords (e.g., 'mario', 'zelda', 'final fantasy'):", "mario"
@@ -883,12 +883,13 @@ elif page == "Style Categorizer":
     if named_available.empty:
         st.info(f"No unclassified games found matching '{search_term}'.")
     else:
+        current_id = st.session_state.get("search_active_id")
         if (
-            "search_active_id" not in st.session_state
-            or st.session_state.search_active_id in done_ids
+            current_id is None
+            or current_id in done_ids
+            or current_id not in named_available["Unique_ID"].values
         ):
             st.session_state.search_active_id = named_available.iloc[0]["Unique_ID"]
-
         s_game = named_available[
             named_available["Unique_ID"] == st.session_state.search_active_id
         ].iloc[0]
