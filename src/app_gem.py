@@ -33,6 +33,11 @@ st.markdown(
         font-size: 18px !important;
     }
     </style>
+    <style>
+        .stTabs [data-baseweb="tab-list"] button [data-testid="stMarkdownContainer"] p {
+        font-size:25px;
+        }
+    </style>
 """,
     unsafe_allow_html=True,
 )
@@ -70,7 +75,7 @@ page = st.sidebar.radio(
         "Theme Timelines",
         "Game Developer Profile",
         "Individual Game Analysis",
-        # "Style Categorizer",
+        "Style Categorizer",
     ],
     key="page_selection",
 )
@@ -208,9 +213,10 @@ if page == "Project Overview":
 
 elif page == "Art Style Popularity":
     st.header("📈 Art Style Popularity through Time")
+    st.info("💡 TOOL TIP:Switch between the tabs to see other visualizations")
 
     stacked, trends, success = st.tabs(
-        ["Art style distribution", "Art style trends", "Classification Success"]
+        ["|Art style distribution", "|Art style trends", "|Classification Success"]
     )
 
     with stacked:
@@ -281,6 +287,11 @@ elif page == "Art Style Popularity":
         # Make lines thicker for better visibility in a thesis
         fig_line.update_traces(line=dict(width=5))
         st.plotly_chart(fig_line, width="stretch")
+        st.info(
+            """ 💡TOOL TIP: Hover over the graph to see exact percentages for each style in a given year. 
+            You can zoom in and out, and pan over the graph using the icons above the legend.
+            You can select which styles to show by clicking on the legend items. Use autoscale to reset the zoom sfter picking the styles."""
+        )
 
     with success:
         st.subheader("📈% of Games Categorized by Decade")
@@ -304,7 +315,7 @@ elif page == "Color through Decades":
     st.header("🎨 Color through Decades")
     st.subheader("Dominant colors of each decade")
 
-    colors, style_pals = st.tabs(["Decade color palettes", "Palettes per artstyle"])
+    colors, style_pals = st.tabs(["|Decade color palettes", "|Palettes per artstyle"])
 
     with colors:
         for dec in decades_list:
@@ -394,7 +405,7 @@ elif page in ["Genre Timelines", "Theme Timelines"]:
             st.markdown(
                 f"""
                 <div style='line-height: 1.5;'>
-                    <span style='font-size: 25px; font-weight: bold;'>{dec}s </span><span style='font-size: 18px; color: white;'>Games: {formatted_count}, Most common art style: {dec_row.iloc[0]["Top_Style"]}</span>
+                    <span style='font-size: 22px; font-weight: bold;'>{dec}s </span><span style='font-size: 18px; color: white;'>Games: {formatted_count}, Most common art style: {dec_row.iloc[0]["Top_Style"]}</span>
                     
                 </div>
                 """,
@@ -428,7 +439,10 @@ elif page in ["Genre Timelines", "Theme Timelines"]:
                     with col2:
                         helper.draw_color_strip(row["Palette"], height=30)
 
-    st.info("💡Hover mouse over the colors in the breakdown to see their hex codes")
+    st.info("💡TOOL TIP: Hover mouse over the colors in the breakdown to see their hex codes")
+    st.info(
+        f""" ☝NOTE: If no games were classified for a specific {mode.lower()} in a decade, the art style will be marked as "Unknown"."""
+    )
 
 
 elif page == "Game Developer Profile":
@@ -495,9 +509,9 @@ elif page == "Game Developer Profile":
         all_years = sorted([y for y in studio_summary["Decade"].unique() if y != "All-Time"])
         sel_dec = st.select_slider("Select Decade", options=all_years)
 
-        if "final_studio_choice" not in st.session_state:
-            st.session_state["final_studio_choice"] = None
-        current_choice = None
+        if "active_studio_id" not in st.session_state:
+            st.session_state["active_studio_id"] = None
+
         c1, c2 = st.columns([1, 3])
 
         with c1:
@@ -506,22 +520,25 @@ elif page == "Game Developer Profile":
             ]["Studio"].tolist()
             major_options = ["Select..."] + sorted(major_in_dec)
 
-            sel_studio = st.selectbox(f"Major Studios in {sel_dec}s", major_options, index=0)
-            search_dec = st.text_input("Or search ANY studio name:", key="dec_search_input")
-
-            if sel_studio != "Select...":
-                st.session_state["final_studio_choice"] = sel_studio
-            elif search_dec.strip() != "":
-                st.session_state["final_studio_choice"] = search_dec.strip().lower()
+            sel_studio = st.selectbox(
+                f"Major Studios in {sel_dec}s",
+                major_options,
+                key="dec_sel_widget",
+                on_change=helper.on_selectbox_change_dec,
+            )
+            search_dec = st.text_input(
+                "Or search ANY studio name:",
+                key="dec_text_input",
+                on_change=helper.on_text_change_dec,
+            )
 
         with c2:
-            current_choice = st.session_state["final_studio_choice"]
-
-            if not current_choice:
+            final_choice = st.session_state["active_studio_id"]
+            if not final_choice:
                 st.info("Select a major studio or search by name to begin")
             else:
                 row = studio_summary[
-                    (studio_summary["Studio"] == current_choice)
+                    (studio_summary["Studio"] == final_choice)
                     & (studio_summary["Decade"] == str(sel_dec))
                 ]
 
@@ -529,23 +546,20 @@ elif page == "Game Developer Profile":
                     helper.display_studio_stats(row.iloc[0], "decade_spec")
                 else:
                     st.warning(
-                        f"⚠️ **{current_choice.title()}** has no recorded releases in the **{sel_dec}s**."
+                        f"⚠️ **{final_choice.title()}** has no recorded releases in the **{sel_dec}s**."
                     )
-                    all_entries = studio_summary[studio_summary["Studio"] == current_choice]
+                    all_entries = studio_summary[studio_summary["Studio"] == final_choice]
 
                     if not all_entries.empty:
                         active_years = sorted(
                             [d for d in all_entries["Decade"].unique() if d != "All-Time"]
                         )
                         st.info(
-                            f"💡 Try moving the slider. {current_choice.title()} is active in: {', '.join(active_years)}"
+                            f"💡 TOOL TIP: Try moving the slider. {final_choice.title()} is active in: {', '.join(active_years)}"
                         )
                     else:
-                        st.error(f"❌ Studio '{current_choice}' not found in the master database.")
+                        st.error(f"❌ Studio '{final_choice}' not found in the master database.")
 
-        # if st.button("Clear Selection"):
-        #     st.session_state["final_studio_choice"] = None
-        #     st.rerun()
     with h_to_h:
         st.subheader("⚔️ Studio Head-to-Head Comparison")
         st.write("Directly compare the artistic evolution of two studios within the same decade.")
@@ -594,7 +608,9 @@ elif page == "Game Developer Profile":
                     & (studio_summary["Decade"] != "All-Time")
                 ]["Decade"].unique()
                 if len(other_decs) > 0:
-                    st.caption(f"Active in: {', '.join(sorted(other_decs))}")
+                    st.info(
+                        f"💡 TOOL TIP: Try moving the slider. {studio_a.title()} is active in: {', '.join(sorted(other_decs))}"
+                    )
 
         with col_b:
             options_b = [s for s in all_studios_global if s != st.session_state["h2h_a"]]
@@ -619,7 +635,9 @@ elif page == "Game Developer Profile":
                     & (studio_summary["Decade"] != "All-Time")
                 ]["Decade"].unique()
                 if len(other_decs) > 0:
-                    st.caption(f"Active in: {', '.join(sorted(other_decs))}")
+                    st.info(
+                        f"💡 TOOL TIP: Try moving the slider. {studio_b.title()} is active in: {', '.join(sorted(other_decs))}"
+                    )
 
 
 elif page == "Individual Game Analysis":
@@ -852,6 +870,8 @@ elif page == "Style Categorizer":
 
     # --- 4. SECTION 2: NAMED PRIORITY QUEUE (Bottom) ---
     st.subheader("🔍 Search & Categorize Specific Titles")
+    animals = ["cat", "dog", "bird"]
+
     search_term = st.text_input(
         "Enter game title keywords (e.g., 'mario', 'zelda', 'final fantasy'):", "mario"
     ).lower()
@@ -874,7 +894,7 @@ elif page == "Style Categorizer":
         ].iloc[0]
         s_screens = screen_df[screen_df["Unique_ID"] == st.session_state.search_active_id]
 
-        st.markdown(f"#### {s_game['Game']} ({s_game['Year']})")
+        st.markdown(f"#### {s_game['Game']} ({s_game['Year']}), {s_game['Unique_ID']}")
         st.caption(f"Currently: {s_game['Art_Style']} | {len(named_available)} results left")
 
         s_img_cols = st.columns(len(s_screens) if len(s_screens) > 0 else 1)

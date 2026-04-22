@@ -253,13 +253,17 @@ def on_text_change():
 
 
 def on_selectbox_change_dec():
-    if st.session_state.dec_box != "Select...":
-        st.session_state.dec_search = ""
+    val = st.session_state["dec_sel_widget"]
+    if val != "Select...":
+        st.session_state["active_studio_id"] = val
+        st.session_state["dec_text_input"] = ""
 
 
 def on_text_change_dec():
-    if st.session_state.dec_search.strip() != "":
-        st.session_state.dec_box = "Select..."
+    val = st.session_state["dec_text_input"].strip()
+    if val != "":
+        st.session_state["active_studio_id"] = val
+        st.session_state["dec_sel_widget"] = "Select..."
 
 
 def draw_color_strip(palette_str, height=50):
