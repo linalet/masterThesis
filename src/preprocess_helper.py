@@ -92,17 +92,30 @@ def classify_taxonomy(df):
 
     name_search = df["Game"].str.lower().str.strip()
     df.loc[
-        (df["Art_Style"] == "Unclassified") & name_search.str.contains("the sims", na=False),
+        (df["Art_Style"] == "Unclassified")
+        & name_search.str.contains("the sims|assassin's creed|counter-strike|fallout", na=False),
         "Art_Style",
     ] = "Realism: Stylized"
+    df.loc[
+        (df["Art_Style"] == "Unclassified")
+        & name_search.str.contains(
+            "call of duty|resident evil|kingdom come: deliverance|gran turismo", na=False
+        ),
+        "Art_Style",
+    ] = "Realism: Photoreal"
     df.loc[
         (df["Art_Style"] == "Unclassified") & name_search.str.contains("minecraft", na=False),
         "Art_Style",
     ] = "Stylization: Pixel Art"
     df.loc[
-        (df["Art_Style"] == "Unclassified") & name_search.str.contains("genshin impact", na=False),
+        (df["Art_Style"] == "Unclassified")
+        & name_search.str.contains("genshin impact|fortnite|overwatch|crash bandicoot", na=False),
         "Art_Style",
     ] = "Stylization: Cartoon"
+    df.loc[
+        (df["Art_Style"] == "Unclassified") & name_search.str.contains("borderlands", na=False),
+        "Art_Style",
+    ] = "Stylization: Illustrative"
 
     text = (
         df["Keywords"].fillna("") + " " + df["Themes"].fillna("") + " " + df["Genres"].fillna("")

@@ -46,7 +46,6 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_PATH = os.path.join(BASE_DIR, "data")
 
 
-# --- DATA LOADING (LAZY) ---
 @st.cache_data
 def get_summary(filename):
     return pd.read_parquet(os.path.join(DATA_PATH, filename))
@@ -63,7 +62,6 @@ if st.session_state.get("trigger_nav"):
     st.session_state["page_selection"] = "Individual Game Analysis"
     st.session_state["trigger_nav"] = False
 
-# --- SIDEBAR NAVIGATION ---
 st.sidebar.title("🎮 Game Color Analytics")
 page = st.sidebar.radio(
     "Analysis Tabs",
@@ -297,7 +295,12 @@ elif page == "Art Style Popularity":
         st.subheader("📈% of Games Categorized by Decade")
         st.write("This graph illustrates the percentage of games classified for each decade")
         success_df = get_summary("summary_success_rate.parquet")
-        fig2 = px.bar(success_df, x="Decade", y="Rate")
+        fig2 = px.bar(
+            success_df,
+            x="Decade",
+            y="Rate",
+            text_auto=".1f",
+        )
         fig2.update_layout(
             yaxis=dict(
                 range=[0, 100],
@@ -308,6 +311,7 @@ elif page == "Art Style Popularity":
                 title_font=dict(size=26),
                 tickfont=dict(size=22),
             ),
+            font=dict(size=20),
         )
         st.plotly_chart(fig2, width="stretch")
 
