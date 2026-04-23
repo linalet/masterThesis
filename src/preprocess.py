@@ -47,7 +47,7 @@ def run_preprocessing(input_path="data/game_data.parquet"):
             )
         )
         + "]"
-    )
+    ).str.strip()
     for i in range(1, 11):
         for chan in ["R", "G", "B"]:
             col = f"C{i}_{chan}"
@@ -55,8 +55,8 @@ def run_preprocessing(input_path="data/game_data.parquet"):
         df[f"C{i}_W"] = df[f"C{i}_W"].astype("float32")
 
     print("🏷️ Applying Vectorized Taxonomy...")
-    df["Art_Style"] = ph.classify_taxonomy(df)
-    df["Is_classified"] = ~df["Art_Style"].str.startswith("Unclassified")
+    df = ph.classify_taxonomy(df)
+    # df["Is_classified"] = ~df["Art_Style"].str.startswith("Unclassified")
 
     print("🎨 Calculating Saturation (Thesis Metric)...")
     df["saturation"] = df[["C1_R", "C1_G", "C1_B"]].max(axis=1) - df[["C1_R", "C1_G", "C1_B"]].min(

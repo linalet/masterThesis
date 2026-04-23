@@ -61,16 +61,23 @@ def manual_classification(main_df, classified_path="data/manual_classification.c
         )
         classified = pd.read_csv(path)
 
-        classified["Unique_ID"] = classified["Unique_ID"].str.lower()
+        classified["Unique_ID"] = classified["Unique_ID"].str.lower().str.strip()
 
-        df = main_df.merge(classified, on="Unique_ID", how="left")
+        main_df["Unique_ID_lower"] = main_df["Unique_ID"].str.lower().str.strip()
+        df = main_df.merge(
+            classified,
+            left_on="Unique_ID_lower",
+            right_on="Unique_ID",
+            how="left",
+            suffixes=("", "_manual"),
+        )
 
         mask = df["Manual_Art_Style"].notna()
         df.loc[mask, "Art_Style"] = df.loc[mask, "Manual_Art_Style"]
 
-        # 3. Clean up the temp column and mark as classified
         df.loc[mask, "Is_classified"] = True
-        df = df.drop(columns=["Manual_Art_Style"])
+        df = df.drop(columns=["Unique_ID_lower", "Unique_ID_manual", "Manual_Art_Style"])
+        # df = df.drop(columns=["Manual_Art_Style"])
 
         print(f"✅ Successfully applied {mask.sum()} manual overrides.")
         return df
@@ -81,13 +88,28 @@ def manual_classification(main_df, classified_path="data/manual_classification.c
 
 def classify_taxonomy(df):
     df["Art_Style"] = "Unclassified"
-    text = (df["Keywords"] + " " + df["Themes"] + " " + df["Genres"]).str.lower()
+    df = manual_classification(df)
+
+    name_search = df["Game"].str.lower().str.strip()
+    df.loc[
+        (df["Art_Style"] == "Unclassified") & name_search.str.contains("the sims", na=False),
+        "Art_Style",
+    ] = "Realism: Stylized"
+    df.loc[
+        (df["Art_Style"] == "Unclassified") & name_search.str.contains("minecraft", na=False),
+        "Art_Style",
+    ] = "Stylization: Pixel Art"
+    df.loc[
+        (df["Art_Style"] == "Unclassified") & name_search.str.contains("genshin impact", na=False),
+        "Art_Style",
+    ] = "Stylization: Cartoon"
+
+    text = (
+        df["Keywords"].fillna("") + " " + df["Themes"].fillna("") + " " + df["Genres"].fillna("")
+    ).str.lower()
     persp = df["Player_Perspective"].str.lower()
 
-    # Manual categorization to ensure some accurate data
-    df = manual_classification(df)
     is_free = df["Art_Style"] == "Unclassified"
-
     early = (df["Year"] < 1970) & (df["Year"] > 0)
     df.loc[early & persp.str.contains("text", na=False), "Art_Style"] = "Abstraction: Symbolic"
     df.loc[early & ~persp.str.contains("text", na=False), "Art_Style"] = "Abstraction: Minimalist"
@@ -139,7 +161,7 @@ def classify_taxonomy(df):
     is_free = df["Art_Style"] == "Unclassified"
     df["Is_classified"] = ~df["Art_Style"].str.startswith("Unclassified")
 
-    return df["Art_Style"]
+    return df
 
 
 def finalize_screenshot_urls(df):

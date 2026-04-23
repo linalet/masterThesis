@@ -75,7 +75,7 @@ page = st.sidebar.radio(
         "Theme Timelines",
         "Game Developer Profile",
         "Individual Game Analysis",
-        # "Style Categorizer",
+        "Style Categorizer",
     ],
     key="page_selection",
 )
@@ -895,7 +895,7 @@ elif page == "Style Categorizer":
         ].iloc[0]
         s_screens = screen_df[screen_df["Unique_ID"] == st.session_state.search_active_id]
 
-        st.markdown(f"#### {s_game['Game']} ({s_game['Year']}), {s_game['Unique_ID']}")
+        st.markdown(f"####  {s_game['Unique_ID']}")
         st.caption(f"Currently: {s_game['Art_Style']} | {len(named_available)} results left")
 
         s_img_cols = st.columns(len(s_screens) if len(s_screens) > 0 else 1)
