@@ -409,7 +409,7 @@ elif page in ["Genre Timelines", "Theme Timelines"]:
             st.markdown(
                 f"""
                 <div style='line-height: 1.5;'>
-                    <span style='font-size: 22px; font-weight: bold;'>{dec}s </span><span style='font-size: 18px; color: white;'>Games: {formatted_count}, Most common art style: {dec_row.iloc[0]["Top_Style"]}</span>
+                    <span style='font-size: 22px; font-weight: bold;'>{dec}s </span><span style='font-size: 18px; color: greay;'>Games: {formatted_count}, Most common art style: {dec_row.iloc[0]["Top_Style"]}</span>
                     
                 </div>
                 """,
@@ -434,8 +434,8 @@ elif page in ["Genre Timelines", "Theme Timelines"]:
                             f"""
                             <div>
                                 <span style='font-size: 18px; font-weight: bold;'>{row["Time"]} </span>
-                                <span style='font-size: 16px; color: white;'> Games: {formatted_count}</span>
-                                <div><span style='font-size: 16px; color: white;'> {row["Top_Style"]}</span></div>
+                                <span style='font-size: 16px; color: grey;'> Games: {formatted_count}</span>
+                                <div><span style='font-size: 16px; color: grey;'> {row["Top_Style"]}</span></div>
                             </div>
                             """,
                             unsafe_allow_html=True,
