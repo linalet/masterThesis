@@ -73,7 +73,7 @@ page = st.sidebar.radio(
         "Theme Timelines",
         "Game Developer Profile",
         "Individual Game Analysis",
-        "Style Categorizer",
+        # "Style Categorizer",
     ],
     key="page_selection",
 )

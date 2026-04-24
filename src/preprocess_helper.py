@@ -4,6 +4,7 @@ import helper_functions as helper
 
 studio_map = {
     "nintendo": [],
+    "microsoft": [],
     "ubisoft": ["ubi soft", "ubi studios uk", "ubi pictures"],
     "sega": [
         "sega am",
