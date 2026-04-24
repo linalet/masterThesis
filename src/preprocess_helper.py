@@ -4,9 +4,7 @@ import helper_functions as helper
 
 studio_map = {
     "nintendo": [],
-    "ubisoft": [
-        "ubi soft",
-    ],
+    "ubisoft": ["ubi soft", "ubi studios uk", "ubi pictures"],
     "sega": [
         "sega am",
         "sega wow",
@@ -32,6 +30,7 @@ studio_map = {
     "activision": [],
     "aeria games": [],
     "lucasarts": ["lucas arts"],
+    "bandai namco": ["bandai", "namco"],
 }
 
 
@@ -93,29 +92,52 @@ def classify_taxonomy(df):
     name_search = df["Game"].str.lower().str.strip()
     df.loc[
         (df["Art_Style"] == "Unclassified")
-        & name_search.str.contains("the sims|assassin's creed|counter-strike|fallout", na=False),
+        & name_search.str.contains(
+            "the sims|assassin's creed|counter-strike|fallout|god of war|half-life|age of empires|dark souls|tom clancy|far cry|powerwash|little nightmares",
+            na=False,
+        ),
         "Art_Style",
     ] = "Realism: Stylized"
     df.loc[
         (df["Art_Style"] == "Unclassified")
         & name_search.str.contains(
-            "call of duty|resident evil|kingdom come: deliverance|gran turismo", na=False
+            "call of duty|resident evil|kingdom come: deliverance|gran turismo|uncharted 4|ea sports|silent hill|Microsoft Flight Simulator",
+            na=False,
         ),
         "Art_Style",
     ] = "Realism: Photoreal"
     df.loc[
-        (df["Art_Style"] == "Unclassified") & name_search.str.contains("minecraft", na=False),
+        (df["Art_Style"] == "Unclassified")
+        & name_search.str.contains("minecraft|deltarune", na=False),
         "Art_Style",
     ] = "Stylization: Pixel Art"
     df.loc[
         (df["Art_Style"] == "Unclassified")
-        & name_search.str.contains("genshin impact|fortnite|overwatch|crash bandicoot", na=False),
+        & name_search.str.contains(
+            "genshin impact|fortnite|overwatch|crash bandicoot|tekken|lego|league of legends|overcooked|super smash bros.",
+            na=False,
+        ),
         "Art_Style",
     ] = "Stylization: Cartoon"
     df.loc[
-        (df["Art_Style"] == "Unclassified") & name_search.str.contains("borderlands", na=False),
+        (df["Art_Style"] == "Unclassified")
+        & name_search.str.contains(
+            "borderlands|the walking dead:|the wolf among us|batman: the telltale|cuphead", na=False
+        ),
         "Art_Style",
     ] = "Stylization: Illustrative"
+    df.loc[
+        (df["Art_Style"] == "Unclassified")
+        & (df["Year"] < 2006)
+        & name_search.str.contains("spider-man", na=False),
+        "Art_Style",
+    ] = "Stylization: Pixel Art"
+    df.loc[
+        (df["Art_Style"] == "Unclassified")
+        & (df["Year"] > 2016)
+        & name_search.str.contains("spider-man", na=False),
+        "Art_Style",
+    ] = "Realism: Stylized"
 
     text = (
         df["Keywords"].fillna("") + " " + df["Themes"].fillna("") + " " + df["Genres"].fillna("")

@@ -173,7 +173,7 @@ if page == "Project Overview":
     st.subheader("⚠️ Disclaimer on Classification Accuracy")
     st.write("""Since the keywords used to classify games are added to IGDB by the users, they are not always accurate or consistent.
             The automated assignment is often incorrect, but it is the only viable option available with my current resources.
-            I have manually classified around 800 games to ensure some level of accuracy, however, it is only a fraction (0.01%) of the total dataset.
+            I have manually classified around 1300 games to ensure some level of accuracy, however, it is only a fraction (0.1%) of the total dataset.
             Art is subjective and complex, so my opinion may not always be correct.
             Some games can fit into multiple categories, such as *Worse Than Death (2019)*, which could be both **Stylization: Pixel Art** and **Stylization: Illustrative**.""")
     # total games: 966 446
@@ -823,7 +823,7 @@ elif page == "Style Categorizer":
     st.caption("Validating games that already have a classified Art Style from the taxonomy.")
 
     # Filter for games that ARE classified but NOT validate
-    chrono_pool = available_data[available_data["Is_classified"]].sort_values("Year")
+    chrono_pool = available_data[available_data["Is_classified"]]  # .sort_values("Year")
 
     if chrono_pool.empty:
         st.success("🎉 All automatically classified games have been validated!")
@@ -882,7 +882,7 @@ elif page == "Style Categorizer":
 
     named_available = available_data[
         available_data["Game"].str.contains(search_term, case=False, na=False)
-    ].sort_values("Year")
+    ]  # .sort_values("Year")
 
     if named_available.empty:
         st.info(f"No unclassified games found matching '{search_term}'.")
