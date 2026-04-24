@@ -211,7 +211,7 @@ if page == "Project Overview":
 
 elif page == "Art Style Popularity":
     st.header("📈 Art Style Popularity through Time")
-    st.info("💡 TOOL TIP:Switch between the tabs to see other visualizations")
+    st.info("💡TOOL TIP: Switch between the tabs to see other visualizations.")
 
     stacked, trends, success = st.tabs(
         ["|Art style distribution", "|Art style trends", "|Classification Success"]
@@ -256,13 +256,13 @@ elif page == "Art Style Popularity":
         st.plotly_chart(fig, width="stretch")
 
         st.info(
-            """ 💡TOOL TIP: Hover over the graph to see exact percentages for each style in a given year. 
+            """💡TOOL TIP: Hover over the graph to see exact percentages for each style in a given year. 
             You can zoom in and out, and pan over the graph using the icons above the legend.
             You can select which styles to show by clicking on the legend items. Use autoscale to reset the zoom sfter picking the styles."""
         )
     with trends:
         st.subheader("Individual Style Trends")
-        st.write("This graph shows the popularity of each style through history")
+        st.write("This graph shows the popularity of each style through history.")
         fig_line = px.line(
             pop_df,
             x="Year",
@@ -293,7 +293,9 @@ elif page == "Art Style Popularity":
 
     with success:
         st.subheader("📈% of Games Categorized by Decade")
-        st.write("This graph illustrates the percentage of games classified for each decade")
+        st.write(
+            "This graph illustrates the percentage of games classified into an art style for each decade."
+        )
         success_df = get_summary("summary_success_rate.parquet")
         fig2 = px.bar(
             success_df,
@@ -340,7 +342,7 @@ elif page == "Color through Decades":
                 st.write(f"*(No data for {dec}s)*")
 
     with style_pals:
-        st.subheader("Dominant colors in a decade by art style")
+        st.subheader("Dominant colors in a decade by art style.")
         col_decade, col_style = st.columns([3, 1])
         sel_dec = col_decade.select_slider("Select Decade", options=decades_list)
 
@@ -365,7 +367,7 @@ elif page == "Color through Decades":
 
             st.subheader(f"Randomized examples from {sel_style} in the {sel_dec}s")
             st.write(
-                "Games may be categorized incorrectly, due to the use of user generated keywords"
+                "Games may be categorized incorrectly, due to the use of user generated keywords."
             )
             samples = search_metadata[
                 (search_metadata["Decade"] == sel_dec) & (search_metadata["Art_Style"] == sel_style)
@@ -387,13 +389,13 @@ elif page == "Color through Decades":
                     "🎨 Data is being used for palette calculation, but no 'Safe for Work' screenshots are available to display for this selection."
                 )
         else:
-            st.info("🎨 no screenshots are available to display for this selection.")
+            st.info("🎨 No screenshots are available to display for this selection.")
 
 elif page in ["Genre Timelines", "Theme Timelines"]:
     mode = "Genre" if "Genre" in page else "Theme"
     st.header(f"🎨 {mode}-Specific Color Evolution")
-    st.write(f"Exploration of how the use of colors changed depending on the {mode}")
-    st.info("**💡TOOL TIP**: Click the 🔍 tab to expand and see year-by-year breakdowns")
+    st.write(f"Exploration of how the use of colors changed depending on the {mode}.")
+    st.info("**💡TOOL TIP**: Click the 🔍 tab to expand and see year-by-year breakdowns.")
 
     timeline_df = get_summary(f"summary_{mode.lower()}s.parquet")
     items = sorted(timeline_df["Item"].unique())
@@ -434,8 +436,8 @@ elif page in ["Genre Timelines", "Theme Timelines"]:
                             f"""
                             <div>
                                 <span style='font-size: 18px; font-weight: bold;'>{row["Time"]} </span>
-                                <span style='font-size: 16px; color: grey;'> Games: {formatted_count}</span>
-                                <div><span style='font-size: 16px; color: grey;'> {row["Top_Style"]}</span></div>
+                                <span style='font-size: 16px;'> Games: {formatted_count}</span>
+                                <div><span style='font-size: 16px;'> {row["Top_Style"]}</span></div>
                             </div>
                             """,
                             unsafe_allow_html=True,
@@ -443,7 +445,7 @@ elif page in ["Genre Timelines", "Theme Timelines"]:
                     with col2:
                         helper.draw_color_strip(row["Palette"], height=30)
 
-    st.info("💡TOOL TIP: Hover mouse over the colors in the breakdown to see their hex codes")
+    st.info("💡TOOL TIP: Hover mouse over the colors in the breakdown to see their hex codes.")
     st.info(
         f""" ☝NOTE: If no games were classified for a specific {mode.lower()} in a decade, the art style will be marked as "Unknown"."""
     )
@@ -453,7 +455,7 @@ elif page == "Game Developer Profile":
     st.header("🏢 Studios' Color and Style Trends")
     st.subheader("🎮Game Studio All-Time Analysis")
     st.write(
-        "Select a major studio from the dropdown or search by name to see their most used colors and art styles"
+        "Select a major studio from the dropdown or search by name to see their most used colors and art styles."
     )
     studio_summary = get_summary("summary_studios.parquet")
 
@@ -507,7 +509,7 @@ elif page == "Game Developer Profile":
                 else:
                     st.error(f"❌ Studio '{final_all}' not found. Please check the spelling.")
             else:
-                st.info("Select a major studio or search by name to begin")
+                st.info("Select a major studio or search by name to begin.")
     with decade_spec:
         st.subheader("📆 Decade-Specific Leaders")
         all_years = sorted([y for y in studio_summary["Decade"].unique() if y != "All-Time"])
@@ -539,7 +541,7 @@ elif page == "Game Developer Profile":
         with c2:
             final_choice = st.session_state["active_studio_id"]
             if not final_choice:
-                st.info("Select a major studio or search by name to begin")
+                st.info("Select a major studio or search by name to begin.")
             else:
                 row = studio_summary[
                     (studio_summary["Studio"] == final_choice)
@@ -568,7 +570,7 @@ elif page == "Game Developer Profile":
         st.subheader("⚔️ Studio Head-to-Head Comparison")
         st.write("Directly compare the artistic evolution of two studios within the same decade.")
         st.info(
-            "💡TOOL TIP: You can write in the selectbox fields to quickly find studios by name instead of scrolling through the list. If you need ideas what studios to compare in each decade, check the *Decade Specific Analysis* section"
+            "💡TOOL TIP: You can write in the selectbox fields to quickly find studios by name instead of scrolling through the list. If you need ideas what studios to compare in each decade, check the *Decade Specific Analysis* section."
         )
         c1, c2 = st.columns([1, 6])
         with c1:
@@ -647,7 +649,7 @@ elif page == "Game Developer Profile":
 elif page == "Individual Game Analysis":
     st.header("🔍 Individual Game Analysis")
     st.info(
-        """💡TOOL TIP: Start writing a game title, then pick the specific game from the selctbox. E.g., "mario kart" -> "mario kart wii (2008) [nintendo]" """
+        """💡TOOL TIP: Start writing a game title, then pick the specific game from the selectbox. E.g., "mario kart" -> "mario kart wii (2008) [nintendo]". """
     )
 
     unique_games = sorted(search_metadata["Unique_ID"].unique())
@@ -658,7 +660,6 @@ elif page == "Individual Game Analysis":
         search_term = search_input.lower()
         filtered_list = []
         for g in unique_games:
-            # Extract just the game name: Everything before " ("
             game_name_part = g.split(" (")[0].lower()
 
             if search_term in game_name_part:
@@ -682,12 +683,7 @@ elif page == "Individual Game Analysis":
             st.stop()
 
         if game_rows["Is_NSFW"].any():
-            st.warning("This game has sexual content")
-        #     st.error("⚠️ Content Restricted")
-        #     st.warning(
-        #         "This title has been filtered from visual display due to inappropriate content."
-        #     )
-        # st.stop()
+            st.warning("⚠️This game contains sexual content.")
 
         main_info = game_rows.iloc[0]
         col1, col2 = st.columns([1.5, 2])
@@ -707,7 +703,6 @@ elif page == "Individual Game Analysis":
 
             html_color_strip = '<div style="display: flex; height: 100px; border-radius: 8px; overflow: hidden; border: 3px solid #999;">'
             for entry in color_profile_str.split("|"):
-                # st.info(entry)
                 if "," in entry:
                     color, weight = entry.split(",")
                     html_color_strip += f'''
