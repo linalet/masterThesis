@@ -460,6 +460,8 @@ def create_homepage_samples(df_optimized, taxonomy):
         for style_info in branch.values():
             for game_ref in style_info["example_games"]:
                 sample_ids.append(game_ref["id"].lower())
+    special_cases = ["worse than death (2019) [benjamin rivers]"]
+    sample_ids.extend(special_cases)
 
     df["id_lower"] = df["Unique_ID"].str.lower()
     sample_df = df[df["id_lower"].isin(sample_ids)].copy()

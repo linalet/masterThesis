@@ -1,6 +1,6 @@
 """
 Final Preprocessing Script
-Converts raw 1M row data into optimized summary files for the Streamlit app.
+Converts data into summary files for the Streamlit app.
 """
 
 import os
@@ -149,6 +149,7 @@ def run_preprocessing(input_path="data/game_data.parquet"):
     sample_df = ph.create_homepage_samples(
         pd.read_parquet("data/color_analytics.parquet"), helper.taxonomy_data.values()
     )
+    sample_df = ph.create_homepage_samples(df_optimized, helper.taxonomy_data.values())
     sample_df.to_parquet("data/homepage_samples.parquet")
     print(f"Created homepage_samples.parquet with {len(sample_df)} rows.")
 
