@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 import helper_functions as helper
+import numpy as np
 
 studio_map = {
     "nintendo": [],
@@ -32,6 +33,52 @@ studio_map = {
     "aeria games": [],
     "lucasarts": ["lucas arts"],
     "bandai namco": ["bandai", "namco"],
+    "rockstar games": [
+        "rockstar leeds",
+        "rockstar north",
+        "rockstar london",
+        "rockstar toronto",
+        "rockstar san diego",
+        "rockstar vancouver",
+        "rockstar new england",
+    ],
+    "thq": ["thq digital studios uk", "thq san diego", "thq studio australia", "thq studio oz"],
+    "sony": [
+        "sony xdev",
+        "sony imagesoft",
+        "sony pictures games",
+        "sony pictures mobile",
+        "sony pictures studios",
+        "sony music entertainment",
+        "sony online entertainment",
+        "sony computer entertainment",
+        "aony interactive entertainment",
+        "sony music entertainment japan",
+        "sony interactive studios america",
+        "sony comupter entertainment japan",
+        "sony comupter entertainment europe",
+        "sony comupter entertainment america",
+        "sony comupter entertainment of america",
+        "sony pictures television uk rights limited",
+    ],
+    "tencent": ["tencent aurora studios"],
+    "xbox game studios": ["xbox live production"],
+    "disney": [
+        "disney games",
+        "disney mobile",
+        "disney online",
+        "disney canada inc.",
+        "disney interactive",
+        "disney imagineering",
+        "disney interactive studios",
+        "disney interactive victoria",
+        "disney interactive studios beijing",
+        "the walt disney company",
+        "walt disney animation studios",
+        "walt disney computer software",
+    ],
+    "mihoyo": ["hoyoverse", "cognosphere"],
+    "playrix": ["lplayrix llc", "playrix entertainment"],
 }
 
 
@@ -235,6 +282,21 @@ def get_weighted_representative_palette(group):
     ]
 
 
+def get_sat_metrics(row):
+    sats = []
+    for i in range(1, 11):
+        r, g, b = row[f"C{i}_R"], row[f"C{i}_G"], row[f"C{i}_B"]
+        s = max(r, g, b) - min(r, g, b)
+        sats.append(s)
+
+    return pd.Series(
+        {
+            "Saturation": np.mean(sats),  # Mean Saturation
+            "Sat_Variance": np.std(sats),  # Saturation Variance (Standard Deviation)
+        }
+    )
+
+
 def generate_style_stats(df):
     """Generates percentages for Art Style Popularity charts."""
     # Annual % of each style
@@ -251,8 +313,10 @@ def generate_style_stats(df):
 def generate_decade_style_summary(df):
     """Calculates the 'Era Vibe' palette for every Decade + Art Style combo."""
     results = []
-    # Calculate global decade saturation averages for Section 6 comparison
-    decade_avgs = df.groupby("Decade")["saturation"].mean().to_dict()
+    # decade_avgs = df.groupby("Decade")["Saturation"].mean().to_dict()
+    decade_stats = (
+        df.groupby("Decade").agg({"Saturation": "mean", "Sat_Variance": "mean"}).to_dict("index")
+    )
 
     for dec, dec_group in df.groupby("Decade"):
         global_palette = helper.get_representative_palette(dec_group, count=10)
@@ -262,7 +326,8 @@ def generate_decade_style_summary(df):
                 "Art_Style": "Global",
                 "Palette": "|".join(global_palette),
                 "Count": len(dec_group),
-                "Decade_Avg_Sat": decade_avgs.get(dec, 0),
+                "Decade_Avg_Sat": decade_stats[dec]["Saturation"],
+                "Decade_Avg_Var": decade_stats[dec]["Sat_Variance"],
             }
         )
 
@@ -274,7 +339,8 @@ def generate_decade_style_summary(df):
                 "Art_Style": style,
                 "Palette": "|".join(palette),
                 "Count": len(group),
-                "Decade_Avg_Sat": decade_avgs.get(dec, 0),
+                "Decade_Avg_Sat": decade_stats[dec]["Saturation"],
+                "Decade_Avg_Var": decade_stats[dec]["Sat_Variance"],
             }
         )
     return pd.DataFrame(results)
@@ -315,7 +381,8 @@ def generate_studio_summary(df):
     for i in range(1, 9):
         for channel in ["R", "G", "B", "W"]:
             color_cols.append(f"C{i}_{channel}")
-    required_cols = ["Unique_ID", "Developers", "Art_Style", "Decade", "saturation"] + color_cols
+    # required_cols = ["Unique_ID", "Developers", "Art_Style", "Decade", "Saturation"] + color_cols
+    required_cols = ["Unique_ID", "Developers", "Art_Style", "Decade"] + color_cols
     available_cols = [c for c in required_cols if c in df.columns]
     temp_df = df[available_cols].copy()
 
@@ -383,3 +450,19 @@ def generate_studio_summary(df):
             )
 
     return pd.DataFrame(rows)
+
+
+def create_homepage_samples(df_optimized, taxonomy):
+    df = df_optimized
+
+    sample_ids = []
+    for branch in taxonomy:
+        for style_info in branch.values():
+            for game_ref in style_info["example_games"]:
+                sample_ids.append(game_ref["id"].lower())
+
+    df["id_lower"] = df["Unique_ID"].str.lower()
+    sample_df = df[df["id_lower"].isin(sample_ids)].copy()
+
+    sample_df.drop(columns=["id_lower"], inplace=True)
+    return sample_df

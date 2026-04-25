@@ -59,9 +59,12 @@ def run_preprocessing(input_path="data/game_data.parquet"):
     # df["Is_classified"] = ~df["Art_Style"].str.startswith("Unclassified")
 
     print("🎨 Calculating Saturation (Thesis Metric)...")
-    df["saturation"] = df[["C1_R", "C1_G", "C1_B"]].max(axis=1) - df[["C1_R", "C1_G", "C1_B"]].min(
-        axis=1
-    )
+    # df["saturation"] = df[["C1_R", "C1_G", "C1_B"]].max(axis=1) - df[["C1_R", "C1_G", "C1_B"]].min(
+    #     axis=1
+    # )
+    sat_data = df.apply(ph.get_sat_metrics, axis=1)
+    df["Saturation"] = sat_data["Saturation"]
+    df["Sat_Variance"] = sat_data["Sat_Variance"]
 
     print("🧬 Generating Game DNA (Top 8 Colors per Game)...")
     game_palettes = df.groupby("Unique_ID").apply(
@@ -105,6 +108,7 @@ def run_preprocessing(input_path="data/game_data.parquet"):
         "Themes",
         "Color_palette",
         "Screenshot",
+        "Is_NSFW",
     ]
     print("💾 Saving Metadata file...")
     df.drop_duplicates("Unique_ID")[search_cols].to_parquet(
@@ -133,15 +137,22 @@ def run_preprocessing(input_path="data/game_data.parquet"):
         "Themes",
         "Color_palette",
         "Screenshot",
-        "saturation",
+        "Saturation",
+        "Sat_Variance",
         "Is_classified",
         "Is_NSFW",
     ]
     df_optimized = df[keep_cols]
     print("💾 Saving Master Color Analytics file...")
     df_optimized.to_parquet(os.path.join(base_dir, "data/color_analytics.parquet"))
+
+    sample_df = ph.create_homepage_samples(
+        pd.read_parquet("data/color_analytics.parquet"), helper.taxonomy_data.values()
+    )
+    sample_df.to_parquet("data/homepage_samples.parquet")
+    print(f"Created homepage_samples.parquet with {len(sample_df)} rows.")
+
     # compression="brotli"?
-    # df.to_parquet(os.path.join(base_dir, "data/color_analytics.parquet"))
 
     print("✅ Preprocessing Complete. The app is now ready to run at high speed.")
 

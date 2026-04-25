@@ -62,7 +62,7 @@ taxonomy_data = {
             "example_games": [
                 {"id": "team fortress 2 (2007) [valve]", "shot_index": 0},
                 {
-                    "id": "genshin impact (2020) [Cognosphere]",
+                    "id": "genshin impact (2020) [mihoyo]",
                     "shot_index": 10,
                 },
                 {"id": "super mario odyssey (2017) [nintendo]", "shot_index": 0},
