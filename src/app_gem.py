@@ -212,7 +212,7 @@ elif page == "Art Style Popularity":
     st.info("💡TOOL TIP: Switch between the tabs to see other visualizations.")
 
     stacked, trends, success = st.tabs(
-        ["|Art style distribution", "|Art style trends", "|Classification Success"]
+        ["|Art style distribution", "|Art style popularity", "|Classification Success"]
     )
 
     with stacked:

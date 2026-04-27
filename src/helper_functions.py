@@ -177,7 +177,7 @@ def load_data(url):
     return df_indexed, unique_devs, top_studios
 
 
-def get_ranked_colors(df_row_or_group, count=5, filter_similarity=True):
+def get_ranked_colors(colors, count=5, filter_similarity=True):
     """
     The Universal Ranking Logic for the Thesis.
     Prioritizes saturated colors: (Weight * 10) * (Saturation + 5)
@@ -187,16 +187,16 @@ def get_ranked_colors(df_row_or_group, count=5, filter_similarity=True):
     b_cols = [f"C{i}_B" for i in range(1, 9)]
     w_cols = [f"C{i}_W" for i in range(1, 9)]
 
-    if isinstance(df_row_or_group, pd.DataFrame):
-        r = df_row_or_group[r_cols].values.flatten()
-        g = df_row_or_group[g_cols].values.flatten()
-        b = df_row_or_group[b_cols].values.flatten()
-        w = df_row_or_group[w_cols].values.flatten()
+    if isinstance(colors, pd.DataFrame):
+        r = colors[r_cols].values.flatten()
+        g = colors[g_cols].values.flatten()
+        b = colors[b_cols].values.flatten()
+        w = colors[w_cols].values.flatten()
     else:
-        r = np.array([getattr(df_row_or_group, c) for c in r_cols])
-        g = np.array([getattr(df_row_or_group, c) for c in g_cols])
-        b = np.array([getattr(df_row_or_group, c) for c in b_cols])
-        w = np.array([getattr(df_row_or_group, c) for c in w_cols])
+        r = np.array([getattr(colors, c) for c in r_cols])
+        g = np.array([getattr(colors, c) for c in g_cols])
+        b = np.array([getattr(colors, c) for c in b_cols])
+        w = np.array([getattr(colors, c) for c in w_cols])
 
     mask = ~np.isnan(r) & (w > 0)
     r, g, b, w = r[mask], g[mask], b[mask], w[mask]

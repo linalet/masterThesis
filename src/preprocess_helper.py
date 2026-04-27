@@ -6,6 +6,7 @@ import numpy as np
 studio_map = {
     "nintendo": [],
     "microsoft": [],
+    "square enix": [],
     "ubisoft": ["ubi soft", "ubi studios uk", "ubi pictures"],
     "sega": [
         "sega am",
@@ -27,7 +28,7 @@ studio_map = {
         "atari corporation",
         "atari interactive",
     ],
-    "ea": ["electronic arts", "ea sports", "ea canada"],
+    "ea": ["electronic arts", "ea sports", "ea canada", "ea digital illusions ce"],
     "acclaim": [],
     "activision": [],
     "aeria games": [],
@@ -149,7 +150,7 @@ def classify_taxonomy(df):
     df.loc[
         (df["Art_Style"] == "Unclassified")
         & name_search.str.contains(
-            "call of duty|resident evil|kingdom come: deliverance|gran turismo|uncharted 4|ea sports|silent hill|Microsoft Flight Simulator",
+            "call of duty|resident evil|kingdom come: deliverance|gran turismo|uncharted 4|ea sports|silent hill|Microsoft Flight Simulator|death stranding",
             na=False,
         ),
         "Art_Style",
@@ -269,10 +270,10 @@ def finalize_screenshot_urls(df):
     return df
 
 
-def get_weighted_representative_palette(group):
+def get_weighted_representative_palette(colors):
     from helper_functions import get_ranked_colors
 
-    top_colors = get_ranked_colors(group, count=8)
+    top_colors = get_ranked_colors(colors, count=8)
     if not top_colors:
         return ""
 
@@ -331,14 +332,14 @@ def generate_decade_style_summary(df):
             }
         )
 
-    for (dec, style), group in df.groupby(["Decade", "Art_Style"]):
-        palette = helper.get_representative_palette(group, count=10)
+    for (dec, style), colors in df.groupby(["Decade", "Art_Style"]):
+        palette = helper.get_representative_palette(colors, count=10)
         results.append(
             {
                 "Decade": dec,
                 "Art_Style": style,
                 "Palette": "|".join(palette),
-                "Count": len(group),
+                "Count": len(colors),
                 "Decade_Avg_Sat": decade_stats[dec]["Saturation"],
                 "Decade_Avg_Var": decade_stats[dec]["Sat_Variance"],
             }
