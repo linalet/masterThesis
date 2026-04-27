@@ -6,7 +6,20 @@ import numpy as np
 studio_map = {
     "nintendo": [],
     "microsoft": [],
-    "square enix": [],
+    "square enix": [
+        "square product development division 1",
+        "square product development division 2",
+        "square product development division 3",
+        "square product development division 4",
+        "square product development division 5",
+        "square product development division 6",
+        "square",
+        "squaresoft",
+        "enix",
+        "enix corporatio",
+        "square usa",
+        "squaresoft usa",
+    ],
     "ubisoft": ["ubi soft", "ubi studios uk", "ubi pictures"],
     "sega": [
         "sega am",
@@ -80,6 +93,7 @@ studio_map = {
     ],
     "mihoyo": ["hoyoverse", "cognosphere"],
     "playrix": ["lplayrix llc", "playrix entertainment"],
+    "hyper-devbox japan": ["hyperdevbox japan", "hyberdevbox japan"],
 }
 
 
