@@ -1,20 +1,20 @@
 """IGDB API interaction and image downloading."""
 
 import os
-
 import requests
+from dotenv import load_dotenv
 
-# IGDB API credentials
-CLIENT_ID = "6k1gmqbtqyihlzrqijshniy5fs3xis"
-ACCESS_TOKEN = "yev6t8mlqe2uawaa967v3vxtldabt3"
 URL = "https://api.igdb.com/v4/games"
 
 # delete?
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(ROOT_DIR, "data")
 SCREENSHOT_DIR = os.path.join(DATA_DIR, "screenshots")
+load_dotenv()
+client_ID = os.getenv("CLIEND_ID")
+access_token = os.getenv("ACCESS_TOKEN")
 
-HEADERS = {"Client-ID": CLIENT_ID, "Authorization": f"Bearer {ACCESS_TOKEN}"}
+HEADERS = {"Client-ID": client_ID, "Authorization": f"Bearer {access_token}"}
 
 
 def query_igdb(year, limit=500, offset=0):
