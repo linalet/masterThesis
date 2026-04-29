@@ -199,7 +199,7 @@ if page == "Project Overview":
     """)
     st.write("""##### 🤔What do the tabs mean?""")
     st.markdown("""
-    1. **Art Style Popularity:** View the popularitty of specific styles over time.
+    1. **Art Style Popularity:** View the popularity of specific styles over time.
     2. **Color through Decades:** See how the industry's average palette has shifted. Look at color palettes for different art styles in a decade.
     3. **Genre Timelines:** Explore how color trends differ across genres.
     4. **Theme Timelines:** Explore how color trends differ across themes.
@@ -256,7 +256,7 @@ elif page == "Art Style Popularity":
         st.info(
             """💡TOOL TIP: Hover over the graph to see exact percentages for each style in a given year. 
             You can zoom in and out, and pan over the graph using the icons above the legend.
-            You can select which styles to show by clicking on the legend items. Use autoscale to reset the zoom sfter picking the styles."""
+            You can select which styles to show by clicking on the legend items. Use autoscale to reset the zoom after picking the styles."""
         )
     with trends:
         st.subheader("Individual Style Trends")
@@ -286,7 +286,7 @@ elif page == "Art Style Popularity":
         st.info(
             """ 💡TOOL TIP: Hover over the graph to see exact percentages for each style in a given year. 
             You can zoom in and out, and pan over the graph using the icons above the legend.
-            You can select which styles to show by clicking on the legend items. Use autoscale to reset the zoom sfter picking the styles."""
+            You can select which styles to show by clicking on the legend items. Use autoscale to reset the zoom after picking the styles."""
         )
 
     with success:
@@ -416,7 +416,7 @@ elif page in ["Genre Timelines", "Theme Timelines"]:
             st.markdown(
                 f"""
                 <div style='line-height: 1.5;'>
-                    <span style='font-size: 22px; font-weight: bold;'>{dec}s </span><span style='font-size: 18px; color: greay;'>Games: {formatted_count}, Most common art style: {dec_row.iloc[0]["Top_Style"]}</span>
+                    <span style='font-size: 22px; font-weight: bold;'>{dec}s </span><span style='font-size: 18px; color: gray;'>Games: {formatted_count}, Most common art style: {dec_row.iloc[0]["Top_Style"]}</span>
                     
                 </div>
                 """,
@@ -661,7 +661,13 @@ elif page == "Individual Game Analysis":
     st.info(
         """💡TOOL TIP: Start writing a game title, then pick the specific game from the selectbox. E.g., "mario kart" -> "mario kart wii (2008) [nintendo]". """
     )
-    all_analytics = get_summary("color_analytics.parquet")
+
+    @st.cache_data
+    def get_game_analytics(game_id: str):
+        path = os.path.join(BASE_DIR, "data", "color_analytics.parquet")
+        table = pq.read_table(path, filters=[("Unique_ID", "=", game_id)])
+        return table.to_pandas()
+
     decade_summary = get_summary("summary_decades.parquet")
 
     unique_games = sorted(search_metadata["Unique_ID"].unique())
@@ -686,7 +692,7 @@ elif page == "Individual Game Analysis":
     selected_game_id = st.selectbox("Select a game:", filtered_list, index=0)
 
     if selected_game_id:
-        game_rows = all_analytics[all_analytics["Unique_ID"] == selected_game_id]
+        game_rows = get_game_analytics(selected_game_id)
 
         if game_rows.empty:
             st.error("Data for this game could not be found.")

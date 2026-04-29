@@ -62,7 +62,7 @@ def run_preprocessing(input_path="data/game_data.parquet"):
     # df["saturation"] = df[["C1_R", "C1_G", "C1_B"]].max(axis=1) - df[["C1_R", "C1_G", "C1_B"]].min(
     #     axis=1
     # )
-    sat_data = df.apply(ph.get_sat_metrics, axis=1)
+    sat_data = ph.get_sat_metrics(df)
     df["Saturation"] = sat_data["Saturation"]
     df["Sat_Variance"] = sat_data["Sat_Variance"]
 
@@ -146,9 +146,9 @@ def run_preprocessing(input_path="data/game_data.parquet"):
     print("💾 Saving Master Color Analytics file...")
     df_optimized.to_parquet(os.path.join(base_dir, "data/color_analytics.parquet"))
 
-    sample_df = ph.create_homepage_samples(
-        pd.read_parquet("data/color_analytics.parquet"), helper.taxonomy_data.values()
-    )
+    # sample_df = ph.create_homepage_samples(
+    #     pd.read_parquet("data/color_analytics.parquet"), helper.taxonomy_data.values()
+    # )
     sample_df = ph.create_homepage_samples(df_optimized, helper.taxonomy_data.values())
     sample_df.to_parquet("data/homepage_samples.parquet")
     print(f"Created homepage_samples.parquet with {len(sample_df)} rows.")

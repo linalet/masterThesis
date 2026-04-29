@@ -3,9 +3,14 @@ import pandas as pd
 import helper_functions as helper
 import numpy as np
 
+_PLACEHOLDER_URL = "https://via.placeholder.com/1280x720?text=No+Image"
+_IGDB_BASE = "https://images.igdb.com/igdb/image/upload/t_screenshot_huge/"
+
 studio_map = {
     "nintendo": [],
     "microsoft": [],
+    "riot": [],
+    "rovio": [],
     "square enix": [
         "square product development division 1",
         "square product development division 2",
@@ -43,7 +48,7 @@ studio_map = {
     ],
     "ea": ["electronic arts", "ea sports", "ea canada", "ea digital illusions ce"],
     "acclaim": [],
-    "activision": [],
+    "activision": ["blizzard north"],
     "aeria games": [],
     "lucasarts": ["lucas arts"],
     "bandai namco": ["bandai", "namco"],
@@ -66,13 +71,13 @@ studio_map = {
         "sony music entertainment",
         "sony online entertainment",
         "sony computer entertainment",
-        "aony interactive entertainment",
+        "sony interactive entertainment",
         "sony music entertainment japan",
         "sony interactive studios america",
-        "sony comupter entertainment japan",
-        "sony comupter entertainment europe",
-        "sony comupter entertainment america",
-        "sony comupter entertainment of america",
+        "sony computer entertainment japan",
+        "sony computer entertainment europe",
+        "sony computer entertainment america",
+        "sony computer entertainment of america",
         "sony pictures television uk rights limited",
     ],
     "tencent": ["tencent aurora studios"],
@@ -262,25 +267,18 @@ def classify_taxonomy(df):
     return df
 
 
+def convert_to_igdb_url(path):
+    """Converts a local screenshot file path to its IGDB CDN URL.
+    Returns a placeholder URL for missing or null paths."""
+    if pd.isna(path) or path == "":
+        return _PLACEHOLDER_URL
+    image_id = os.path.splitext(os.path.basename(str(path)))[0]
+    return f"{_IGDB_BASE}{image_id}.jpg"
+
+
 def finalize_screenshot_urls(df):
-    """
-    Converts local screenshot filenames/paths into IGDB CDN URLs.
-    Format: https://images.igdb.com/igdb/image/upload/t_screenshot_huge/{image_id}.jpg
-    """
-
-    def convert_to_url(path):
-        if pd.isna(path) or path == "":
-            return "https://via.placeholder.com/1280x720?text=No+Image"
-
-        # Extract the filename (e.g., 'co1r98.jpg') from the path
-        filename = os.path.basename(str(path))
-        # Get the ID without the extension
-        image_id = os.path.splitext(filename)[0]
-
-        return f"https://images.igdb.com/igdb/image/upload/t_screenshot_huge/{image_id}.jpg"
-
-    # Overwrite the Screenshot column with the web URL
-    df["Screenshot"] = df["Screenshot"].apply(convert_to_url)
+    """Replaces local screenshot paths with IGDB URLs."""
+    df["Screenshot"] = df["Screenshot"].apply(convert_to_igdb_url)
     return df
 
 
@@ -297,18 +295,28 @@ def get_weighted_representative_palette(colors):
     ]
 
 
-def get_sat_metrics(row):
-    sats = []
-    for i in range(1, 11):
-        r, g, b = row[f"C{i}_R"], row[f"C{i}_G"], row[f"C{i}_B"]
-        s = max(r, g, b) - min(r, g, b)
-        sats.append(s)
+def get_sat_metrics(df):
+    """
+    Calculates mean saturation and saturation variance for each row.
+    Vectorized version — operates on the full DataFrame at once.
+    Returns a DataFrame with 'Saturation' and 'Sat_Variance' columns.
+    """
+    r_cols = [f"C{i}_R" for i in range(1, 11)]
+    g_cols = [f"C{i}_G" for i in range(1, 11)]
+    b_cols = [f"C{i}_B" for i in range(1, 11)]
 
-    return pd.Series(
+    r = df[r_cols].values  # shape: (n_rows, 10)
+    g = df[g_cols].values
+    b = df[b_cols].values
+
+    per_slot_sat = np.maximum(np.maximum(r, g), b) - np.minimum(np.minimum(r, g), b)
+
+    return pd.DataFrame(
         {
-            "Saturation": np.mean(sats),  # Mean Saturation
-            "Sat_Variance": np.std(sats),  # Saturation Variance (Standard Deviation)
-        }
+            "Saturation": per_slot_sat.mean(axis=1),
+            "Sat_Variance": per_slot_sat.std(axis=1),
+        },
+        index=df.index,
     )
 
 

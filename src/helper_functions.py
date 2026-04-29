@@ -137,46 +137,6 @@ taxonomy_data = {
 }
 
 
-@st.cache_data
-def load_data(url):
-    # Load the pre-processed file
-    df = pd.read_parquet(url, engine="pyarrow")
-    rename_map = {col.lower(): col for col in df.columns}
-
-    if "game" in rename_map:
-        df = df.rename(columns={rename_map["game"]: "Game"})
-
-    if "Game" not in df.columns:
-        # if "name" in rename_map:
-        #     df = df.rename(columns={rename_map["name"]: "Game"})
-        # else:
-        available = ", ".join(df.columns)
-        raise KeyError(f"Critical Column 'Game' missing from Parquet. Available: {available}")
-
-    standard_cols = ["Year", "Developers", "Themes", "Genres", "Art_Style", "Screenshot"]
-    for col in standard_cols:
-        lower_col = col.lower()
-        if lower_col in rename_map and col not in df.columns:
-            df = df.rename(columns={rename_map[lower_col]: col})
-
-    for col in df.select_dtypes(include=["int64"]).columns:
-        df[col] = pd.to_numeric(df[col], downcast="integer")
-    for col in df.select_dtypes(include=["float64"]).columns:
-        df[col] = pd.to_numeric(df[col], downcast="float")
-
-    df["Dev_Set"] = df["Developers"].apply(lambda x: set(x.split("|")))
-    df["Theme_Set"] = df["Themes"].apply(lambda x: set(x.split("|")))
-    df["Genre_Set"] = df["Genres"].apply(lambda x: set(x.split("|")))
-
-    all_devs = df["Developers"].str.split("|").explode().str.strip()
-    unique_devs = sorted(all_devs[all_devs != ""].unique().tolist())
-    top_studios = all_devs[all_devs != "unknown"].value_counts().nlargest(50).index.tolist()
-
-    df_indexed = df.set_index("Game", drop=False)
-
-    return df_indexed, unique_devs, top_studios
-
-
 def get_ranked_colors(colors, count=5, filter_similarity=True):
     """
     The Universal Ranking Logic for the Thesis.
