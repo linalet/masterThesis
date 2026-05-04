@@ -1,6 +1,6 @@
 """Main script to fetch game data and analyze color palettes from screenshots."""
 
-import csv
+# import csv
 import os
 import pandas as pd
 from PIL import Image
@@ -16,7 +16,7 @@ COLOR_COUNT = 10
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(ROOT_DIR, "data")
 # OUTPUT_CSV = os.path.join(DATA_DIR, "game_data.csv")
-OUTPUT_PARQUET = os.path.join(DATA_DIR, "game_data.parquet")
+OUTPUT_PARQUET = os.path.join(DATA_DIR, "final_game_data.parquet")
 
 # List of keywords to filter nsfw images
 NSFW_WORDS = [
@@ -70,21 +70,21 @@ def get_palette(image_path, n_clusters=10):
 
 def main():
     # Prepare CSV
-    color_headers = []
-    for i in range(1, COLOR_COUNT + 1):
-        color_headers.extend([f"C{i}_R", f"C{i}_G", f"C{i}_B", f"C{i}_W"])
-    header = [
-        "Year",
-        "Decade",
-        "Game",
-        "Screenshot",
-        "Genres",
-        "Themes",
-        "Keywords",
-        "Player_Perspective",
-        "Developers",
-        "Is_NSFW",
-    ] + color_headers
+    # color_headers = []
+    # for i in range(1, COLOR_COUNT + 1):
+    #     color_headers.extend([f"C{i}_R", f"C{i}_G", f"C{i}_B", f"C{i}_W"])
+    # header = [
+    #     "Year",
+    #     "Decade",
+    #     "Game",
+    #     "Screenshot",
+    #     "Genres",
+    #     "Themes",
+    #     "Keywords",
+    #     "Player_Perspective",
+    #     "Developers",
+    #     "Is_NSFW",
+    # ] + color_headers
 
     if os.path.exists(OUTPUT_PARQUET):
         # Skip processed screenshots
@@ -120,7 +120,7 @@ def main():
                 perspective = "|".join(
                     p["name"] for p in game.get("player_perspectives", []) if "name" in p
                 )
-                combined_text = f"{genres} {themes} {keywords} {name}".lower()
+                combined_text = f"{themes} {keywords} {name}".lower()
                 is_nsfw = 1 if any(word in combined_text for word in NSFW_WORDS) else 0
                 # screenshots = game.get("screenshots", [])
 
@@ -173,7 +173,7 @@ def main():
         pd.DataFrame(buffer).to_parquet(
             OUTPUT_PARQUET, engine="fastparquet", append=append_mode, index=False
         )
-        print("🏁 Final batch saved. Collection complete!")
+        print(f"🏁 Final batch saved. Collection complete! {counter} games processed")
     df_final = pd.read_parquet(OUTPUT_PARQUET)
     df_final.to_csv(os.path.join(DATA_DIR, "human_readable_backup.csv"), index=False)
     print("[INFO] Data collection complete!")

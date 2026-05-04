@@ -31,8 +31,8 @@ taxonomy_data = {
         "Photoreal": {
             "description": "Visuals trying to look as realistic as possible. Can utilize physically based rendering (PBR) and high-resolution textures.",
             "keywords": [
-                "ray-tracing",
-                "pbr",
+                "photoreal",
+                "ray tracing",
                 "realistic",
                 "4k",
             ],
@@ -74,7 +74,6 @@ taxonomy_data = {
                 "watercolor",
                 "hand-painted",
                 "hand-drawn",
-                "sketch",
             ],
             "example_games": [
                 {"id": "machinarium (2009) [amanita design]", "shot_index": 0},
@@ -84,7 +83,7 @@ taxonomy_data = {
         },
         "Pixel Art": {
             "description": "Art style limited or inspired by the technical constraints of early gaming hardware. Uses squares.",
-            "keywords": ["pixel art", "8-bit", "16-bit"],
+            "keywords": ["pixel art", "8-bit", "16-bit", "voxel", "pixel graphics"],
             "example_games": [
                 {"id": "stardew valley (2016) [concernedape]", "shot_index": 0},
                 {"id": "minecraft (2011) [mojang studios]", "shot_index": 3},
@@ -95,9 +94,8 @@ taxonomy_data = {
             "description": "Games designed to look like they are constructed from physical materials. Often uses stop-motion.",
             "keywords": [
                 "claymation",
-                "papercraft",
-                "stop-motion",
-                "felt",
+                "paper aesthetic",
+                "stop motion",
             ],
             "example_games": [
                 {"id": "it takes two (2021) [hazelight studios]", "shot_index": 0},
@@ -109,7 +107,7 @@ taxonomy_data = {
     "3️⃣ Abstraction": {
         "Minimalist": {
             "description": "Reduces visuals to only essential elements. Uses clean lines, silhouettes, and simple shapes.",
-            "keywords": ["silhouette", "geometric", "minimalist"],
+            "keywords": ["geometry", "minimalist", "minimalism"],
             "example_games": [
                 {"id": "superhot (2016) [ea]", "shot_index": 0},
                 {"id": "voxel blast (2015) [ceiba software & arts]", "shot_index": 1},
@@ -118,12 +116,7 @@ taxonomy_data = {
         },
         "Symbolic": {
             "description": "Color and shape represent ideas or mechanics. Also includestext-based and audio-based games with limited visual art.",
-            "keywords": [
-                "text-based",
-                "experimental",
-                "psychedelic",
-                "ascii",
-            ],
+            "keywords": ["text-based", "experimental", "ascii", "abstract"],
             "example_games": [
                 {
                     "id": "the hitchhiker's guide to the galaxy (1984) [infocom]",

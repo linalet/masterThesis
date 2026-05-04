@@ -9,7 +9,7 @@ import preprocess_helper as ph
 import helper_functions as helper
 
 
-def run_preprocessing(input_path="data/game_data.parquet"):
+def run_preprocessing(input_path="data/final_game_data.parquet"):
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     path = os.path.join(base_dir, input_path)
 
@@ -26,8 +26,8 @@ def run_preprocessing(input_path="data/game_data.parquet"):
 
     df["Year"] = pd.to_numeric(df["Year"], errors="coerce").fillna(0).astype("int16")
     # new main can use:
-    # df["Decade"] = pd.to_numeric(df["Decade"], errors="coerce").fillna(0).astype("int16")
-    df["Decade"] = (df["Year"] // 10 * 10).astype("int16")
+    df["Decade"] = pd.to_numeric(df["Decade"], errors="coerce").fillna(0).astype("int16")
+    # df["Decade"] = (df["Year"] // 10 * 10).astype("int16")
 
     print("🧹 Normalizing Studios & Generating IDs...")
     df["Developers"] = df["Developers"].apply(ph.normalize_studio_name)
@@ -48,6 +48,7 @@ def run_preprocessing(input_path="data/game_data.parquet"):
         )
         + "]"
     ).str.strip()
+
     for i in range(1, 11):
         for chan in ["R", "G", "B"]:
             col = f"C{i}_{chan}"
@@ -58,7 +59,7 @@ def run_preprocessing(input_path="data/game_data.parquet"):
     df = ph.classify_taxonomy(df)
     # df["Is_classified"] = ~df["Art_Style"].str.startswith("Unclassified")
 
-    print("🎨 Calculating Saturation (Thesis Metric)...")
+    print("🎨 Calculating Saturation...")
     # df["saturation"] = df[["C1_R", "C1_G", "C1_B"]].max(axis=1) - df[["C1_R", "C1_G", "C1_B"]].min(
     #     axis=1
     # )
@@ -70,10 +71,10 @@ def run_preprocessing(input_path="data/game_data.parquet"):
     game_palettes = df.groupby("Unique_ID").apply(
         lambda x: "|".join(ph.get_weighted_representative_palette(x)), include_groups=False
     )
-    df["Color_palette"] = df["Unique_ID"].map(game_palettes)
+    df["Color_Palette"] = df["Unique_ID"].map(game_palettes)
 
-    print("🖼 Formatting Screenshot URLs...")
-    df = ph.finalize_screenshot_urls(df)
+    # print("🖼 Formatting Screenshot URLs...")
+    # df = ph.finalize_screenshot_urls(df)
 
     print("📊 Exporting Aggregated Summaries...")
 
@@ -106,7 +107,7 @@ def run_preprocessing(input_path="data/game_data.parquet"):
         "Art_Style",
         "Genres",
         "Themes",
-        "Color_palette",
+        # "Color_Palette",
         "Screenshot",
         "Is_NSFW",
     ]
@@ -126,23 +127,23 @@ def run_preprocessing(input_path="data/game_data.parquet"):
     print("💾 Saving Screenshot palette file...")
     df_optimized.to_parquet(os.path.join(base_dir, "data/screenshot_colors.parquet"))
 
-    keep_cols = [
+    keepers = [
         "Unique_ID",
-        "Game",
-        "Year",
-        "Decade",
-        "Developers",
-        "Art_Style",
-        "Genres",
-        "Themes",
-        "Color_palette",
-        "Screenshot",
+        # "Game",
+        # "Year",
+        # "Decade",
+        # "Developers",
+        # "Art_Style",
+        # "Genres",
+        # "Themes",
+        "Color_Palette",
+        # "Screenshot",
         "Saturation",
         "Sat_Variance",
-        "Is_classified",
-        "Is_NSFW",
+        # "Is_classified",
+        # "Is_NSFW",
     ]
-    df_optimized = df[keep_cols]
+    df_optimized = df[keepers]
     print("💾 Saving Master Color Analytics file...")
     df_optimized.to_parquet(os.path.join(base_dir, "data/color_analytics.parquet"))
 

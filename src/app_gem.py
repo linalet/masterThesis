@@ -5,7 +5,6 @@ import helper_functions as helper
 import plotly.express as px
 import pyarrow.parquet as pq
 
-# --- CONFIG & STYLING ---
 st.set_page_config(
     layout="wide", page_title="Evolution of Color and Art Styles in Video Game Design"
 )
@@ -15,7 +14,7 @@ st.markdown(
     <style>
     /* Target the checkbox label text */
     [data-baseweb="checkbox"] [data-testid="stWidgetLabel"] p {
-        font-size: 18px !important;
+        font-size: calc(10px + 0.5vw) !important;
         font-weight: bold;
     }
     /* Make the slider values/steps bigger */
@@ -52,8 +51,6 @@ def get_summary(filename):
 
 
 search_metadata = get_summary("search_metadata.parquet")
-# all_analytics = get_summary("color_analytics.parquet")
-# decade_summary = get_summary("summary_decades.parquet")
 
 unclassified_labels = ["Unclassified", "Unclassified 2D", "Unclassified 3D"]
 if st.session_state.get("trigger_nav"):
@@ -71,7 +68,6 @@ page = st.sidebar.radio(
         "Theme Timelines",
         "Game Developer Profile",
         "Individual Game Analysis",
-        # "Style Categorizer",
     ],
     key="page_selection",
 )
@@ -308,12 +304,15 @@ elif page == "Art Style Popularity":
                 tickfont=dict(size=22),
             ),
             xaxis=dict(
+                range=[1945, 2025],
                 title_font=dict(size=26),
                 tickfont=dict(size=22),
             ),
             font=dict(size=20),
         )
         st.plotly_chart(fig2, width="stretch")
+        overall_val = success_df[success_df["Decade"] == 3000]["Rate"].values[0]
+        st.info(f"{overall_val:.2f}% of all games were assigned an art style")
 
 elif page == "Color through Decades":
     st.header("🎨 Color through Decades")
@@ -321,7 +320,7 @@ elif page == "Color through Decades":
 
     decades_list = sorted(search_metadata["Decade"].unique().tolist())
     decade_summary = get_summary("summary_decades.parquet")
-    colors, style_pals = st.tabs(["|Decade color palettes", "|Palettes per artstyle"])
+    colors, style_pals = st.tabs(["|Decade color palettes", "|Palettes per art style"])
 
     with colors:
         for dec in decades_list:
@@ -450,7 +449,7 @@ elif page in ["Genre Timelines", "Theme Timelines"]:
                     with col2:
                         helper.draw_color_strip(row["Palette"], height=30)
 
-    st.info("💡TOOL TIP: Hover mouse over the colors in the breakdown to see their hex codes.")
+    # st.info("💡TOOL TIP: Hover mouse over the colors in the breakdown to see their hex codes.")
     st.info(
         f""" ☝NOTE: If no games were classified for a specific {mode.lower()} in a decade, the art style will be marked as "Unknown"."""
     )
@@ -701,7 +700,8 @@ elif page == "Individual Game Analysis":
         if game_rows["Is_NSFW"].any():
             st.warning("⚠️This game contains sexual content.")
 
-        main_info = game_rows.iloc[0]
+        color_info = game_rows.iloc[0]
+        main_info = search_metadata[search_metadata["Unique_ID"] == selected_game_id].iloc[0]
         col1, col2 = st.columns([1.5, 2])
 
         with col1:
@@ -711,11 +711,11 @@ elif page == "Individual Game Analysis":
             st.markdown(f"**🎨 Art Style:** {main_info['Art_Style']}")
             st.markdown(f"**🕹️ Genres:** {main_info['Genres'].replace('|', ', ').title()}")
             st.markdown(f"**🎭 Themes:** {main_info['Themes'].replace('|', ', ').title()}")
-            st.markdown(f"**🖼️ Screenshots:** {len(game_rows)} image(s) analyzed")
+            # st.markdown(f"**🖼️ Screenshots:** {len(game_rows)} image(s) analyzed")
 
         with col2:
             st.subheader("🎨 Weighted Representative Palette")
-            color_profile_str = main_info["Color_palette"]
+            color_profile_str = color_info["Color_Palette"]
 
             html_color_strip = '<div style="display: flex; height: 100px; border-radius: 8px; overflow: hidden; border: 3px solid #999;">'
             for entry in color_profile_str.split("|"):
@@ -737,11 +737,11 @@ elif page == "Individual Game Analysis":
 
             if not dec_avg_row.empty:
                 dec_var = dec_avg_row.iloc[0]["Decade_Avg_Var"]
-                game_var = main_info["Sat_Variance"]
+                game_var = color_info["Sat_Variance"]
                 var_factor = game_var / dec_var if dec_var > 0 else 1.0
 
                 dec_sat = dec_avg_row.iloc[0]["Decade_Avg_Sat"]
-                game_sat = main_info["Saturation"]
+                game_sat = color_info["Saturation"]
                 sat_factor = game_sat / dec_sat if dec_sat > 0 else 1.0
 
                 if var_factor > 1.3:
@@ -808,150 +808,4 @@ elif page == "Individual Game Analysis":
                 mini_html += "</div>"
                 st.markdown(mini_html, unsafe_allow_html=True)
 
-        st.info("💡 TOOL TIP: Hover over any color block to see the specific Hex Code.")
-
-# elif page == "Style Categorizer":
-#     st.header("🏷️ Research Validation & Categorizer")
-
-#     # --- 1. File Paths & Initialization ---
-#     data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
-#     manual_file = os.path.join(data_dir, "manual_classification.csv")
-#     valid_ids_file = os.path.join(data_dir, "validated_log.txt")
-
-#     # Ensure files exist
-#     if not os.path.exists(manual_file):
-#         pd.DataFrame(columns=["Unique_ID", "Manual_Art_Style"]).to_csv(manual_file, index=False)
-
-#     if not os.path.exists(valid_ids_file):
-#         with open(valid_ids_file, "w", encoding="utf-8") as f:
-#             f.write("unique_id\n")
-
-#     # --- 2. Load Progress ---
-#     manual_df = pd.read_csv(manual_file)
-#     with open(valid_ids_file, "r", encoding="utf-8") as f:
-#         confirmed_ids = set(line.strip().lower() for line in f.readlines()[1:] if line.strip())
-
-#     csv_ids = set(manual_df["Unique_ID"].astype(str).str.lower().str.strip().unique())
-#     done_ids = csv_ids.union(confirmed_ids)
-
-#     # Use the master color analytics file for classification work
-#     master_df = get_summary("color_analytics.parquet")
-#     # Use the screenshot file for the visual gallery
-#     screen_df = get_summary("screenshot_colors.parquet")
-
-#     # Filter out games already processed
-#     available_data = master_df[
-#         ~master_df["Unique_ID"].str.lower().str.strip().isin(done_ids)
-#     ].copy()
-
-#     # --- 3. SECTION 1: CHRONOLOGICAL VALIDATION (Top) ---
-#     st.subheader("⏳ Chronological Validation")
-#     st.caption("Validating games that already have a classified Art Style from the taxonomy.")
-
-#     # Filter for games that ARE classified but NOT validate
-#     chrono_pool = available_data[available_data["Is_classified"]]  # .sort_values("Year")
-
-#     if chrono_pool.empty:
-#         st.success("🎉 All automatically classified games have been validated!")
-#     else:
-#         # Lock in current game
-#         if "chrono_id" not in st.session_state or st.session_state.chrono_id in done_ids:
-#             st.session_state.chrono_id = chrono_pool.iloc[0]["Unique_ID"]
-
-#         current_game = chrono_pool[chrono_pool["Unique_ID"] == st.session_state.chrono_id].iloc[0]
-#         game_screens = screen_df[screen_df["Unique_ID"] == st.session_state.chrono_id]
-
-#         c1, c2 = st.columns([3, 1])
-#         with c1:
-#             st.markdown(f"### {current_game['Game']} ({current_game['Year']})")
-#             st.write(
-#                 f"Studio: `{current_game['Developers']}` | System Suggestion: **{current_game['Art_Style']}**"
-#             )
-#         with c2:
-#             st.metric("Pending Validation", len(chrono_pool))
-
-#         # Show Screenshots
-#         img_cols = st.columns(len(game_screens) if len(game_screens) > 0 else 1)
-#         for i, shot in enumerate(game_screens.itertuples()):
-#             with img_cols[i % len(img_cols)]:
-#                 st.image(shot.Screenshot, width="stretch")
-
-#         v_col1, v_col2, v_col3 = st.columns([1, 2, 1])
-#         with v_col1:
-#             if st.button(f"✅ Correct: {current_game['Art_Style']}", key="v_auto", type="primary"):
-#                 with open(valid_ids_file, "a", encoding="utf-8") as f:
-#                     f.write(f"{st.session_state.chrono_id}\n")
-#                 st.rerun()
-
-#         with v_col2:
-#             # Assumes custom_style_order is defined in your constants
-#             new_style = st.selectbox("Actually, it is:", helper.STYLE_ORDER, key="v_select")
-
-#         with v_col3:
-#             if st.button("💾 Overwrite & Save", key="v_save"):
-#                 new_row = pd.DataFrame(
-#                     {"Unique_ID": [st.session_state.chrono_id], "Manual_Art_Style": [new_style]}
-#                 )
-#                 new_row.to_csv(manual_file, mode="a", header=False, index=False)
-#                 with open(valid_ids_file, "a", encoding="utf-8") as f:
-#                     f.write(f"{st.session_state.chrono_id}\n")
-#                 st.rerun()
-
-#     st.divider()
-
-#     # --- 4. SECTION 2: NAMED PRIORITY QUEUE (Bottom) ---
-#     st.subheader("🔍 Search & Categorize Specific Titles")
-
-#     search_term = st.text_input(
-#         "Enter game title keywords (e.g., 'mario', 'zelda', 'final fantasy'):", "mario"
-#     ).lower()
-
-#     named_available = available_data[
-#         available_data["Developers"].str.contains(search_term, case=False, na=False)
-#     ]  # .sort_values("Year")
-
-#     if named_available.empty:
-#         st.info(f"No unclassified games found matching '{search_term}'.")
-#     else:
-#         current_id = st.session_state.get("search_active_id")
-#         if (
-#             current_id is None
-#             or current_id in done_ids
-#             or current_id not in named_available["Unique_ID"].values
-#         ):
-#             st.session_state.search_active_id = named_available.iloc[0]["Unique_ID"]
-#         s_game = named_available[
-#             named_available["Unique_ID"] == st.session_state.search_active_id
-#         ].iloc[0]
-#         s_screens = screen_df[screen_df["Unique_ID"] == st.session_state.search_active_id]
-
-#         st.markdown(f"####  {s_game['Unique_ID']}")
-#         st.caption(f"Currently: {s_game['Art_Style']} | {len(named_available)} results left")
-
-#         s_img_cols = st.columns(len(s_screens) if len(s_screens) > 0 else 1)
-#         for i, shot in enumerate(s_screens.itertuples()):
-#             with s_img_cols[i % len(s_img_cols)]:
-#                 st.image(shot.Screenshot, width="stretch")
-
-#         s_col1, s_col2, s_col3 = st.columns([1, 2, 1])
-#         with s_col1:
-#             if st.button(f"✅ Keep: {s_game['Art_Style']}", key="s_keep"):
-#                 with open(valid_ids_file, "a", encoding="utf-8") as f:
-#                     f.write(f"{st.session_state.search_active_id}\n")
-#                 st.rerun()
-
-#         with s_col2:
-#             s_chosen = st.selectbox("Assign New Style:", helper.STYLE_ORDER, key="s_select")
-
-#         with s_col3:
-#             if st.button("💾 Save Manual Entry", key="s_save"):
-#                 new_row = pd.DataFrame(
-#                     {
-#                         "Unique_ID": [st.session_state.search_active_id],
-#                         "Manual_Art_Style": [s_chosen],
-#                     }
-#                 )
-#                 new_row.to_csv(manual_file, mode="a", header=False, index=False)
-#                 with open(valid_ids_file, "a", encoding="utf-8") as f:
-#                     f.write(f"{st.session_state.search_active_id}\n")
-#                 st.rerun()
+        st.info("💡 TOOL TIP: Hover over color palettes to see the specific hex codes.")

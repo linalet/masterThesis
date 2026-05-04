@@ -6,14 +6,12 @@ from dotenv import load_dotenv
 
 URL = "https://api.igdb.com/v4/games"
 
-# delete?
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(ROOT_DIR, "data")
 SCREENSHOT_DIR = os.path.join(DATA_DIR, "screenshots")
 load_dotenv()
-client_ID = os.getenv("CLIEND_ID")
+client_ID = os.getenv("CLIENT_ID")
 access_token = os.getenv("ACCESS_TOKEN")
-
 HEADERS = {"Client-ID": client_ID, "Authorization": f"Bearer {access_token}"}
 
 

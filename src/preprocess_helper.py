@@ -48,7 +48,8 @@ studio_map = {
     ],
     "ea": ["electronic arts", "ea sports", "ea canada", "ea digital illusions ce"],
     "acclaim": [],
-    "activision": ["blizzard north"],
+    "activision": [],
+    "blizzard entertainment": ["blizzard north"],
     "aeria games": [],
     "lucasarts": ["lucas arts"],
     "bandai namco": ["bandai", "namco"],
@@ -99,6 +100,7 @@ studio_map = {
     "mihoyo": ["hoyoverse", "cognosphere"],
     "playrix": ["lplayrix llc", "playrix entertainment"],
     "hyper-devbox japan": ["hyperdevbox japan", "hyberdevbox japan"],
+    "2k": [],
 }
 
 
@@ -219,18 +221,29 @@ def classify_taxonomy(df):
 
     is_free = df["Art_Style"] == "Unclassified"
     df.loc[
-        is_free & text.str.contains("text-based|experimental|psychedelic|ascii", na=False),
+        is_free & text.str.contains("text-based|experimental|abstract|ascii", na=False),
         "Art_Style",
     ] = "Abstraction: Symbolic"
     is_free = df["Art_Style"] == "Unclassified"
     df.loc[
-        is_free & text.str.contains("silhouette|geometric|minimalist", na=False),
+        is_free & text.str.contains("minimalism|minimalist|geometry", na=False),
         "Art_Style",
     ] = "Abstraction: Minimalist"
 
     is_free = df["Art_Style"] == "Unclassified"
     df.loc[
-        is_free & text.str.contains("photoreal|ray-tracing|pbr|realistic|4k|realism", na=False),
+        is_free & text.str.contains("watercolor|hand-painted|hand-drawn", na=False),
+        "Art_Style",
+    ] = "Stylization: Illustrative"
+    is_free = df["Art_Style"] == "Unclassified"
+    df.loc[
+        is_free & text.str.contains("claymation|paper aesthetic|stop motion", na=False),
+        "Art_Style",
+    ] = "Stylization: Material-Based"
+
+    is_free = df["Art_Style"] == "Unclassified"
+    df.loc[
+        is_free & text.str.contains("photoreal|ray tracing|realistic|4k|realism", na=False),
         "Art_Style",
     ] = "Realism: Photoreal"
 
@@ -243,43 +256,30 @@ def classify_taxonomy(df):
         "Stylization: Cartoon"
     )
     is_free = df["Art_Style"] == "Unclassified"
-    df.loc[is_free & text.str.contains("pixel|8-bit|16-bit|voxel", na=False), "Art_Style"] = (
-        "Stylization: Pixel Art"
-    )
-    is_free = df["Art_Style"] == "Unclassified"
     df.loc[
-        is_free & text.str.contains("claymation|papercraft|stop-motion|felt", na=False),
+        is_free & text.str.contains("pixel|8-bit|16-bit|voxel|pixel graphics", na=False),
         "Art_Style",
-    ] = "Stylization: Material-Based"
-    is_free = df["Art_Style"] == "Unclassified"
-    df.loc[
-        is_free & text.str.contains("watercolor|hand-painted|hand-drawn|sketch", na=False),
-        "Art_Style",
-    ] = "Stylization: Illustrative"
+    ] = "Stylization: Pixel Art"
 
-    # is_free = df["Art_Style"] == "Unclassified"
-    # df.loc[is_free & text.str.contains("3d|3-d", na=False), "Art_Style"] = "Unclassified 3D"
-    # is_free = df["Art_Style"] == "Unclassified"
-    # df.loc[is_free & text.str.contains("2d|2-d", na=False), "Art_Style"] = "Unclassified 2D"
     is_free = df["Art_Style"] == "Unclassified"
     df["Is_classified"] = ~df["Art_Style"].str.startswith("Unclassified")
 
     return df
 
 
-def convert_to_igdb_url(path):
-    """Converts a local screenshot file path to its IGDB CDN URL.
-    Returns a placeholder URL for missing or null paths."""
-    if pd.isna(path) or path == "":
-        return _PLACEHOLDER_URL
-    image_id = os.path.splitext(os.path.basename(str(path)))[0]
-    return f"{_IGDB_BASE}{image_id}.jpg"
+# def convert_to_igdb_url(path):
+#     """Converts a local screenshot file path to its IGDB CDN URL.
+#     Returns a placeholder URL for missing or null paths."""
+#     if pd.isna(path) or path == "":
+#         return _PLACEHOLDER_URL
+#     image_id = os.path.splitext(os.path.basename(str(path)))[0]
+#     return f"{_IGDB_BASE}{image_id}.jpg"
 
 
-def finalize_screenshot_urls(df):
-    """Replaces local screenshot paths with IGDB URLs."""
-    df["Screenshot"] = df["Screenshot"].apply(convert_to_igdb_url)
-    return df
+# def finalize_screenshot_urls(df):
+#     """Replaces local screenshot paths with IGDB URLs."""
+#     df["Screenshot"] = df["Screenshot"].apply(convert_to_igdb_url)
+#     return df
 
 
 def get_weighted_representative_palette(colors):
@@ -305,7 +305,7 @@ def get_sat_metrics(df):
     g_cols = [f"C{i}_G" for i in range(1, 11)]
     b_cols = [f"C{i}_B" for i in range(1, 11)]
 
-    r = df[r_cols].values  # shape: (n_rows, 10)
+    r = df[r_cols].values
     g = df[g_cols].values
     b = df[b_cols].values
 
@@ -330,7 +330,12 @@ def generate_style_stats(df):
 
     # Classification success rate per decade
     success = df.groupby("Decade")["Is_classified"].mean() * 100
-    return yearly_df, success.reset_index(name="Rate")
+    success_df = success.reset_index(name="Rate")
+    overall_rate = df["Is_classified"].mean() * 100
+    overall_row = pd.DataFrame([{"Decade": 3000, "Rate": overall_rate}])
+    success_df = pd.concat([success_df, overall_row], ignore_index=True)
+
+    return yearly_df, success_df
 
 
 def generate_decade_style_summary(df):
@@ -348,7 +353,7 @@ def generate_decade_style_summary(df):
                 "Decade": dec,
                 "Art_Style": "Global",
                 "Palette": "|".join(global_palette),
-                "Count": len(dec_group),
+                "Count": dec_group["Unique_ID"].nunique(),
                 "Decade_Avg_Sat": decade_stats[dec]["Saturation"],
                 "Decade_Avg_Var": decade_stats[dec]["Sat_Variance"],
             }
@@ -361,7 +366,7 @@ def generate_decade_style_summary(df):
                 "Decade": dec,
                 "Art_Style": style,
                 "Palette": "|".join(palette),
-                "Count": len(colors),
+                "Count": colors["Unique_ID"].nunique(),
                 "Decade_Avg_Sat": decade_stats[dec]["Saturation"],
                 "Decade_Avg_Var": decade_stats[dec]["Sat_Variance"],
             }
@@ -390,7 +395,7 @@ def generate_timeline_summary(df, column):
                         "Top_Style": classified_styles["Art_Style"].mode()[0]
                         if not classified_styles.empty
                         else "Unknown",
-                        "Count": len(g),
+                        "Count": g["Unique_ID"].nunique(),
                     }
                 )
     return pd.DataFrame(summary)
