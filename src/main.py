@@ -70,21 +70,21 @@ def get_palette(image_path, n_clusters=10):
 
 def main():
     # Prepare CSV
-    # color_headers = []
-    # for i in range(1, COLOR_COUNT + 1):
-    #     color_headers.extend([f"C{i}_R", f"C{i}_G", f"C{i}_B", f"C{i}_W"])
-    # header = [
-    #     "Year",
-    #     "Decade",
-    #     "Game",
-    #     "Screenshot",
-    #     "Genres",
-    #     "Themes",
-    #     "Keywords",
-    #     "Player_Perspective",
-    #     "Developers",
-    #     "Is_NSFW",
-    # ] + color_headers
+    color_headers = []
+    for i in range(1, COLOR_COUNT + 1):
+        color_headers.extend([f"C{i}_R", f"C{i}_G", f"C{i}_B", f"C{i}_W"])
+    header = [
+        "Year",
+        "Decade",
+        "Game",
+        "Screenshot",
+        "Genres",
+        "Themes",
+        "Keywords",
+        "Player_Perspective",
+        "Developers",
+        "Is_NSFW",
+    ] + color_headers
 
     if os.path.exists(OUTPUT_PARQUET):
         # Skip processed screenshots
@@ -127,6 +127,7 @@ def main():
                 for screen in game.get("screenshots", [])[:SCREENSHOT_COUNT]:
                     url = screen["url"]
                     if url in processed:
+                        print("Skip")
                         continue
                     image_path = download_image(url)
                     # Skip if download failed or already recorded
@@ -158,6 +159,7 @@ def main():
 
                 if counter % 500 == 0:
                     df_flush = pd.DataFrame(buffer)
+                    df_flush = df_flush[header]
                     df_flush.to_parquet(
                         OUTPUT_PARQUET, engine="fastparquet", append=append_mode, index=False
                     )
@@ -170,7 +172,9 @@ def main():
             offset += len(games)
         print(f"[INFO] Finished all games for {year}")
     if buffer:
-        pd.DataFrame(buffer).to_parquet(
+        df_final_batch = pd.DataFrame(buffer)
+        df_final_batch = df_final_batch[header]
+        df_final_batch.to_parquet(
             OUTPUT_PARQUET, engine="fastparquet", append=append_mode, index=False
         )
         print(f"🏁 Final batch saved. Collection complete! {counter} games processed")

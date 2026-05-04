@@ -63,9 +63,7 @@ def run_preprocessing(input_path="data/final_game_data.parquet"):
     # df["saturation"] = df[["C1_R", "C1_G", "C1_B"]].max(axis=1) - df[["C1_R", "C1_G", "C1_B"]].min(
     #     axis=1
     # )
-    sat_data = ph.get_sat_metrics(df)
-    df["Saturation"] = sat_data["Saturation"]
-    df["Sat_Variance"] = sat_data["Sat_Variance"]
+    df[["Saturation", "Sat_Variance"]] = ph.get_sat_metrics(df)
 
     print("🧬 Generating Game DNA (Top 8 Colors per Game)...")
     game_palettes = df.groupby("Unique_ID").apply(

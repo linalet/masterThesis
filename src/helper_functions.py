@@ -135,10 +135,10 @@ def get_ranked_colors(colors, count=5, filter_similarity=True):
     The Universal Ranking Logic for the Thesis.
     Prioritizes saturated colors: (Weight * 10) * (Saturation + 5)
     """
-    r_cols = [f"C{i}_R" for i in range(1, 9)]
-    g_cols = [f"C{i}_G" for i in range(1, 9)]
-    b_cols = [f"C{i}_B" for i in range(1, 9)]
-    w_cols = [f"C{i}_W" for i in range(1, 9)]
+    r_cols = [f"C{i}_R" for i in range(1, 11)]
+    g_cols = [f"C{i}_G" for i in range(1, 11)]
+    b_cols = [f"C{i}_B" for i in range(1, 11)]
+    w_cols = [f"C{i}_W" for i in range(1, 11)]
 
     if isinstance(colors, pd.DataFrame):
         r = colors[r_cols].values.flatten()
@@ -231,7 +231,7 @@ def draw_color_strip(palette_str, height=50):
     colors = palette_str.split("|")
     for c in colors:
         html += f'<div style="background-color:{c}; flex:1;" title="{c.upper()}"></div>'
-        hex_labels += f'<div style="flex:1; text-align:center; font-size:14px; color:gray; font-family:monospace;">{c.upper()}</div>'
+        hex_labels += f'<div style="flex:1; text-align:center; font-size:13px; color:gray; font-family:monospace;">{c.upper()}</div>'
 
     html += "</div>"
     hex_labels += "</div>"

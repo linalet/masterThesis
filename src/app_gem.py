@@ -1,5 +1,6 @@
 import os
 import streamlit as st
+from streamlit_option_menu import option_menu
 import pandas as pd
 import helper_functions as helper
 import plotly.express as px
@@ -14,7 +15,7 @@ st.markdown(
     <style>
     /* Target the checkbox label text */
     [data-baseweb="checkbox"] [data-testid="stWidgetLabel"] p {
-        font-size: calc(10px + 0.5vw) !important;
+        font-size: 18px + 0.5vw !important;
         font-weight: bold;
     }
     /* Make the slider values/steps bigger */
@@ -50,6 +51,20 @@ def get_summary(filename):
     return pd.read_parquet(os.path.join(DATA_PATH, filename))
 
 
+@st.cache_data
+def get_game_analytics(game_id: str):
+    path = os.path.join(BASE_DIR, "data", "color_analytics.parquet")
+    table = pq.read_table(path, filters=[("Unique_ID", "=", game_id)])
+    return table.to_pandas()
+
+
+@st.cache_data
+def get_specific_game_screenshots(game_id):
+    path = os.path.join(BASE_DIR, "data", "screenshot_colors.parquet")
+    table = pq.read_table(path, filters=[("Unique_ID", "=", game_id)])
+    return table.to_pandas()
+
+
 search_metadata = get_summary("search_metadata.parquet")
 
 unclassified_labels = ["Unclassified", "Unclassified 2D", "Unclassified 3D"]
@@ -57,26 +72,41 @@ if st.session_state.get("trigger_nav"):
     st.session_state["page_selection"] = "Individual Game Analysis"
     st.session_state["trigger_nav"] = False
 
-st.sidebar.title("🎮 Game Color Analytics")
-page = st.sidebar.radio(
-    "Analysis Tabs",
-    [
-        "Project Overview",
-        "Art Style Popularity",
-        "Color through Decades",
-        "Genre Timelines",
-        "Theme Timelines",
-        "Game Developer Profile",
-        "Individual Game Analysis",
-    ],
-    key="page_selection",
-)
-if st.sidebar.button("🎲 Random Game"):
-    random_game = search_metadata["Unique_ID"].sample(1).iloc[0]
-    st.session_state["search_query"] = random_game
-    st.session_state["text_search_box"] = ""
-    st.session_state["trigger_nav"] = True
-    st.rerun()
+with st.sidebar:
+    page = option_menu(
+        None,
+        options=[
+            "Project Overview",
+            "Art Style Popularity",
+            "Color through Decades",
+            "Genre Timelines",
+            "Theme Timelines",
+            "Game Developer Profile",
+            "Individual Game Analysis",
+        ],
+        icons=[
+            "info-circle",
+            "graph-up",
+            "palette",
+            "palette",
+            "palette",
+            "building",
+            "search",
+        ],
+        menu_icon="house",
+        default_index=0,
+        styles={
+            "container": {"padding": "0!important"},
+            "icon": {"font-size": "18px+ 0.5vw"},
+            "nav-link": {
+                "font-size": "16px + 0.5vw",
+                "text-align": "left",
+                "margin": "0px",
+                "--hover-color": "#7DABCC",
+            },
+            "nav-link-selected": {"background-color": "#0067B0"},
+        },
+    )
 if page == "Project Overview":
     st.title(
         "Exploring and Visualizing the Evolution of Color",
@@ -193,7 +223,7 @@ if page == "Project Overview":
         If you cannot see the side menu and the tabs inside, press the arrows ⏩ in the top left corner.
         Navigate through the various tabs to explore the data and discover insights into the evolution of color and art styles in video games.
     """)
-    st.write("""##### 🤔What do the tabs mean?""")
+    st.write("""##### 🤔What do the pages mean?""")
     st.markdown("""
     1. **Art Style Popularity:** View the popularity of specific styles over time.
     2. **Color through Decades:** See how the industry's average palette has shifted. Look at color palettes for different art styles in a decade.
@@ -206,18 +236,30 @@ if page == "Project Overview":
 elif page == "Art Style Popularity":
     st.header("📈 Art Style Popularity through Time")
     st.info("💡TOOL TIP: Switch between the tabs to see other visualizations.")
-
-    stacked, trends, success = st.tabs(
-        ["|Art style distribution", "|Art style popularity", "|Classification Success"]
+    graph_tab = option_menu(
+        None,
+        ["Art style distribution", "Art style popularity", "Classification success"],
+        icons=["bar-chart-fill", "graph-up", "bar-chart-fill"],
+        menu_icon="cast",
+        default_index=0,
+        orientation="horizontal",
+        styles={
+            "nav-link": {
+                "font-size": "16px",
+                "text-align": "left",
+                "margin": "0px",
+                "--hover-color": "#7DABCC",
+            },
+            "nav-link-selected": {"background-color": "#0067B0"},
+        },
     )
-
-    with stacked:
+    pop_df = get_summary("summary_style_popularity.parquet")
+    if graph_tab == "Art style distribution":
         st.subheader("Style Distribution by Year")
         st.write("""
         This graph shows the division of art styles over time. 
         It shows how many percent of the successfully classified games each style represents in a given year.
         """)
-        pop_df = get_summary("summary_style_popularity.parquet")
         fig = px.bar(
             pop_df,
             x="Year",
@@ -235,7 +277,7 @@ elif page == "Art Style Popularity":
                 tickfont=dict(size=20),
             ),
             xaxis=dict(
-                range=[1950, 2026],
+                range=[1950, 2027],
                 title_font=dict(size=22),
                 tickfont=dict(size=20),
             ),
@@ -254,7 +296,7 @@ elif page == "Art Style Popularity":
             You can zoom in and out, and pan over the graph using the icons above the legend.
             You can select which styles to show by clicking on the legend items. Use autoscale to reset the zoom after picking the styles."""
         )
-    with trends:
+    if graph_tab == "Art style popularity":
         st.subheader("Individual Style Trends")
         st.write("This graph shows the popularity of each style through history.")
         fig_line = px.line(
@@ -273,7 +315,7 @@ elif page == "Art Style Popularity":
                 title_font=dict(size=22),
                 tickfont=dict(size=20),
             ),
-            xaxis=dict(range=[1950, 2026], title_font=dict(size=22), tickfont=dict(size=20)),
+            xaxis=dict(range=[1950, 2027], title_font=dict(size=22), tickfont=dict(size=20)),
             legend=dict(title="Art Styles", font=dict(size=20), title_font=dict(size=24)),
         )
         # Make lines thicker for better visibility in a thesis
@@ -285,7 +327,7 @@ elif page == "Art Style Popularity":
             You can select which styles to show by clicking on the legend items. Use autoscale to reset the zoom after picking the styles."""
         )
 
-    with success:
+    if graph_tab == "Classification success":
         st.subheader("📈% of Games Categorized by Decade")
         st.write(
             "This graph illustrates the percentage of games classified into an art style for each decade."
@@ -304,7 +346,7 @@ elif page == "Art Style Popularity":
                 tickfont=dict(size=22),
             ),
             xaxis=dict(
-                range=[1945, 2025],
+                range=[1945, 2027],
                 title_font=dict(size=26),
                 tickfont=dict(size=22),
             ),
@@ -320,9 +362,25 @@ elif page == "Color through Decades":
 
     decades_list = sorted(search_metadata["Decade"].unique().tolist())
     decade_summary = get_summary("summary_decades.parquet")
-    colors, style_pals = st.tabs(["|Decade color palettes", "|Palettes per art style"])
+    tabs = option_menu(
+        None,
+        ["Decade color palettes", "Palettes per artstyle"],
+        icons=["palette", "palette"],
+        menu_icon="cast",
+        default_index=0,
+        orientation="horizontal",
+        styles={
+            "nav-link": {
+                "font-size": "16px",
+                "text-align": "left",
+                "margin": "0px",
+                "--hover-color": "#7DABCC",
+            },
+            "nav-link-selected": {"background-color": "#0067B0"},
+        },
+    )
 
-    with colors:
+    if tabs == "Decade color palettes":
         for dec in decades_list:
             row = decade_summary[
                 (decade_summary["Decade"] == dec) & (decade_summary["Art_Style"] == "Global")
@@ -340,7 +398,7 @@ elif page == "Color through Decades":
                 # debugging
                 st.write(f"*(No data for {dec}s)*")
 
-    with style_pals:
+    if tabs == "Palettes per artstyle":
         st.subheader("Dominant colors in a decade by art style.")
         decades_list = sorted(search_metadata["Decade"].unique().tolist())
 
@@ -449,7 +507,6 @@ elif page in ["Genre Timelines", "Theme Timelines"]:
                     with col2:
                         helper.draw_color_strip(row["Palette"], height=30)
 
-    # st.info("💡TOOL TIP: Hover mouse over the colors in the breakdown to see their hex codes.")
     st.info(
         f""" ☝NOTE: If no games were classified for a specific {mode.lower()} in a decade, the art style will be marked as "Unknown"."""
     )
@@ -463,11 +520,29 @@ elif page == "Game Developer Profile":
     )
     studio_summary = get_summary("summary_studios.parquet")
 
-    all_time, decade_spec, h_to_h = st.tabs(
-        ["|All-Time Analysis", "|Decade Specific Analysis", "|Studio Comparison"]
+    # all_time, decade_spec, h_to_h = st.tabs(
+    #     ["|All-Time Analysis", "|Decade Specific Analysis", "|Studio Comparison"]
+    # )
+    studio_tabs = option_menu(
+        None,
+        ["All-Time Analysis", "Decade Specific Analysis", "Studio Comparison"],
+        # icons=["palette", "palette"],
+        menu_icon="cast",
+        default_index=0,
+        orientation="horizontal",
+        styles={
+            "nav-link": {
+                "font-size": "16px",
+                "text-align": "left",
+                "margin": "0px",
+                "--hover-color": "#7DABCC",
+            },
+            "nav-link-selected": {"background-color": "#0067B0"},
+        },
     )
+    all_years = sorted([y for y in studio_summary["Decade"].unique() if y != "All-Time"])
 
-    with all_time:
+    if studio_tabs == "All-Time Analysis":
         top_50_global = sorted(
             studio_summary[(studio_summary["Decade"] == "All-Time") & (studio_summary["Is_Major"])][
                 "Studio"
@@ -513,9 +588,8 @@ elif page == "Game Developer Profile":
                     st.error(f"❌ Studio '{final_all}' not found. Please check the spelling.")
             else:
                 st.info("Select a major studio or search by name to begin.")
-    with decade_spec:
+    if studio_tabs == "Decade Specific Analysis":
         st.subheader("📆 Decade-Specific Leaders")
-        all_years = sorted([y for y in studio_summary["Decade"].unique() if y != "All-Time"])
         sel_dec = st.select_slider("Select Decade", options=all_years)
 
         if "active_studio_id" not in st.session_state:
@@ -575,7 +649,7 @@ elif page == "Game Developer Profile":
                     else:
                         st.error(f"❌ Studio '{final_choice}' not found in the master database.")
 
-    with h_to_h:
+    if studio_tabs == "Studio Comparison":
         st.subheader("⚔️ Studio Head-to-Head Comparison")
         st.write("Directly compare the artistic evolution of two studios within the same decade.")
         st.info(
@@ -657,15 +731,15 @@ elif page == "Game Developer Profile":
 
 elif page == "Individual Game Analysis":
     st.header("🔍 Individual Game Analysis")
+
+    if st.button("🎲 Random Game"):
+        random_game = search_metadata["Unique_ID"].sample(1).iloc[0]
+        st.session_state["search_query"] = random_game
+        st.session_state["trigger_nav"] = True
+        st.rerun()
     st.info(
         """💡TOOL TIP: Start writing a game title, then pick the specific game from the selectbox. E.g., "mario kart" -> "mario kart wii (2008) [nintendo]". """
     )
-
-    @st.cache_data
-    def get_game_analytics(game_id: str):
-        path = os.path.join(BASE_DIR, "data", "color_analytics.parquet")
-        table = pq.read_table(path, filters=[("Unique_ID", "=", game_id)])
-        return table.to_pandas()
 
     decade_summary = get_summary("summary_decades.parquet")
 
@@ -675,12 +749,11 @@ elif page == "Individual Game Analysis":
 
     if search_input:
         search_term = search_input.lower()
-        filtered_df = search_metadata[
+        filtered_list = search_metadata[
             search_metadata["Unique_ID"].str.contains(search_term, case=False)
-        ]
-        filtered_list = filtered_df["Unique_ID"].tolist()
+        ]["Unique_ID"].tolist()
     else:
-        filtered_list = unique_games
+        filtered_list = []
 
     if "search_query" in st.session_state:
         target_game = st.session_state["search_query"]
@@ -688,20 +761,27 @@ elif page == "Individual Game Analysis":
             filtered_list = [target_game] + [g for g in filtered_list if g != target_game]
         del st.session_state["search_query"]
 
-    selected_game_id = st.selectbox("Select a game:", filtered_list, index=0)
+    if search_input and not filtered_list:
+        st.warning("No game found. Chcek the spelling or try another game")
+
+    selected_game_id = st.selectbox(
+        "Select a game:",
+        filtered_list if filtered_list else [],
+        index=0,
+    )
 
     if selected_game_id:
         game_rows = get_game_analytics(selected_game_id)
+        main_info = search_metadata[search_metadata["Unique_ID"] == selected_game_id].iloc[0]
 
         if game_rows.empty:
             st.error("Data for this game could not be found.")
             st.stop()
 
-        if game_rows["Is_NSFW"].any():
+        if main_info["Is_NSFW"]:
             st.warning("⚠️This game contains sexual content.")
 
         color_info = game_rows.iloc[0]
-        main_info = search_metadata[search_metadata["Unique_ID"] == selected_game_id].iloc[0]
         col1, col2 = st.columns([1.5, 2])
 
         with col1:
@@ -711,7 +791,6 @@ elif page == "Individual Game Analysis":
             st.markdown(f"**🎨 Art Style:** {main_info['Art_Style']}")
             st.markdown(f"**🕹️ Genres:** {main_info['Genres'].replace('|', ', ').title()}")
             st.markdown(f"**🎭 Themes:** {main_info['Themes'].replace('|', ', ').title()}")
-            # st.markdown(f"**🖼️ Screenshots:** {len(game_rows)} image(s) analyzed")
 
         with col2:
             st.subheader("🎨 Weighted Representative Palette")
@@ -774,13 +853,6 @@ elif page == "Individual Game Analysis":
         st.divider()
 
         st.subheader("🖼️ Source Screenshots & Local Palettes")
-
-        @st.cache_data
-        def get_specific_game_screenshots(game_id):
-            path = os.path.join(BASE_DIR, "data", "screenshot_colors.parquet")
-            table = pq.read_table(path, filters=[("Unique_ID", "=", game_id)])
-            return table.to_pandas()
-
         cols = st.columns(3)
         screens = get_specific_game_screenshots(selected_game_id)
         for i, row in enumerate(screens.itertuples()):
@@ -808,4 +880,4 @@ elif page == "Individual Game Analysis":
                 mini_html += "</div>"
                 st.markdown(mini_html, unsafe_allow_html=True)
 
-        st.info("💡 TOOL TIP: Hover over color palettes to see the specific hex codes.")
+        st.info("💡 TOOL TIP: Hover over any color block to see the specific Hex Code.")
