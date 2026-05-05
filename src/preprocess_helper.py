@@ -7,11 +7,11 @@ _PLACEHOLDER_URL = "https://via.placeholder.com/1280x720?text=No+Image"
 _IGDB_BASE = "https://images.igdb.com/igdb/image/upload/t_screenshot_huge/"
 
 studio_map = {
-    "nintendo": [],
-    "microsoft": [],
-    "riot": [],
-    "rovio": [],
-    "square enix": [
+    "Nintendo": [],
+    "Microsoft": [],
+    "Riot": [],
+    "Rovio": [],
+    "Square Enix": [
         "square product development division 1",
         "square product development division 2",
         "square product development division 3",
@@ -25,35 +25,35 @@ studio_map = {
         "square usa",
         "squaresoft usa",
     ],
-    "ubisoft": ["ubi soft", "ubi studios uk", "ubi pictures"],
-    "sega": [
+    "Ubisoft": ["ubi soft", "ubi studios uk", "ubi pictures"],
+    "Sega": [
         "sega am",
         "sega wow",
         "sega technical institute",
         "sonic team",
     ],
-    "capcom": [
+    "Capcom": [
         "capcom production",
         "capcom development",
     ],
-    "konami": [
+    "Konami": [
         "konami computer entertainment",
         "konami tokyo",
         "konami osaka",
     ],
-    "atari": [
+    "Atari": [
         "atari games",
         "atari corporation",
         "atari interactive",
     ],
-    "ea": ["electronic arts", "ea sports", "ea canada", "ea digital illusions ce"],
-    "acclaim": [],
-    "activision": [],
-    "blizzard entertainment": ["blizzard north"],
-    "aeria games": [],
-    "lucasarts": ["lucas arts"],
-    "bandai namco": ["bandai", "namco"],
-    "rockstar games": [
+    "EA": ["electronic arts", "ea sports", "ea canada", "ea digital illusions ce"],
+    "Acclaim": [],
+    "Activision": [],
+    "Blizzard Entertainment": ["blizzard north"],
+    "Aeria Games": [],
+    "Lucasarts": ["lucas arts"],
+    "Bandai Namco": ["bandai", "namco"],
+    "Rockstar Games": [
         "rockstar leeds",
         "rockstar north",
         "rockstar london",
@@ -62,8 +62,8 @@ studio_map = {
         "rockstar vancouver",
         "rockstar new england",
     ],
-    "thq": ["thq digital studios uk", "thq san diego", "thq studio australia", "thq studio oz"],
-    "sony": [
+    "THQ": ["thq digital studios uk", "thq san diego", "thq studio australia", "thq studio oz"],
+    "Sony": [
         "sony xdev",
         "sony imagesoft",
         "sony pictures games",
@@ -81,9 +81,9 @@ studio_map = {
         "sony computer entertainment of america",
         "sony pictures television uk rights limited",
     ],
-    "tencent": ["tencent aurora studios"],
-    "xbox game studios": ["xbox live production"],
-    "disney": [
+    "Tencent": ["tencent aurora studios"],
+    "Xbox Game Studios": ["xbox live production"],
+    "Disney": [
         "disney games",
         "disney mobile",
         "disney online",
@@ -97,10 +97,10 @@ studio_map = {
         "walt disney animation studios",
         "walt disney computer software",
     ],
-    "mihoyo": ["hoyoverse", "cognosphere"],
-    "playrix": ["lplayrix llc", "playrix entertainment"],
-    "hyper-devbox japan": ["hyperdevbox japan", "hyberdevbox japan"],
-    "2k": [],
+    "Mihoyo": ["hoyoverse", "cognosphere"],
+    "Playrix": ["lplayrix llc", "playrix entertainment"],
+    "Hyper-Devbox Japan": ["hyperdevbox japan", "hyberdevbox japan"],
+    "2K": [],
 }
 
 
@@ -109,9 +109,10 @@ def normalize_studio_name(dev_string):
     cleaned_parts = []
 
     for part in parts:
+        part_lower = part.lower()
         found_parent = False
         for parent, aliases in studio_map.items():
-            if parent in part or any(alias in part for alias in aliases):
+            if parent in part_lower or any(alias in part_lower for alias in aliases):
                 cleaned_parts.append(parent)
                 found_parent = True
                 break
@@ -480,9 +481,7 @@ def generate_studio_summary(df):
     return pd.DataFrame(rows)
 
 
-def create_homepage_samples(df_optimized, taxonomy):
-    df = df_optimized
-
+def create_homepage_samples(df, taxonomy):
     sample_ids = []
     for branch in taxonomy:
         for style_info in branch.values():

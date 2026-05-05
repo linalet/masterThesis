@@ -8,7 +8,7 @@ from PIL import Image
 from igdb_api import download_image, query_igdb
 
 
-START_YEAR = 1950
+START_YEAR = 2006
 END_YEAR = 2026
 SCREENSHOT_COUNT = 5  # possibly increase to 10
 COLOR_COUNT = 10
@@ -70,21 +70,21 @@ def get_palette(image_path, n_clusters=10):
 
 def main():
     # Prepare CSV
-    color_headers = []
-    for i in range(1, COLOR_COUNT + 1):
-        color_headers.extend([f"C{i}_R", f"C{i}_G", f"C{i}_B", f"C{i}_W"])
-    header = [
-        "Year",
-        "Decade",
-        "Game",
-        "Screenshot",
-        "Genres",
-        "Themes",
-        "Keywords",
-        "Player_Perspective",
-        "Developers",
-        "Is_NSFW",
-    ] + color_headers
+    # color_headers = []
+    # for i in range(1, COLOR_COUNT + 1):
+    #     color_headers.extend([f"C{i}_R", f"C{i}_G", f"C{i}_B", f"C{i}_W"])
+    # header = [
+    #     "Year",
+    #     "Decade",
+    #     "Game",
+    #     "Screenshot",
+    #     "Genres",
+    #     "Themes",
+    #     "Keywords",
+    #     "Player_Perspective",
+    #     "Developers",
+    #     "Is_NSFW",
+    # ] + color_headers
 
     if os.path.exists(OUTPUT_PARQUET):
         # Skip processed screenshots
@@ -97,6 +97,7 @@ def main():
         append_mode = False
     buffer = []
     counter = 0
+    game_count = 0
     for year in range(START_YEAR, END_YEAR + 1):
         print(f"[INFO] Getting games from {year}...")
         decade = (year // 10) * 10
@@ -154,33 +155,31 @@ def main():
                         )
 
                     buffer.append(row)
-                    processed.add(image_path)
-                counter += 1
+                    processed.add(url)
+                    counter += 1
 
-                if counter % 500 == 0:
-                    df_flush = pd.DataFrame(buffer)
-                    df_flush = df_flush[header]
-                    df_flush.to_parquet(
-                        OUTPUT_PARQUET, engine="fastparquet", append=append_mode, index=False
-                    )
-                    append_mode = True
-                    buffer = []
-                    print(f"💾 Milestone: {counter} games saved to disk. RAM cleared.")
-
+                    if counter % 500 == 0:
+                        df_flush = pd.DataFrame(buffer)
+                        # df_flush = df_flush[header]
+                        df_flush.to_parquet(
+                            OUTPUT_PARQUET, engine="fastparquet", append=append_mode, index=False
+                        )
+                        append_mode = True
+                        buffer = []
+                        print(f"💾 Milestone: {counter} screenshots saved to disk. RAM cleared.")
+                game_count += 1
                 print(f"[INFO] Saved {name} ({year})")
 
             offset += len(games)
         print(f"[INFO] Finished all games for {year}")
     if buffer:
-        df_final_batch = pd.DataFrame(buffer)
-        df_final_batch = df_final_batch[header]
-        df_final_batch.to_parquet(
+        pd.DataFrame(buffer).to_parquet(
             OUTPUT_PARQUET, engine="fastparquet", append=append_mode, index=False
         )
         print(f"🏁 Final batch saved. Collection complete! {counter} games processed")
     df_final = pd.read_parquet(OUTPUT_PARQUET)
     df_final.to_csv(os.path.join(DATA_DIR, "human_readable_backup.csv"), index=False)
-    print("[INFO] Data collection complete!")
+    print(f"[INFO] Data collection complete! Processed {game_count} games")
 
 
 if __name__ == "__main__":

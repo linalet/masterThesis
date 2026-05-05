@@ -230,7 +230,7 @@ if page == "Project Overview":
     3. **Genre Timelines:** Explore how color trends differ across genres.
     4. **Theme Timelines:** Explore how color trends differ across themes.
     3. **Game Developer Profile:** Explore game studio's most common art styles and colors or compare 2 studios.
-    4. **Individual Game Palette:** Deep-dive into a specific game and look at its screenshots.
+    4. **Individual Game Analysis:** Deep-dive into a specific game and look at its screenshots.
     """)
 
 elif page == "Art Style Popularity":
@@ -520,13 +520,10 @@ elif page == "Game Developer Profile":
     )
     studio_summary = get_summary("summary_studios.parquet")
 
-    # all_time, decade_spec, h_to_h = st.tabs(
-    #     ["|All-Time Analysis", "|Decade Specific Analysis", "|Studio Comparison"]
-    # )
     studio_tabs = option_menu(
         None,
         ["All-Time Analysis", "Decade Specific Analysis", "Studio Comparison"],
-        # icons=["palette", "palette"],
+        icons=["building", "building", "buildings"],
         menu_icon="cast",
         default_index=0,
         orientation="horizontal",

@@ -21,8 +21,10 @@ def run_preprocessing(input_path="data/final_game_data.parquet"):
     else:
         df["Is_NSFW"] = df["Is_NSFW"].fillna(False).astype(bool)
 
-    for col in ["Genres", "Themes", "Keywords", "Developers", "Game", "Player_Perspective"]:
+    for col in ["Genres", "Themes", "Keywords", "Player_Perspective"]:
         df[col] = df[col].fillna("").astype(str).str.lower()
+    for col in ["Developers", "Game"]:
+        df[col] = df[col].fillna("").astype(str)
 
     df["Year"] = pd.to_numeric(df["Year"], errors="coerce").fillna(0).astype("int16")
     # new main can use:
@@ -33,11 +35,12 @@ def run_preprocessing(input_path="data/final_game_data.parquet"):
     df["Developers"] = df["Developers"].apply(ph.normalize_studio_name)
 
     df["Unique_ID"] = (
-        df["Game"]
+        df["Game"].str.lower()
         + " ("
         + df["Year"].astype(str)
         + ") ["
         + df["Developers"]
+        .str.lower()
         .str.split("|")
         .apply(
             lambda x: (
@@ -95,6 +98,9 @@ def run_preprocessing(input_path="data/final_game_data.parquet"):
         os.path.join(base_dir, "data/summary_studios.parquet")
     )
 
+    sample_df = ph.create_homepage_samples(df, helper.taxonomy_data.values())
+    sample_df.to_parquet("data/homepage_samples.parquet")
+
     print("🔍 Creating Search Metadata Index...")
     search_cols = [
         "Unique_ID",
@@ -144,15 +150,6 @@ def run_preprocessing(input_path="data/final_game_data.parquet"):
     df_optimized = df[keepers]
     print("💾 Saving Master Color Analytics file...")
     df_optimized.to_parquet(os.path.join(base_dir, "data/color_analytics.parquet"))
-
-    # sample_df = ph.create_homepage_samples(
-    #     pd.read_parquet("data/color_analytics.parquet"), helper.taxonomy_data.values()
-    # )
-    sample_df = ph.create_homepage_samples(df_optimized, helper.taxonomy_data.values())
-    sample_df.to_parquet("data/homepage_samples.parquet")
-    print(f"Created homepage_samples.parquet with {len(sample_df)} rows.")
-
-    # compression="brotli"?
 
     print("✅ Preprocessing Complete. The app is now ready to run at high speed.")
 
