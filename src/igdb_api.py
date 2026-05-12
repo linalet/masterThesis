@@ -18,11 +18,7 @@ HEADERS = {"Client-ID": client_ID, "Authorization": f"Bearer {access_token}"}
 def query_igdb(year, limit=500, offset=0):
     """
     Query games released in a given year. Download screenshots.
-    Using pagination to fetch all available games.
-    Returns a dictionary of games, empty list on failure.
-    year: int - release year to query
-    limit: int - batchsize from IGDB (default 500)
-    offset: int - pagination offset
+    Returns a dictionary of games.
     """
     query = f"""
     fields release_dates.y, name, screenshots.url, genres.name,
@@ -43,7 +39,7 @@ def query_igdb(year, limit=500, offset=0):
 
 
 def normalize_igdb_url(url):
-    """Normalize IGDB image URLs to ensure they are valid. IGDB changed URL format :( )."""
+    """Normalize IGDB image URLs. (IGDB changed URL format :( )."""
 
     url = url.strip()
 
@@ -60,18 +56,18 @@ def normalize_igdb_url(url):
 
 
 def download_image(url, folder=SCREENSHOT_DIR):
-    """Download a screenshot from IGDB URL, only if it doesn’t already exist.
-    Returns the local file path or None."""
+    """Download a screenshot from IGDB URL, if it isn’t already downloaded.
+    Returns the local file path and IGDB image url"""
 
     os.makedirs(folder, exist_ok=True)
 
     url = normalize_igdb_url(url)
-    img_url = url.replace("t_thumb", "t_screenshot_big")  # t_720p instead?
+    img_url = url.replace("t_thumb", "t_screenshot_big")
     filename = os.path.join(folder, img_url.split("/")[-1])
 
     # Skip download if already exists
     if os.path.exists(filename):
-        return filename
+        return filename, img_url
 
     try:
         img_data = requests.get(img_url, timeout=15)
@@ -80,8 +76,8 @@ def download_image(url, folder=SCREENSHOT_DIR):
         with open(filename, "wb") as f:
             f.write(img_data.content)
 
-        return filename
+        return filename, img_url
 
     except requests.RequestException as e:
-        print(f"[ERROR] Failed to download image {url}: {e}")
-        return None
+        print(f"[ERROR] Failed to download image {img_url}: {e}")
+        return None, None

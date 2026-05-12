@@ -1,6 +1,7 @@
+""" "Helper functions for Streamlit app. Taxonomy information, visualization and UI state management."""
+
 import streamlit as st
 import pandas as pd
-import numpy as np
 import plotly.express as px
 
 STYLE_ORDER = [
@@ -37,7 +38,7 @@ taxonomy_data = {
                 "4k",
             ],
             "example_games": [
-                {"id": "cyberpunk 2077 (2020) [cd projekt red]", "shot_index": 9},
+                {"id": "cyberpunk 2077 (2020) [cd projekt red]", "shot_index": 3},
                 {"id": "the last of us part ii (2020) [naughty dog]", "shot_index": 0},
                 {"id": "forza horizon 5 (2021) [playground games]", "shot_index": 0},
             ],
@@ -51,7 +52,7 @@ taxonomy_data = {
             "example_games": [
                 {"id": "the sims 4 (2014) [maxis]", "shot_index": 4},
                 {"id": "portal 2 (2011) [valve]", "shot_index": 1},
-                {"id": "the witcher 3: wild hunt (2015) [cd projekt red]", "shot_index": 10},
+                {"id": "the witcher 3: wild hunt (2015) [cd projekt red]", "shot_index": 1},
             ],
         },
     },
@@ -63,7 +64,7 @@ taxonomy_data = {
                 {"id": "team fortress 2 (2007) [valve]", "shot_index": 0},
                 {
                     "id": "genshin impact (2020) [mihoyo]",
-                    "shot_index": 10,
+                    "shot_index": 0,
                 },
                 {"id": "super mario odyssey (2017) [nintendo]", "shot_index": 0},
             ],
@@ -109,9 +110,9 @@ taxonomy_data = {
             "description": "Reduces visuals to only essential elements. Uses clean lines, silhouettes, and simple shapes.",
             "keywords": ["geometry", "minimalist", "minimalism"],
             "example_games": [
-                {"id": "superhot (2016) [ea]", "shot_index": 0},
+                {"id": "superhot (2016) [superhot team]", "shot_index": 0},
                 {"id": "voxel blast (2015) [ceiba software & arts]", "shot_index": 1},
-                {"id": "limbo (2010) [ea]", "shot_index": 4},
+                {"id": "limbo (2010) [playdead]", "shot_index": 4},
             ],
         },
         "Symbolic": {
@@ -129,70 +130,7 @@ taxonomy_data = {
     },
 }
 
-
-def get_ranked_colors(colors, count=5, filter_similarity=True):
-    """
-    The Universal Ranking Logic for the Thesis.
-    Prioritizes saturated colors: (Weight * 10) * (Saturation + 5)
-    """
-    r_cols = [f"C{i}_R" for i in range(1, 11)]
-    g_cols = [f"C{i}_G" for i in range(1, 11)]
-    b_cols = [f"C{i}_B" for i in range(1, 11)]
-    w_cols = [f"C{i}_W" for i in range(1, 11)]
-
-    if isinstance(colors, pd.DataFrame):
-        r = colors[r_cols].values.flatten()
-        g = colors[g_cols].values.flatten()
-        b = colors[b_cols].values.flatten()
-        w = colors[w_cols].values.flatten()
-    else:
-        r = np.array([getattr(colors, c) for c in r_cols])
-        g = np.array([getattr(colors, c) for c in g_cols])
-        b = np.array([getattr(colors, c) for c in b_cols])
-        w = np.array([getattr(colors, c) for c in w_cols])
-
-    mask = ~np.isnan(r) & (w > 0)
-    r, g, b, w = r[mask], g[mask], b[mask], w[mask]
-
-    if len(r) == 0:
-        return []
-
-    r_b, g_b, b_b = (r // 15 * 15), (g // 15 * 15), (b // 15 * 15)
-    sat = np.max([r, g, b], axis=0) - np.min([r, g, b], axis=0)
-
-    temp = pd.DataFrame({"R": r_b, "G": g_b, "B": b_b, "W": w, "S": sat})
-    grouped = (
-        temp.groupby(["R", "G", "B"]).agg(total_w=("W", "sum"), max_s=("S", "max")).reset_index()
-    )
-
-    grouped["score"] = (grouped["total_w"] * 10) * (grouped["max_s"] + 5)
-    all_sorted = grouped.sort_values("score", ascending=False)
-
-    if not filter_similarity:
-        return all_sorted.head(count)
-
-    final_selection = []
-    for row in all_sorted.itertuples():
-        if len(final_selection) >= count:
-            break
-        is_similar = False
-        for chosen in final_selection:
-            dist = (
-                (row.R - chosen.R) ** 2 + (row.G - chosen.G) ** 2 + (row.B - chosen.B) ** 2
-            ) ** 0.5
-            if dist < 50:
-                is_similar = True
-                break
-        if not is_similar:
-            final_selection.append(row)
-
-    return final_selection
-
-
-def get_representative_palette(yr_data, count=10):
-    """Now uses the weighted logic for the Era Vibe!"""
-    top_colors = get_ranked_colors(yr_data, count=count)
-    return [f"#{int(c.R):02x}{int(c.G):02x}{int(c.B):02x}" for c in top_colors]
+"""UI state managementfunctions"""
 
 
 def on_selectbox_change():
@@ -220,6 +158,7 @@ def on_text_change_dec():
 
 
 def draw_color_strip(palette_str, height=50):
+    """Draws a horizontal strip of colors from a palette string. Height is adjustable."""
     height = f"{height}px"
     if not palette_str:
         st.info("No color data available.")
@@ -239,7 +178,7 @@ def draw_color_strip(palette_str, height=50):
 
 
 def draw_style_distribution(dist_dict, unclassified_pct, tab, studio_name="default", suffix=""):
-    """Draws a  Pie Chart color-coded by style"""
+    """Draws a  pie chart of art style distributions color-coded by style"""
     if not dist_dict:
         st.info("No art style distribution data available.")
         return
@@ -273,6 +212,7 @@ def draw_style_distribution(dist_dict, unclassified_pct, tab, studio_name="defau
 
 
 def display_studio_stats(row, tab, suffix=""):
+    """Displays the studio's color signature and art style distribution."""
     st.write(f"### {row['Studio'].title()}'s Color Signature")
     st.caption(f"Collected from {row['Game_Count']} games")
     draw_color_strip(row["Palette"], height=60)

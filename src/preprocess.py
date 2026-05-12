@@ -1,6 +1,5 @@
 """
-Final Preprocessing Script
-Converts data into summary files for the Streamlit app.
+Data processing converts data into summary files for the Streamlit app.
 """
 
 import os
@@ -10,12 +9,13 @@ import helper_functions as helper
 
 
 def run_preprocessing(input_path="data/final_game_data.parquet"):
+    """Main preprocessing function to clean data, apply taxonomy, and generate summary files."""
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     path = os.path.join(base_dir, input_path)
 
-    print("📖 Loading raw data...")
     df = pd.read_parquet(path)
 
+    # normalize and downcast data
     if "Is_NSFW" not in df.columns:
         df["Is_NSFW"] = False
     else:
@@ -27,11 +27,8 @@ def run_preprocessing(input_path="data/final_game_data.parquet"):
         df[col] = df[col].fillna("").astype(str)
 
     df["Year"] = pd.to_numeric(df["Year"], errors="coerce").fillna(0).astype("int16")
-    # new main can use:
     df["Decade"] = pd.to_numeric(df["Decade"], errors="coerce").fillna(0).astype("int16")
-    # df["Decade"] = (df["Year"] // 10 * 10).astype("int16")
 
-    print("🧹 Normalizing Studios & Generating IDs...")
     df["Developers"] = df["Developers"].apply(ph.normalize_studio_name)
 
     df["Unique_ID"] = (
@@ -53,31 +50,24 @@ def run_preprocessing(input_path="data/final_game_data.parquet"):
     ).str.strip()
 
     for i in range(1, 11):
-        for chan in ["R", "G", "B"]:
-            col = f"C{i}_{chan}"
+        for channel in ["R", "G", "B"]:
+            col = f"C{i}_{channel}"
             df[col] = df[col].fillna(0).astype("uint8")
         df[f"C{i}_W"] = df[f"C{i}_W"].astype("float32")
 
-    print("🏷️ Applying Vectorized Taxonomy...")
+    print("Applying taxonomy...")
     df = ph.classify_taxonomy(df)
-    # df["Is_classified"] = ~df["Art_Style"].str.startswith("Unclassified")
 
-    print("🎨 Calculating Saturation...")
-    # df["saturation"] = df[["C1_R", "C1_G", "C1_B"]].max(axis=1) - df[["C1_R", "C1_G", "C1_B"]].min(
-    #     axis=1
-    # )
+    print("Calculating saturation metrics...")
     df[["Saturation", "Sat_Variance"]] = ph.get_sat_metrics(df)
 
-    print("🧬 Generating Game DNA (Top 8 Colors per Game)...")
+    print("Generating game palettes...")
     game_palettes = df.groupby("Unique_ID").apply(
         lambda x: "|".join(ph.get_weighted_representative_palette(x)), include_groups=False
     )
     df["Color_Palette"] = df["Unique_ID"].map(game_palettes)
 
-    # print("🖼 Formatting Screenshot URLs...")
-    # df = ph.finalize_screenshot_urls(df)
-
-    print("📊 Exporting Aggregated Summaries...")
+    print("Creating summaries...")
 
     style_p, class_s = ph.generate_style_stats(df)
     style_p.to_parquet(os.path.join(base_dir, "data/summary_style_popularity.parquet"))
@@ -101,7 +91,6 @@ def run_preprocessing(input_path="data/final_game_data.parquet"):
     sample_df = ph.create_homepage_samples(df, helper.taxonomy_data.values())
     sample_df.to_parquet("data/homepage_samples.parquet")
 
-    print("🔍 Creating Search Metadata Index...")
     search_cols = [
         "Unique_ID",
         "Game",
@@ -111,11 +100,9 @@ def run_preprocessing(input_path="data/final_game_data.parquet"):
         "Art_Style",
         "Genres",
         "Themes",
-        # "Color_Palette",
         "Screenshot",
         "Is_NSFW",
     ]
-    print("💾 Saving Metadata file...")
     df.drop_duplicates("Unique_ID")[search_cols].to_parquet(
         os.path.join(base_dir, "data/search_metadata.parquet")
     )
@@ -128,30 +115,19 @@ def run_preprocessing(input_path="data/final_game_data.parquet"):
         "Screenshot",
     ] + color_headers
     df_optimized = df[keepers]
-    print("💾 Saving Screenshot palette file...")
     df_optimized.to_parquet(os.path.join(base_dir, "data/screenshot_colors.parquet"))
 
     keepers = [
         "Unique_ID",
-        # "Game",
-        # "Year",
-        # "Decade",
-        # "Developers",
-        # "Art_Style",
-        # "Genres",
-        # "Themes",
         "Color_Palette",
-        # "Screenshot",
         "Saturation",
         "Sat_Variance",
-        # "Is_classified",
-        # "Is_NSFW",
     ]
     df_optimized = df[keepers]
-    print("💾 Saving Master Color Analytics file...")
+    print("Saving color analytics file...")
     df_optimized.to_parquet(os.path.join(base_dir, "data/color_analytics.parquet"))
 
-    print("✅ Preprocessing Complete. The app is now ready to run at high speed.")
+    print("Preprocessing complete.")
 
 
 if __name__ == "__main__":

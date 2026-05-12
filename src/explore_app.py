@@ -341,7 +341,7 @@ elif page == "Color through Decades":
         style_df = df_decade[df_decade["Art_Style"] == style_choice]
 
     if not style_df.empty:
-        palette = helper.get_representative_palette(style_df, count=10)
+        palette = helper.get_representative_palette(style_df)
         p_cols = st.columns(10)
         for i, color in enumerate(palette):
             p_cols[i].markdown(

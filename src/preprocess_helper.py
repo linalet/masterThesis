@@ -1,15 +1,14 @@
+"""Preprocessing helper functions for normalizing data, classifying art styles, generating color palettes, and creating summary files."""
+
 import os
 import pandas as pd
-import helper_functions as helper
 import numpy as np
-
-_PLACEHOLDER_URL = "https://via.placeholder.com/1280x720?text=No+Image"
-_IGDB_BASE = "https://images.igdb.com/igdb/image/upload/t_screenshot_huge/"
+import re
 
 studio_map = {
     "Nintendo": [],
     "Microsoft": [],
-    "Riot": [],
+    "Riot": ["riot games"],
     "Rovio": [],
     "Square Enix": [
         "square product development division 1",
@@ -105,26 +104,31 @@ studio_map = {
 
 
 def normalize_studio_name(dev_string):
-    parts = [p.strip() for p in dev_string.split("|")]
-    cleaned_parts = []
+    """Normalizes studio names using the studio_map."""
+    devs = [d.strip() for d in dev_string.split("|")]
+    cleaned_devs = []
 
-    for part in parts:
-        part_lower = part.lower()
+    for dev in devs:
         found_parent = False
         for parent, aliases in studio_map.items():
-            if parent in part_lower or any(alias in part_lower for alias in aliases):
-                cleaned_parts.append(parent)
-                found_parent = True
+            all_matches = [parent] + aliases
+            for match in all_matches:
+                pattern = rf"\b{re.escape(match)}\b"
+                if re.search(pattern, dev, re.IGNORECASE):
+                    cleaned_devs.append(parent)
+                    found_parent = True
+            if found_parent:
                 break
         if not found_parent:
-            cleaned_parts.append(part)
-    if cleaned_parts == [""]:
-        return "unknown"
-
-    return "|".join(list(set(cleaned_parts)))
+            cleaned_devs.append(dev)
+    if cleaned_devs == [""]:
+        return "Unknown"
+    unique_devs = sorted(list(set(cleaned_devs)))
+    return "|".join(unique_devs) if unique_devs else "Unknown"
 
 
 def manual_classification(main_df, classified_path="data/manual_classification.csv"):
+    """Applies manual art style classifications from a CSV file."""
     try:
         path = os.path.join(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))), classified_path
@@ -147,19 +151,21 @@ def manual_classification(main_df, classified_path="data/manual_classification.c
 
         df.loc[mask, "Is_classified"] = True
         df = df.drop(columns=["Unique_ID_lower", "Unique_ID_manual", "Manual_Art_Style"])
-        # df = df.drop(columns=["Manual_Art_Style"])
 
-        print(f"✅ Successfully applied {mask.sum()} manual overrides.")
+        print(f"Successfully applied {mask.sum()} manual overrides.")
         return df
     except FileNotFoundError:
-        print("⚠️ No overrides file found, skipping manual labels.")
+        print("No manual classification file found.")
         return main_df
 
 
 def classify_taxonomy(df):
+    """Classifies games into art styles."""
     df["Art_Style"] = "Unclassified"
+    # completely manual classification
     df = manual_classification(df)
 
+    # manually assigned franchises
     name_search = df["Game"].str.lower().str.strip()
     df.loc[
         (df["Art_Style"] == "Unclassified")
@@ -210,6 +216,7 @@ def classify_taxonomy(df):
         "Art_Style",
     ] = "Realism: Stylized"
 
+    # early games override
     text = (
         df["Keywords"].fillna("") + " " + df["Themes"].fillna("") + " " + df["Genres"].fillna("")
     ).str.lower()
@@ -220,6 +227,7 @@ def classify_taxonomy(df):
     df.loc[early & persp.str.contains("text", na=False), "Art_Style"] = "Abstraction: Symbolic"
     df.loc[early & ~persp.str.contains("text", na=False), "Art_Style"] = "Abstraction: Minimalist"
 
+    # keyword classification
     is_free = df["Art_Style"] == "Unclassified"
     df.loc[
         is_free & text.str.contains("text-based|experimental|abstract|ascii", na=False),
@@ -268,23 +276,69 @@ def classify_taxonomy(df):
     return df
 
 
-# def convert_to_igdb_url(path):
-#     """Converts a local screenshot file path to its IGDB CDN URL.
-#     Returns a placeholder URL for missing or null paths."""
-#     if pd.isna(path) or path == "":
-#         return _PLACEHOLDER_URL
-#     image_id = os.path.splitext(os.path.basename(str(path)))[0]
-#     return f"{_IGDB_BASE}{image_id}.jpg"
+def get_ranked_colors(colors, count=5):
+    """Palette ranking prioritizing saturated colors"""
+    r_cols = [f"C{i}_R" for i in range(1, 11)]
+    g_cols = [f"C{i}_G" for i in range(1, 11)]
+    b_cols = [f"C{i}_B" for i in range(1, 11)]
+    w_cols = [f"C{i}_W" for i in range(1, 11)]
+
+    if isinstance(colors, pd.DataFrame):
+        r = colors[r_cols].values.flatten()
+        g = colors[g_cols].values.flatten()
+        b = colors[b_cols].values.flatten()
+        w = colors[w_cols].values.flatten()
+    else:
+        r = np.array([getattr(colors, c) for c in r_cols])
+        g = np.array([getattr(colors, c) for c in g_cols])
+        b = np.array([getattr(colors, c) for c in b_cols])
+        w = np.array([getattr(colors, c) for c in w_cols])
+
+    mask = ~np.isnan(r) & (w > 0)
+    r, g, b, w = r[mask], g[mask], b[mask], w[mask]
+
+    if len(r) == 0:
+        return []
+
+    # pool similar colors
+    r_b, g_b, b_b = (r // 15 * 15), (g // 15 * 15), (b // 15 * 15)
+    chroma = np.maximum(np.maximum(r, g), b) - np.minimum(np.minimum(r, g), b)
+
+    df_rgb = pd.DataFrame({"R": r_b, "G": g_b, "B": b_b, "W": w, "S": chroma})
+    grouped = (
+        df_rgb.groupby(["R", "G", "B"]).agg(total_w=("W", "sum"), max_s=("S", "max")).reset_index()
+    )
+
+    grouped["score"] = (grouped["total_w"] * 10) * (grouped["max_s"] + 5)
+    all_sorted = grouped.sort_values("score", ascending=False)
+
+    # euclid distance filter
+    final_selection = []
+    for row in all_sorted.itertuples():
+        if len(final_selection) >= count:
+            break
+        is_similar = False
+        for chosen in final_selection:
+            dist = (
+                (row.R - chosen.R) ** 2 + (row.G - chosen.G) ** 2 + (row.B - chosen.B) ** 2
+            ) ** 0.5
+            if dist < 50:
+                is_similar = True
+                break
+        if not is_similar:
+            final_selection.append(row)
+
+    return final_selection
 
 
-# def finalize_screenshot_urls(df):
-#     """Replaces local screenshot paths with IGDB URLs."""
-#     df["Screenshot"] = df["Screenshot"].apply(convert_to_igdb_url)
-#     return df
+def get_representative_palette(yr_data):
+    """Create hex codes from RGB values of top ranked colors"""
+    top_colors = get_ranked_colors(yr_data, count=10)
+    return [f"#{int(c.R):02x}{int(c.G):02x}{int(c.B):02x}" for c in top_colors]
 
 
 def get_weighted_representative_palette(colors):
-    from helper_functions import get_ranked_colors
+    """Create hex codes from RGB values of top ranked colors, weighted by their importance."""
 
     top_colors = get_ranked_colors(colors, count=8)
     if not top_colors:
@@ -298,8 +352,8 @@ def get_weighted_representative_palette(colors):
 
 def get_sat_metrics(df):
     """
-    Calculates mean saturation and saturation variance for each row.
-    Vectorized version — operates on the full DataFrame at once.
+    Calculates mean chroma and chroma variance for each row.
+    Vectorized — operates on the full DataFrame at once.
     Returns a DataFrame with 'Saturation' and 'Sat_Variance' columns.
     """
     r_cols = [f"C{i}_R" for i in range(1, 11)]
@@ -310,12 +364,11 @@ def get_sat_metrics(df):
     g = df[g_cols].values
     b = df[b_cols].values
 
-    per_slot_sat = np.maximum(np.maximum(r, g), b) - np.minimum(np.minimum(r, g), b)
-
+    chroma = np.maximum(np.maximum(r, g), b) - np.minimum(np.minimum(r, g), b)
     return pd.DataFrame(
         {
-            "Saturation": per_slot_sat.mean(axis=1),
-            "Sat_Variance": per_slot_sat.std(axis=1),
+            "Saturation": chroma.mean(axis=1),
+            "Sat_Variance": chroma.std(axis=1),
         },
         index=df.index,
     )
@@ -340,15 +393,14 @@ def generate_style_stats(df):
 
 
 def generate_decade_style_summary(df):
-    """Calculates the 'Era Vibe' palette for every Decade + Art Style combo."""
+    """Calculates the decade stats for overall and per art style."""
     results = []
-    # decade_avgs = df.groupby("Decade")["Saturation"].mean().to_dict()
     decade_stats = (
         df.groupby("Decade").agg({"Saturation": "mean", "Sat_Variance": "mean"}).to_dict("index")
     )
-
+    # overall decade stats
     for dec, dec_group in df.groupby("Decade"):
-        global_palette = helper.get_representative_palette(dec_group, count=10)
+        global_palette = get_representative_palette(dec_group)
         results.append(
             {
                 "Decade": dec,
@@ -359,9 +411,9 @@ def generate_decade_style_summary(df):
                 "Decade_Avg_Var": decade_stats[dec]["Sat_Variance"],
             }
         )
-
+    # per-art style decade stats
     for (dec, style), colors in df.groupby(["Decade", "Art_Style"]):
-        palette = helper.get_representative_palette(colors, count=10)
+        palette = get_representative_palette(colors)
         results.append(
             {
                 "Decade": dec,
@@ -376,7 +428,7 @@ def generate_decade_style_summary(df):
 
 
 def generate_timeline_summary(df, column):
-    """Pre-calculates Year and Decade palettes for Genres/Themes."""
+    """Calculates Year and Decade palettes for genres/themes."""
     items = df[column].str.split("|").explode().str.strip().unique()
     items = [i for i in items if i and i != "unknown"]
 
@@ -385,7 +437,7 @@ def generate_timeline_summary(df, column):
         item_df = df[df[column].str.contains(item, case=False, na=False, regex=False)]
         for time_unit in ["Year", "Decade"]:
             for time_val, g in item_df.groupby(time_unit):
-                palette = helper.get_representative_palette(g, count=10)
+                palette = get_representative_palette(g)
                 classified_styles = g[~g["Art_Style"].str.contains("Unclassified", na=False)]
                 summary.append(
                     {
@@ -403,22 +455,22 @@ def generate_timeline_summary(df, column):
 
 
 def generate_studio_summary(df):
-    """Generates DNA and Style distributions for ALL developers with Top 50 ranking flags."""
-
-    # color_cols = [f"C{i}_{channel}" for i in range(1, 9) for channel in ["R", "G", "B"]]
+    """Generates palette and art style distributions for developer studios, calculates top 50 studios.
+    Both is prepared overall and per decade."""
     color_cols = []
-    for i in range(1, 9):
-        for channel in ["R", "G", "B", "W"]:
+    for i in range(1, 11):
+        for channel in ["R", "G", "B"]:
             color_cols.append(f"C{i}_{channel}")
-    # required_cols = ["Unique_ID", "Developers", "Art_Style", "Decade", "Saturation"] + color_cols
+        color_cols.append(f"C{i}_W")
     required_cols = ["Unique_ID", "Developers", "Art_Style", "Decade"] + color_cols
     available_cols = [c for c in required_cols if c in df.columns]
-    temp_df = df[available_cols].copy()
+    new_df = df[available_cols].copy()
 
-    temp_df["Dev_List"] = temp_df["Developers"].str.split("|")
-    exploded = temp_df.explode("Dev_List")
+    # prepare studios df
+    new_df["Dev_List"] = new_df["Developers"].str.split("|")
+    exploded = new_df.explode("Dev_List")
     exploded["Dev_List"] = exploded["Dev_List"].str.strip()
-    exploded = exploded[exploded["Dev_List"] != "unknown"]
+    exploded = exploded[exploded["Dev_List"] != "Unknown"]
 
     top_50_global = exploded["Dev_List"].value_counts().nlargest(50).index.tolist()
 
@@ -427,9 +479,9 @@ def generate_studio_summary(df):
         top_50_by_decade[int(dec)] = d_group["Dev_List"].value_counts().nlargest(50).index.tolist()
 
     rows = []
-
+    # all-time stats per studio
     for studio, s_df in exploded.groupby("Dev_List"):
-        palette = helper.get_representative_palette(s_df, count=10)
+        palette = get_representative_palette(s_df)
         unclassified_count = s_df["Art_Style"].str.contains("Unclassified", na=False).sum()
         unclassified_pct = unclassified_count / len(s_df) if len(s_df) > 0 else 0
         classified = s_df[~s_df["Art_Style"].str.contains("Unclassified", na=False)]
@@ -450,12 +502,13 @@ def generate_studio_summary(df):
                 "Is_Major": studio in top_50_global,
             }
         )
+        # per-decade stats per studio
         for dec, dec_group in s_df.groupby("Decade"):
             dec_total = len(dec_group)
             dec_unclassified = dec_group["Art_Style"].str.contains("Unclassified", na=False).sum()
-            dec_un_pct = dec_unclassified / dec_total if dec_total > 0 else 0
+            dec_unclass_pct = dec_unclassified / dec_total if dec_total > 0 else 0
 
-            dec_palette = helper.get_representative_palette(dec_group, count=10)
+            dec_palette = get_representative_palette(dec_group)
             dec_classified = dec_group[
                 ~dec_group["Art_Style"].str.contains("Unclassified", na=False)
             ]
@@ -464,7 +517,7 @@ def generate_studio_summary(df):
                 if not dec_classified.empty
                 else {"Unknown": 1.0}
             )
-            is_major_this_decade = studio in top_50_by_decade.get(int(dec), [])
+            is_top_50_dec = studio in top_50_by_decade.get(int(dec), [])
 
             rows.append(
                 {
@@ -472,9 +525,9 @@ def generate_studio_summary(df):
                     "Decade": str(int(dec)),
                     "Palette": "|".join(dec_palette),
                     "Style_Distribution": dec_style_dist,
-                    "Unclassified_Pct": dec_un_pct,
+                    "Unclassified_Pct": dec_unclass_pct,
                     "Game_Count": dec_group["Unique_ID"].nunique(),
-                    "Is_Major": is_major_this_decade,
+                    "Is_Major": is_top_50_dec,
                 }
             )
 
@@ -482,6 +535,7 @@ def generate_studio_summary(df):
 
 
 def create_homepage_samples(df, taxonomy):
+    """Prepares a sample of games for the homepage."""
     sample_ids = []
     for branch in taxonomy:
         for style_info in branch.values():

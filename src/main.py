@@ -1,21 +1,19 @@
-"""Main script to fetch game data and analyze color palettes from screenshots."""
+"""Main script to acquire game data and analyze color palettes from screenshots."""
 
-# import csv
 import os
 import pandas as pd
 from PIL import Image
 
-from igdb_api import download_image, query_igdb
+from igdb_api import download_image, normalize_igdb_url, query_igdb
 
 
-START_YEAR = 2006
+START_YEAR = 1950
 END_YEAR = 2026
-SCREENSHOT_COUNT = 5  # possibly increase to 10
+SCREENSHOT_COUNT = 5
 COLOR_COUNT = 10
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(ROOT_DIR, "data")
-# OUTPUT_CSV = os.path.join(DATA_DIR, "game_data.csv")
 OUTPUT_PARQUET = os.path.join(DATA_DIR, "final_game_data.parquet")
 
 # List of keywords to filter nsfw images
@@ -37,13 +35,12 @@ NSFW_WORDS = [
 
 def get_palette(image_path, n_clusters=10):
     """
-    Gets the color palette using Octree quantization.
+    Exctract the color palette using Octree quantization.
     Returns a list of tuples sorted by weight.
     """
     try:
         with Image.open(image_path) as image:
             image = image.convert("RGB")
-            # quantized_image = image.quantize(colors=n_clusters, method=Image.Quantize.MEDIANCUT)
             quantized_image = image.quantize(colors=n_clusters, method=Image.Quantize.FASTOCTREE)
 
             # get palettes
@@ -69,22 +66,6 @@ def get_palette(image_path, n_clusters=10):
 
 
 def main():
-    # Prepare CSV
-    # color_headers = []
-    # for i in range(1, COLOR_COUNT + 1):
-    #     color_headers.extend([f"C{i}_R", f"C{i}_G", f"C{i}_B", f"C{i}_W"])
-    # header = [
-    #     "Year",
-    #     "Decade",
-    #     "Game",
-    #     "Screenshot",
-    #     "Genres",
-    #     "Themes",
-    #     "Keywords",
-    #     "Player_Perspective",
-    #     "Developers",
-    #     "Is_NSFW",
-    # ] + color_headers
 
     if os.path.exists(OUTPUT_PARQUET):
         # Skip processed screenshots
@@ -97,9 +78,8 @@ def main():
         append_mode = False
     buffer = []
     counter = 0
-    game_count = 0
     for year in range(START_YEAR, END_YEAR + 1):
-        print(f"[INFO] Getting games from {year}...")
+        print(f"Getting games from {year}...")
         decade = (year // 10) * 10
         offset = 0
         while True:
@@ -123,15 +103,14 @@ def main():
                 )
                 combined_text = f"{themes} {keywords} {name}".lower()
                 is_nsfw = 1 if any(word in combined_text for word in NSFW_WORDS) else 0
-                # screenshots = game.get("screenshots", [])
 
                 for screen in game.get("screenshots", [])[:SCREENSHOT_COUNT]:
                     url = screen["url"]
-                    if url in processed:
-                        print("Skip")
-                        continue
-                    image_path = download_image(url)
+                    norm_url = normalize_igdb_url(url)
                     # Skip if download failed or already recorded
+                    if norm_url in processed:
+                        continue
+                    image_path, final_url = download_image(url)
                     if not image_path:
                         continue
 
@@ -140,7 +119,7 @@ def main():
                         "Year": year,
                         "Decade": decade,
                         "Game": game.get("name", "Unknown"),
-                        "Screenshot": url,
+                        "Screenshot": final_url,
                         "Developers": devs,
                         "Genres": genres,
                         "Themes": themes,
@@ -155,31 +134,28 @@ def main():
                         )
 
                     buffer.append(row)
-                    processed.add(url)
+                    processed.add(final_url)
                     counter += 1
 
                     if counter % 500 == 0:
                         df_flush = pd.DataFrame(buffer)
-                        # df_flush = df_flush[header]
                         df_flush.to_parquet(
                             OUTPUT_PARQUET, engine="fastparquet", append=append_mode, index=False
                         )
                         append_mode = True
                         buffer = []
-                        print(f"💾 Milestone: {counter} screenshots saved to disk. RAM cleared.")
-                game_count += 1
-                print(f"[INFO] Saved {name} ({year})")
+                        print(f"{counter} screenshots saved to disk")
+                print(f"Saved {name} ({year})")
 
             offset += len(games)
-        print(f"[INFO] Finished all games for {year}")
+        print(f"Finished all games for {year}")
     if buffer:
         pd.DataFrame(buffer).to_parquet(
             OUTPUT_PARQUET, engine="fastparquet", append=append_mode, index=False
         )
-        print(f"🏁 Final batch saved. Collection complete! {counter} games processed")
     df_final = pd.read_parquet(OUTPUT_PARQUET)
     df_final.to_csv(os.path.join(DATA_DIR, "human_readable_backup.csv"), index=False)
-    print(f"[INFO] Data collection complete! Processed {game_count} games")
+    print(f"Data collection complete! Processed {counter} screenshots")
 
 
 if __name__ == "__main__":
