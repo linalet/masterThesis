@@ -128,7 +128,7 @@ def main():
                         "Is_NSFW": is_nsfw,
                     }
                     for i in range(COLOR_COUNT):
-                        r, g, b, w = palette[i] if i < len(palette) else (None, None, None, 0.0)
+                        r, g, b, w = palette[i] if i < len(palette) else (0, 0, 0, 0.0)
                         row.update(
                             {f"C{i + 1}_R": r, f"C{i + 1}_G": g, f"C{i + 1}_B": b, f"C{i + 1}_W": w}
                         )
@@ -137,8 +137,13 @@ def main():
                     processed.add(final_url)
                     counter += 1
 
+                    # downcast vakues and flush to disk every 500 screenshots to save memory
                     if counter % 500 == 0:
                         df_flush = pd.DataFrame(buffer)
+                        for i in range(1, COLOR_COUNT + 1):
+                            for ch in ["R", "G", "B"]:
+                                df_flush[f"C{i}_{ch}"] = df_flush[f"C{i}_{ch}"].astype("uint8")
+                            df_flush[f"C{i}_W"] = df_flush[f"C{i}_W"].astype("float32")
                         df_flush.to_parquet(
                             OUTPUT_PARQUET, engine="fastparquet", append=append_mode, index=False
                         )
